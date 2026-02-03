@@ -5,7 +5,9 @@
  * Focus: Sales coverage (per-rep schedule) + calls/SMS activity + Zoho deal movement + meetings booked.
  *
  * Usage:
- *   node scripts/tyfys/daily-sales-ops-brief.mjs --hours 24 --connectedSec 30 --fewMin 2
+ *   node scripts/tyfys/daily-sales-ops-brief.mjs --hours 24 --connectedSec 30 --fewMin 2 [--redact]
+ *
+ *   --redact   Mask phone numbers + deal/event titles so the output is safe to paste into group chats
  */
 
 import { loadEnvLocal } from '../lib/load-env-local.mjs';
@@ -26,6 +28,8 @@ const hours = Number(getArg('--hours', '24'));
 const connectedSec = Number(getArg('--connectedSec', '30'));
 const fewMin = Number(getArg('--fewMin', '2'));
 const fewMinSec = Math.round(fewMin * 60);
+
+const redact = process.argv.includes('--redact');
 
 const now = new Date();
 const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
@@ -73,6 +77,21 @@ function formatDuration(sec) {
 
 function basicAuthHeader(id, secret) {
   return 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64');
+}
+
+function maskPhone(v) {
+  const raw = v == null ? '' : String(v);
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return raw || 'Unknown';
+  if (digits.length < 4) return '***';
+  const last4 = digits.slice(-4);
+  return `***-***-${last4}`;
+}
+
+function redactTitle({ kind, id, title }) {
+  if (!redact) return title || id || kind;
+  const suffix = String(id || '').slice(-6) || '??????';
+  return `${kind}#${suffix}`;
 }
 
 // RingCentral token refresh + rotation handled by scripts/lib/ringcentral.mjs
@@ -181,7 +200,7 @@ function briefHeader() {
 (async function main() {
   const lines = [];
   lines.push(briefHeader());
-  lines.push(`Window: last ${hours}h | connected≥${connectedSec}s | long≥${fewMin}m`);
+  lines.push(`Window: last ${hours}h | connected≥${connectedSec}s | long≥${fewMin}m${redact ? ' | REDACTED' : ''}`);
 
   // RingCentral activity
   const callLog = await ringcentralGetJson(`/restapi/v1.0/account/~/extension/~/call-log?dateFrom=${encodeURIComponent(iso(from))}&dateTo=${encodeURIComponent(iso(now))}&perPage=1000`);
@@ -203,8 +222,8 @@ function briefHeader() {
     .slice(0, 10)
     .map(r => ({
       when: r.startTime,
-      from: r.from?.phoneNumber || r.from?.name || 'Unknown',
-      to: r.to?.phoneNumber || r.to?.name || 'Unknown',
+      from: redact ? maskPhone(r.from?.phoneNumber || r.from?.name) : (r.from?.phoneNumber || r.from?.name || 'Unknown'),
+      to: redact ? maskPhone(r.to?.phoneNumber || r.to?.name) : (r.to?.phoneNumber || r.to?.name || 'Unknown'),
     }));
 
   if (missedInbound.length) {
@@ -216,7 +235,7 @@ function briefHeader() {
   }
 
   const inboundSms = (msgs.records || []).filter(r => r.type === 'SMS' && r.direction === 'Inbound');
-  const topInboundSms = topBy(inboundSms, r => r.from?.phoneNumber || r.from?.name, 8);
+  const topInboundSms = topBy(inboundSms, r => (redact ? maskPhone(r.from?.phoneNumber || r.from?.name) : (r.from?.phoneNumber || r.from?.name)), 8);
   if (topInboundSms.length) {
     lines.push('');
     lines.push('Who texted you (inbound SMS top):');
@@ -251,7 +270,10 @@ function briefHeader() {
     const nextTwo = repEvents
       .filter(e => e.Start_DateTime && new Date(e.Start_DateTime) >= now)
       .slice(0, 2)
-      .map(e => `  - ${fmtLocal(e.Start_DateTime)}: ${e.Event_Title || 'Event'}`);
+      .map(e => {
+        const title = redactTitle({ kind: 'Event', id: e.id, title: e.Event_Title || 'Event' });
+        return `  - ${fmtLocal(e.Start_DateTime)}: ${title}`;
+      });
     if (nextTwo.length) {
       lines.push(`- Next up:`);
       lines.push(...nextTwo);
@@ -270,7 +292,7 @@ function briefHeader() {
 
   // Latest deal updates list (short)
   const latestDeals = deals.slice(0, 12).map(d => {
-    const name = d.Deal_Name || d.id;
+    const name = redactTitle({ kind: 'Deal', id: d.id, title: d.Deal_Name || d.id });
     const stage = d.Stage || '—';
     const owner = d.Owner?.name || '—';
     const by = d.Modified_By?.name || '—';
@@ -293,7 +315,7 @@ function briefHeader() {
     .slice(0, 12)
     .map(e => {
       const when = e.Start_DateTime ? fmtLocal(e.Start_DateTime) : '—';
-      const subj = e.Event_Title || 'Meeting';
+      const subj = redactTitle({ kind: 'Event', id: e.id, title: e.Event_Title || 'Meeting' });
       const owner = e.Owner?.name || '—';
       return `- ${when}: ${subj} (owner ${owner})`;
     });

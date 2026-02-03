@@ -6,8 +6,10 @@
  *
  * Usage:
  *   node scripts/tyfys/daily-sales-ops-brief.mjs --hours 24 --connectedSec 30 --fewMin 2 [--redact]
+ *   node scripts/tyfys/daily-sales-ops-brief.mjs --selftest
  *
- *   --redact   Mask phone numbers + deal/event titles so the output is safe to paste into group chats
+ *   --redact     Mask phone numbers + deal/event titles so the output is safe to paste into group chats
+ *   --selftest   Run a no-credentials sanity check for redaction helpers
  */
 
 import { loadEnvLocal } from '../lib/load-env-local.mjs';
@@ -30,6 +32,35 @@ const fewMin = Number(getArg('--fewMin', '2'));
 const fewMinSec = Math.round(fewMin * 60);
 
 const redact = process.argv.includes('--redact');
+const selftest = process.argv.includes('--selftest');
+
+if (selftest) {
+  // Allows a quick sanity-check without any API credentials.
+  // Run: node scripts/tyfys/daily-sales-ops-brief.mjs --selftest
+  const { strict: assert } = await import('node:assert');
+
+  // We can’t reassign `redact` (const), so just validate the helpers directly.
+  assert.equal(maskPhone('+1 (321) 555-1234'), '***-***-1234');
+  assert.equal(maskPhone('5551234'), '***-***-1234');
+
+  // In redact mode, non-numeric names should not leak.
+  // Simulate by temporarily calling the logic inline.
+  const redactContactInline = (x) => {
+    const phone = x?.phoneNumber;
+    if (phone) return maskPhone(phone);
+    const maybe = x?.name;
+    const digits = maybe == null ? '' : String(maybe).replace(/\D/g, '');
+    if (digits) return maskPhone(maybe);
+    return 'Unknown';
+  };
+
+  assert.equal(redactContactInline({ name: 'John Smith' }), 'Unknown');
+  assert.equal(redactContactInline({ name: '+1 555 777 8888' }), '***-***-8888');
+  assert.equal(redactContactInline({ phoneNumber: '+1 555 777 8888', name: 'John' }), '***-***-8888');
+
+  process.stdout.write('Selftest OK\n');
+  process.exit(0);
+}
 
 const now = new Date();
 const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
@@ -46,11 +77,6 @@ function startOfLocalDay(d) {
 const todayStart = startOfLocalDay(now);
 const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
 const plus48h = new Date(todayStart.getTime() + 48 * 60 * 60 * 1000);
-
-const RC_API_SERVER = process.env.RINGCENTRAL_API_SERVER || 'https://platform.ringcentral.com';
-const RC_CLIENT_ID = process.env.RINGCENTRAL_CLIENT_ID;
-const RC_CLIENT_SECRET = process.env.RINGCENTRAL_CLIENT_SECRET;
-const RC_REFRESH_TOKEN = process.env.RINGCENTRAL_REFRESH_TOKEN;
 
 const ZOHO_API_DOMAIN = process.env.ZOHO_API_DOMAIN || 'https://www.zohoapis.com';
 
@@ -75,10 +101,6 @@ function formatDuration(sec) {
   return `${m}m`;
 }
 
-function basicAuthHeader(id, secret) {
-  return 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64');
-}
-
 function maskPhone(v) {
   const raw = v == null ? '' : String(v);
   const digits = raw.replace(/\D/g, '');
@@ -86,6 +108,20 @@ function maskPhone(v) {
   if (digits.length < 4) return '***';
   const last4 = digits.slice(-4);
   return `***-***-${last4}`;
+}
+
+function redactContact(fromOrTo) {
+  if (!redact) return fromOrTo?.phoneNumber || fromOrTo?.name || 'Unknown';
+
+  const phone = fromOrTo?.phoneNumber;
+  if (phone) return maskPhone(phone);
+
+  // Some RC payloads put a number-ish string in name; we still mask it if so.
+  const maybe = fromOrTo?.name;
+  const digits = maybe == null ? '' : String(maybe).replace(/\D/g, '');
+  if (digits) return maskPhone(maybe);
+
+  return 'Unknown';
 }
 
 function redactTitle({ kind, id, title }) {
@@ -222,8 +258,8 @@ function briefHeader() {
     .slice(0, 10)
     .map(r => ({
       when: r.startTime,
-      from: redact ? maskPhone(r.from?.phoneNumber || r.from?.name) : (r.from?.phoneNumber || r.from?.name || 'Unknown'),
-      to: redact ? maskPhone(r.to?.phoneNumber || r.to?.name) : (r.to?.phoneNumber || r.to?.name || 'Unknown'),
+      from: redactContact(r.from),
+      to: redactContact(r.to),
     }));
 
   if (missedInbound.length) {
@@ -235,7 +271,7 @@ function briefHeader() {
   }
 
   const inboundSms = (msgs.records || []).filter(r => r.type === 'SMS' && r.direction === 'Inbound');
-  const topInboundSms = topBy(inboundSms, r => (redact ? maskPhone(r.from?.phoneNumber || r.from?.name) : (r.from?.phoneNumber || r.from?.name)), 8);
+  const topInboundSms = topBy(inboundSms, r => redactContact(r.from), 8);
   if (topInboundSms.length) {
     lines.push('');
     lines.push('Who texted you (inbound SMS top):');

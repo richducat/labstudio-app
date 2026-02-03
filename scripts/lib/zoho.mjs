@@ -99,6 +99,24 @@ export async function zohoCrmGet({ accessToken, apiDomain, pathAndQuery }) {
   return json;
 }
 
+export async function zohoCrmPut({ accessToken, apiDomain, path, json }) {
+  const url = `${apiDomain}${path}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Zoho-oauthtoken ${accessToken}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(json ?? {}),
+  });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(`Zoho PUT failed (${res.status}): ${out?.message || JSON.stringify(out)}`);
+  }
+  return out;
+}
+
 export async function zohoCrmPost({ accessToken, apiDomain, path, json }) {
   const url = `${apiDomain}${path}`;
   const res = await fetch(url, {

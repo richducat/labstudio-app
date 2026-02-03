@@ -2,7 +2,10 @@
 /**
  * Sync client email attachments from Gmail into Zoho Deal Attachments.
  *
- * Default scope: HIT LIST deals for Richard’s Devin+Karen triage.
+ * Default scope: ACTIVE pipeline deals in the first 3 stages:
+ *   - Intake (Document Collection)
+ *   - Ready for Provider
+ *   - Sent to Provider
  *
  * Requirements:
  * - gog CLI authenticated for richard@thankyouforyourservice.co
@@ -26,17 +29,10 @@ process.stdout.on('error', () => {});
 const GMAIL_ACCOUNT = process.env.GMAIL_ACCOUNT || 'richard@thankyouforyourservice.co';
 const apiDomain = process.env.ZOHO_API_DOMAIN || 'https://www.zohoapis.com';
 
-const HITLIST_NAMES = [
-  'John Aleman',
-  'John Rensel',
-  'James Barker',
-  'Joseph Scott birchell',
-  'Eric Lozano Jr.',
-  'Brandon Guerra',
-  'Jason Manning',
-  'Mark Jamison',
-  'Nathaniel Shields-Koszarek',
-  'Robert Ellerd',
+const DEFAULT_STAGES = [
+  'Intake (Document Collection)',
+  'Ready for Provider',
+  'Sent to Provider',
 ];
 
 function getArg(name, def) {
@@ -124,13 +120,17 @@ async function ensureDir(p) {
   await fs.mkdir(p, { recursive: true });
 }
 
-async function fetchDealsForHitlist({ zohoToken }) {
+async function fetchDealsForScope({ zohoToken }) {
   if (onlyDealId) {
     const j = await zohoCrmGet({ accessToken: zohoToken, apiDomain, pathAndQuery: `/crm/v2/Deals/${onlyDealId}` });
     return j?.data || [];
   }
 
-  const q = `select id, Deal_Name, Stage, Owner, Email_Address, Phone_Number, Provider, Appointment_Status, Next_Step, Veteran_Live_Status, Modified_Time from Deals where Deal_Name in (${HITLIST_NAMES.map((n) => `'${escZoho(n)}'`).join(',')}) limit 50`;
+  // NOTE: COQL limit 200 per query. For now, we scan the last N days of activity.
+  const sinceIso = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().replace(/\.\d{3}Z$/, '+00:00');
+  const stageList = DEFAULT_STAGES.map(s => `'${escZoho(s)}'`).join(',');
+
+  const q = `select id, Deal_Name, Stage, Owner, Email_Address, Phone_Number, Provider, Appointment_Status, Next_Step, Veteran_Live_Status, Modified_Time from Deals where Modified_Time >= '${sinceIso}' and Stage in (${stageList}) limit 200`;
   const res = await zohoCrmCoql({ accessToken: zohoToken, apiDomain, selectQuery: q });
   return res?.data || [];
 }
@@ -222,7 +222,7 @@ async function syncDeal({ zohoToken, state, deal }) {
   const zohoToken = await getZohoAccessToken();
   const state = await readState();
 
-  const deals = await fetchDealsForHitlist({ zohoToken });
+  const deals = await fetchDealsForScope({ zohoToken });
   if (!deals.length) {
     process.stdout.write('No deals found for scope.\n');
     return;

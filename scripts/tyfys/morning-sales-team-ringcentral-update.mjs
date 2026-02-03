@@ -2,21 +2,25 @@
 /**
  * TYFYS Morning Sales Team Update (RingCentral Team Messaging)
  *
- * Posts to a RingCentral team chat:
- *  - Today's booked meetings (Zoho Events happening today)
- *  - Yesterday's outbound performance (RingCentral outbound calls + outbound SMS) by rep
- *  - A short motivational line
+ * Posts to a RingCentral team chat.
+ *
+ * Modes:
+ *  - morning: today’s meetings lineup (for today only)
+ *  - eod: today’s outbound performance + tomorrow’s meetings + lead aging / top follow-ups
  *
  * Usage:
- *   node scripts/tyfys/morning-sales-team-ringcentral-update.mjs --chatId 144856375302
+ *   node scripts/tyfys/morning-sales-team-ringcentral-update.mjs --chatId 144856375302 --mode morning
+ *   node scripts/tyfys/morning-sales-team-ringcentral-update.mjs --chatId 144856375302 --mode eod
  *
  * Options:
- *   --window previousBusinessDay|today   (default: previousBusinessDay)
+ *   --mode morning|eod   (default: morning)
  */
 
 import { loadEnvLocal } from '../lib/load-env-local.mjs';
-import { getZohoAccessToken, zohoCrmCoql, zohoBookingsReportGet } from '../lib/zoho.mjs';
+import { getZohoAccessToken, zohoCrmCoql, zohoCrmGet, zohoBookingsReportGet } from '../lib/zoho.mjs';
 import { ringcentralGetJson, ringcentralPostJson } from '../lib/ringcentral.mjs';
+
+const SALES_CHAT_ID_DEFAULT = '144856375302';
 
 loadEnvLocal();
 
@@ -55,6 +59,95 @@ function formatTable(rows) {
 }
 
 const SALES_ROSTER = ['Adam', 'Amy', 'Jared'];
+
+function hoursBetween(a, b) {
+  return Math.abs((a.getTime() - b.getTime()) / 36e5);
+}
+
+function daysBetween(a, b) {
+  return Math.abs((a.getTime() - b.getTime()) / 864e5);
+}
+
+function pickTs(lead) {
+  // Best-effort “last touched” timestamp.
+  // Zoho sometimes has Last_Activity_Time; fall back to Modified_Time or Created_Time.
+  const v = lead?.Last_Activity_Time || lead?.Last_Activity_Time?.value || lead?.Created_Time;
+  const d = v ? new Date(v) : null;
+  return d && !Number.isNaN(d.getTime()) ? d : null;
+}
+
+async function getZohoUserIdsForRoster({ accessToken }) {
+  const out = new Map();
+  const res = await zohoCrmGet({ accessToken, apiDomain: ZOHO_API_DOMAIN, pathAndQuery: '/crm/v2/users?type=ActiveUsers&per_page=200' });
+  const users = res?.users || res?.data || [];
+
+  for (const rep of SALES_ROSTER) {
+    const match = users.find(u => {
+      const name = String(u?.full_name || u?.name || '').toLowerCase();
+      return name.includes(rep.toLowerCase());
+    });
+    if (match?.id) out.set(rep, match.id);
+  }
+  return out;
+}
+
+async function getLeadAging({ accessToken, asOf }) {
+  const repToZohoUserId = await getZohoUserIdsForRoster({ accessToken });
+
+  // COQL has strict limits. Query each rep separately.
+  const byRep = new Map(SALES_ROSTER.map(r => [r, []]));
+  for (const rep of SALES_ROSTER) {
+    const ownerId = repToZohoUserId.get(rep);
+    if (!ownerId) continue;
+
+    const q = `select id, Full_Name, Company, Owner, Lead_Status, Created_Time, Modified_Time from Leads where Owner.id = '${ownerId}' order by Created_Time desc limit 200`;
+    const res = await zohoCrmCoql({ accessToken, apiDomain: ZOHO_API_DOMAIN, selectQuery: q });
+    for (const l of res?.data || []) byRep.get(rep).push(l);
+  }
+
+  const out = {};
+  for (const rep of SALES_ROSTER) {
+    const items = byRep.get(rep) || [];
+    const scored = items
+      .map(l => {
+        const ts = pickTs(l);
+        const hrs = ts ? hoursBetween(asOf, ts) : null;
+        return { lead: l, ts, hrs };
+      })
+      .filter(x => x.hrs != null)
+      .sort((a, b) => b.hrs - a.hrs); // oldest first
+
+    const buckets = {
+      lt24h: 0,
+      d1_3: 0,
+      d3_7: 0,
+      gt7d: 0,
+      gt24h: 0,
+    };
+
+    for (const s of scored) {
+      if (s.hrs > 24) buckets.gt24h++;
+      const d = s.hrs / 24;
+      if (d < 1) buckets.lt24h++;
+      else if (d < 3) buckets.d1_3++;
+      else if (d < 7) buckets.d3_7++;
+      else buckets.gt7d++;
+    }
+
+    const top = scored
+      .filter(s => s.hrs > 24)
+      .slice(0, 3)
+      .map(s => {
+        const name = s.lead?.Full_Name || s.lead?.Company || 'Lead';
+        const age = `${Math.round((s.hrs / 24) * 10) / 10}d`;
+        return `- ${name} (id ${s.lead?.id}) — untouched ~${age}`;
+      });
+
+    out[rep] = { buckets, top };
+  }
+
+  return out;
+}
 
 // Explicit extension ids (more reliable than name matching)
 const RC_EXTENSION_ID_BY_REP = {
@@ -187,70 +280,105 @@ async function postToRingCentralChat({ chatId, text }) {
 }
 
 (async function main() {
-  const chatId = getArg('--chatId', null);
+  const chatId = getArg('--chatId', SALES_CHAT_ID_DEFAULT);
   if (!chatId) {
     console.error('Missing --chatId');
     process.exit(1);
   }
 
-  const windowMode = getArg('--window', 'previousBusinessDay');
-  if (!['previousBusinessDay', 'today'].includes(windowMode)) {
-    console.error("Invalid --window. Use 'previousBusinessDay' or 'today'.");
+  const mode = getArg('--mode', 'morning');
+  if (!['morning', 'eod'].includes(mode)) {
+    console.error("Invalid --mode. Use 'morning' or 'eod'.");
     process.exit(1);
   }
 
   const now = new Date();
   const todayStart = startOfLocalDay(now);
   const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
-
-  // Use previous business day (Mon–Fri) for the morning report so Monday covers Friday.
-  const previousBusinessDayStart = (() => {
-    const d = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
-    while (d.getDay() === 0 || d.getDay() === 6) {
-      d.setDate(d.getDate() - 1);
-    }
-    d.setHours(0, 0, 0, 0);
-    return d;
-  })();
-
-  const perfFrom = windowMode === 'today' ? todayStart : previousBusinessDayStart;
-  const perfTo = windowMode === 'today' ? now : todayStart;
+  const dayStr = todayStart.toLocaleDateString('en-US');
 
   const zohoToken = await getZohoAccessToken();
-  const todaysMeetings = await getTodaysMeetings({ accessToken: zohoToken, todayStart, tomorrowStart });
 
-  const perf = await getOutboundPerf({ from: perfFrom, to: perfTo });
+  if (mode === 'morning') {
+    const todaysMeetings = await getTodaysMeetings({ accessToken: zohoToken, todayStart, tomorrowStart });
 
-  const meetingLines = todaysMeetings.length
-    ? todaysMeetings.map(e => {
-        const title = e.Event_Title || 'Meeting';
-        const repHint = SALES_ROSTER.find(r => title.toLowerCase().includes(r.toLowerCase()));
-        return `- ${fmtLocal(e.Start_DateTime)} — ${title}${repHint ? ` (${repHint})` : ''}`;
-      }).join('\n')
-    : '- None on the calendar today.';
+    const meetingLines = todaysMeetings.length
+      ? todaysMeetings
+          .map(e => {
+            const title = e.Event_Title || 'Meeting';
+            const repHint = SALES_ROSTER.find(r => title.toLowerCase().includes(r.toLowerCase()));
+            return `- ${fmtLocal(e.Start_DateTime)} — ${title}${repHint ? ` (${repHint})` : ''}`;
+          })
+          .join('\n')
+      : '- None on the calendar today.';
 
-  const motivation = MOTIVATION[Math.floor(Math.random() * MOTIVATION.length)];
+    const motivation = MOTIVATION[Math.floor(Math.random() * MOTIVATION.length)];
 
+    const text = [
+      `Good morning team — today’s lineup (${dayStr}):`,
+      '',
+      'Meetings today:',
+      meetingLines,
+      '',
+      motivation,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    await postToRingCentralChat({ chatId, text });
+    process.stdout.write('Posted MORNING update to RingCentral chat.\n');
+    return;
+  }
+
+  // mode === 'eod'
+  const perf = await getOutboundPerf({ from: todayStart, to: now });
   const perfTable = formatTable(perf.rows);
-  const winnerLine = perf.winner ? `Top outbound yesterday: ${perf.winner.name} (calls ${perf.winner.calls}, sms ${perf.winner.sms})` : '';
+
+  const tomorrowEnd = new Date(tomorrowStart.getTime() + 24 * 60 * 60 * 1000);
+  const tomorrowMeetings = await getTodaysMeetings({ accessToken: zohoToken, todayStart: tomorrowStart, tomorrowStart: tomorrowEnd });
+
+  const tomorrowLines = tomorrowMeetings.length
+    ? tomorrowMeetings
+        .map(e => {
+          const title = e.Event_Title || 'Meeting';
+          const repHint = SALES_ROSTER.find(r => title.toLowerCase().includes(r.toLowerCase()));
+          return `- ${fmtLocal(e.Start_DateTime)} — ${title}${repHint ? ` (${repHint})` : ''}`;
+        })
+        .join('\n')
+    : '- None on the calendar tomorrow.';
+
+  const aging = await getLeadAging({ accessToken: zohoToken, asOf: now });
+  const agingLines = SALES_ROSTER.map(rep => {
+    const b = aging?.[rep]?.buckets;
+    if (!b) return `${rep}: (no data)`;
+    return `${rep}: <24h ${b.lt24h} | 1–3d ${b.d1_3} | 3–7d ${b.d3_7} | >7d ${b.gt7d} (untouched>24h ${b.gt24h})`;
+  }).join('\n');
+
+  const topActions = SALES_ROSTER.map(rep => {
+    const top = aging?.[rep]?.top || [];
+    return [
+      `${rep} — top 3 follow-ups (untouched >24h):`,
+      top.length ? top.join('\n') : '- None (or no leads >24h found).',
+    ].join('\n');
+  }).join('\n\n');
 
   const text = [
-    `Good morning team — here’s today’s lineup (${todayStart.toLocaleDateString('en-US')}):`,
+    `End of day — performance (${dayStr}, through ${fmtLocal(now)}):`,
     '',
-    'Today’s booked meetings:',
-    meetingLines,
-    '',
-    windowMode === 'today'
-      ? `Today outbound performance so far (calls + SMS, through ${fmtLocal(now)}):`
-      : 'Previous business day outbound performance (calls + SMS):',
+    'Outbound performance (calls + SMS):',
     perfTable,
-    winnerLine ? `\n${winnerLine}` : '',
     '',
-    motivation,
-  ].filter(Boolean).join('\n');
+    'Tomorrow’s meetings:',
+    tomorrowLines,
+    '',
+    'Lead aging (by owner):',
+    agingLines,
+    '',
+    topActions,
+  ].join('\n');
 
   await postToRingCentralChat({ chatId, text });
-  process.stdout.write('Posted morning update to RingCentral chat.\n');
+  process.stdout.write('Posted EOD update to RingCentral chat.\n');
 })().catch(err => {
   console.error(err?.stack || String(err));
   process.exit(1);

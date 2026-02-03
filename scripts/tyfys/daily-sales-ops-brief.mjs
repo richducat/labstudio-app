@@ -6,15 +6,21 @@
  *
  * Usage:
  *   node scripts/tyfys/daily-sales-ops-brief.mjs --hours 24 --connectedSec 30 --fewMin 2 [--redact]
+ *   node scripts/tyfys/daily-sales-ops-brief.mjs --opsRisk [--opsHours 168 --opsLimit 40]
  *   node scripts/tyfys/daily-sales-ops-brief.mjs --selftest
  *
+ * Flags:
  *   --redact     Mask phone numbers + deal/event titles so the output is safe to paste into group chats
+ *   --opsRisk    Add an ops-focused “at-risk deal files” section (uses Zoho related records)
+ *   --opsHours   Lookback window for ops risk scan (default 168h)
+ *   --opsLimit   Max deals to scan for ops risk section (default 40)
  *   --selftest   Run a no-credentials sanity check for redaction helpers
  */
 
 import { loadEnvLocal } from '../lib/load-env-local.mjs';
-import { getZohoAccessToken, zohoCrmCoql } from '../lib/zoho.mjs';
+import { getZohoAccessToken, zohoCrmCoql, zohoCrmGet } from '../lib/zoho.mjs';
 import { ringcentralGetJson } from '../lib/ringcentral.mjs';
+import { scanDealFileHealth, formatHealthLine } from './lib/deal-file-health-lib.mjs';
 
 loadEnvLocal();
 
@@ -32,6 +38,11 @@ const fewMin = Number(getArg('--fewMin', '2'));
 const fewMinSec = Math.round(fewMin * 60);
 
 const redact = process.argv.includes('--redact');
+const opsRisk = process.argv.includes('--opsRisk');
+const opsHours = Number(getArg('--opsHours', '168'));
+const opsLimit = Number(getArg('--opsLimit', '40'));
+const opsMaxConcurrent = Number(getArg('--opsMaxConcurrent', '5'));
+
 const selftest = process.argv.includes('--selftest');
 
 if (selftest) {
@@ -360,6 +371,32 @@ function briefHeader() {
     lines.push('');
     lines.push('Upcoming newly-booked meetings (top 12):');
     lines.push(...nextMeetings);
+  }
+
+  if (opsRisk) {
+    lines.push('');
+    lines.push(`OPS RISK FLAGS (Deal File Health — last ${opsHours}h)`);
+
+    const { atRisk } = await scanDealFileHealth({
+      zohoCrmCoql,
+      zohoCrmGet,
+      token: zohoToken,
+      apiDomain: ZOHO_API_DOMAIN,
+      hours: opsHours,
+      limit: opsLimit,
+      staleDays: 7,
+      maxConcurrent: opsMaxConcurrent,
+    });
+
+    lines.push(`At-risk deals: ${atRisk.length} (scanned up to ${opsLimit})${redact ? ' | REDACTED' : ''}`);
+
+    const top = atRisk.slice(0, 10);
+    if (!top.length) {
+      lines.push('- None flagged');
+    } else {
+      for (const r of top) lines.push(formatHealthLine({ r, redact }));
+      if (atRisk.length > top.length) lines.push(`- (+${atRisk.length - top.length} more)`);
+    }
   }
 
   process.stdout.write(lines.join('\n') + '\n');

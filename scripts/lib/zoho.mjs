@@ -118,6 +118,47 @@ export async function zohoCrmPost({ accessToken, apiDomain, path, json }) {
 }
 
 /**
+ * Upload a local file as an Attachment to a Zoho CRM record.
+ *
+ * Zoho endpoint:
+ *   POST /crm/v2/<Module>/<recordId>/Attachments
+ *
+ * NOTE: uses multipart/form-data with field name "file".
+ */
+export async function zohoCrmUploadAttachment({ accessToken, apiDomain, module, recordId, filePath }) {
+  if (!module) throw new Error('zohoCrmUploadAttachment: missing module');
+  if (!recordId) throw new Error('zohoCrmUploadAttachment: missing recordId');
+  if (!filePath) throw new Error('zohoCrmUploadAttachment: missing filePath');
+
+  const url = `${apiDomain}/crm/v2/${module}/${recordId}/Attachments`;
+
+  const buf = await fs.readFile(filePath);
+  const filename = path.basename(filePath);
+
+  // Node 18+ has global FormData/Blob.
+  const form = new FormData();
+  form.append('file', new Blob([buf]), filename);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Zoho-oauthtoken ${accessToken}`,
+      // Do NOT set Content-Type; fetch will set multipart boundary.
+    },
+    body: form,
+  });
+
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(`Zoho attachment upload failed (${res.status}): ${out?.message || JSON.stringify(out)}`);
+  }
+  if (out?.data?.[0]?.status === 'error') {
+    throw new Error(`Zoho attachment upload error: ${out?.data?.[0]?.message || JSON.stringify(out)}`);
+  }
+  return out;
+}
+
+/**
  * Zoho Bookings (Creator-backed) reports
  *
  * NOTE: The Zoho Bookings UI uses Creator report endpoints like:

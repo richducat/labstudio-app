@@ -17,7 +17,7 @@
  */
 
 import { loadEnvLocal } from '../lib/load-env-local.mjs';
-import { getZohoAccessToken, zohoCrmCoql, zohoBookingsReportGet } from '../lib/zoho.mjs';
+import { getZohoAccessToken, zohoCrmCoql, zohoCrmGet, zohoBookingsReportGet } from '../lib/zoho.mjs';
 import { ringcentralGetJson, ringcentralPostJson } from '../lib/ringcentral.mjs';
 
 const SALES_CHAT_ID_DEFAULT = '144856375302';
@@ -179,18 +179,19 @@ function formatMeetingsByRep(meetings) {
   for (const rep of SALES_ROSTER) {
     const items = byRep.get(rep) || [];
     lines.push(`${rep}:`);
-    if (!items.length) lines.push('- none');
+    if (!items.length) lines.push('- no meetings scheduled');
     else lines.push(...items);
-    lines.push('');
   }
 
   if (other.length) {
     lines.push('Unassigned:');
     lines.push(...other);
-    lines.push('');
   }
 
-  return { text: lines.join('\n').trim(), counts: Object.fromEntries(SALES_ROSTER.map(r => [r, (byRep.get(r) || []).length])) };
+  return {
+    text: lines.join('\n'),
+    counts: Object.fromEntries(SALES_ROSTER.map(r => [r, (byRep.get(r) || []).length])),
+  };
 }
 
 async function getZohoPipelineMomentum24h({ accessToken, from, to }) {
@@ -210,6 +211,53 @@ async function getZohoPipelineMomentum24h({ accessToken, from, to }) {
     closedWon,
     meetingsBooked: eventsCreated.length,
   };
+}
+
+async function getZohoUserIdsForRoster({ accessToken }) {
+  // Use CRM users API (COQL doesn't reliably support users across orgs)
+  const res = await zohoCrmGet({
+    accessToken,
+    apiDomain: ZOHO_API_DOMAIN,
+    pathAndQuery: '/crm/v2/users?type=ActiveUsers&per_page=200',
+  }).catch(() => null);
+
+  const users = res?.users || res?.data || [];
+  const out = new Map();
+  for (const rep of SALES_ROSTER) {
+    const match = users.find(u => {
+      const name = String(u?.full_name || u?.name || '').toLowerCase();
+      return name.includes(rep.toLowerCase());
+    });
+    if (match?.id) out.set(rep, match.id);
+  }
+  return out;
+}
+
+async function getSalesReadyLeadAttemptStats({ accessToken }) {
+  // Goal: measure follow-through on existing Sales Ready leads.
+  // We define:
+  // - attempted = Last_Activity_Time exists
+  // - not_attempted = Last_Activity_Time is null
+  // NOTE: If the org uses a different status value than "Sales Ready", update here.
+
+  const repToOwnerId = await getZohoUserIdsForRoster({ accessToken });
+  const out = {};
+
+  for (const rep of SALES_ROSTER) {
+    const ownerId = repToOwnerId.get(rep);
+    if (!ownerId) continue;
+
+    const q = `select id, Lead_Status, Owner, Last_Activity_Time, Created_Time, Modified_Time from Leads where Owner.id = '${ownerId}' and Lead_Status = 'Sales Ready' limit 200`;
+    const res = await zohoCrmCoql({ accessToken, apiDomain: ZOHO_API_DOMAIN, selectQuery: q });
+    const leads = res?.data || [];
+
+    const attempted = leads.filter(l => Boolean(l.Last_Activity_Time)).length;
+    const notAttempted = leads.length - attempted;
+
+    out[rep] = { total: leads.length, attempted, notAttempted };
+  }
+
+  return out;
 }
 
 async function getAccountCallLog({ from, to }) {
@@ -383,25 +431,45 @@ async function postToRingCentralChat({ chatId, text }) {
 
     const motivation = MOTIVATION[Math.floor(Math.random() * MOTIVATION.length)];
 
+    // Sales Ready follow-through stats (attempted vs not attempted)
+    let salesReadyStats = null;
+    try {
+      salesReadyStats = await getSalesReadyLeadAttemptStats({ accessToken: zohoToken });
+    } catch {
+      salesReadyStats = null;
+    }
+
+    const noMeetingReps = Object.entries(meetingsByRep.counts || {}).filter(([, c]) => !c).map(([r]) => r);
+    const noMeetingLine = noMeetingReps.length
+      ? `If you don’t have meetings today (${noMeetingReps.join(', ')}), take advantage of your buckets and work your Sales Ready leads hard.`
+      : null;
+
+    const salesReadyLines = salesReadyStats
+      ? [
+          'Sales Ready follow-through (attempted vs not attempted):',
+          ...SALES_ROSTER.filter(r => salesReadyStats?.[r]).map(r => {
+            const s = salesReadyStats[r];
+            return `- ${r}: total ${s.total} | attempted ${s.attempted} | not attempted ${s.notAttempted}`;
+          }),
+        ].join('\n')
+      : null;
+
     const text = [
-      `Good morning team,` ,
-      '',
+      `Good morning team,`,
       `It’s ${dow}, Feb ${dom} (${left} days left in the month) and it’s going to be a ${busy} (team avg: ${avg.toFixed(2)} meetings/person).`,
       `“${motivation}”`,
-      '',
       'Customer / Pipeline Status',
       `- Strong movement in the last 24h: ${pipeline.dealsUpdated} deals updated`,
       `- Closings happening: ${pipeline.closedWon} Closed-Won`,
       `- Calendar filling: ${pipeline.meetingsBooked} new meetings booked`,
       'Keep the pace steady and the notes clean — momentum is there.',
-      '',
       'Meetings Today (by rep)',
       meetingsByRep.text || '- None',
-      '',
+      noMeetingLine,
+      salesReadyLines,
       `Yesterday’s Outbound Performance (Calls + SMS + Talk Time) (${yesterdayStart.toLocaleDateString('en-US')})`,
       formatYesterdayPerfLines({ repAgg: yAgg, outboundSmsByRep: ySms }),
-      '',
-      'Call Bonus Tracker (25 outbound calls/day, 5 days in a row = $50)',
+      'Call Bonus Tracker (25 outbound calls/day, 5 days in a row = $50):',
       ...SALES_ROSTER.map(rep => `- ${rep}: ${bonusStreaks[rep] || 0}/5 days`),
     ].filter(Boolean).join('\n');
 

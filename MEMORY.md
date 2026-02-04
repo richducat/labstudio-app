@@ -26,6 +26,8 @@
 ## LabStudio / Personal Apps (active)
 - LabStudio requirement: **NO mock data** in user-visible UI. Only real DB-backed/integration-backed data; seeding is allowed if it writes to the DB.
 - For demos: use temporary Google Calendar under `richducat@gmail.com` for bookings (later migrate to the user’s calendar).
+- Nightly focus: ensure every night includes progress toward **LabStudio** goals (PR-ready deliverables), not just TYFYS ops.
+- Maximize nightly time: don’t stop early—if the primary Home tasks are done, immediately roll into the next highest-impact LabStudio work item and keep going until time is up.
 
 ### Deploy + continuity runbook (generalized; learned 2026-02-02)
 - Generic runbook: `/Users/richardducat/clawd/docs/RUNBOOK_DEPLOY_GENERIC.md`

@@ -21,7 +21,7 @@ async function seedAmenities() {
   const body_md = [
     '## Recovery Room Amenities',
     '',
-    '(Source: thelabstudiogym.com — mirrored in-app)',
+    '',
     '',
     '## Additional Member Perks',
     '',

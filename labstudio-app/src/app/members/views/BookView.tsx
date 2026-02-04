@@ -45,9 +45,7 @@ export default function BookView() {
     <div className="space-y-4 pb-20">
       <div className="px-1">
         <h1 className="text-2xl font-black italic uppercase">Book + Waivers</h1>
-        <div className="text-xs text-zinc-500 mt-1">
-          Bookings are backed by a real Google Calendar feed (richducat@gmail.com). Waivers are real links (DB-backed).
-        </div>
+        <div className="text-xs text-zinc-500 mt-1">Book sessions and complete waivers.</div>
       </div>
 
       {nextBooking ? (
@@ -66,9 +64,7 @@ export default function BookView() {
       ) : (
         <Card className="p-4">
           <div className="text-sm text-zinc-300">No upcoming session found.</div>
-          <div className="text-xs text-zinc-500 mt-2">
-            Create an event in the “LabStudio - Bookings” Google Calendar and it will appear here.
-          </div>
+          {/* */}
         </Card>
       )}
 
@@ -79,7 +75,7 @@ export default function BookView() {
       ) : waivers.length === 0 ? (
         <Card className="p-4">
           <div className="text-sm text-zinc-300">No waivers configured yet.</div>
-          <div className="text-xs text-zinc-500 mt-2">(DB-backed — once waivers exist, they’ll show here.)</div>
+          {/* */}
         </Card>
       ) : (
         <Card className="p-4 space-y-3">
@@ -102,17 +98,13 @@ export default function BookView() {
               </div>
             ))}
           </div>
-          <div className="text-xs text-zinc-500">
-            Memberships/passes live in the Shop tab (deep links to Stripe checkout).
-          </div>
+          <div className="text-xs text-zinc-500">Memberships and passes are available in the Shop tab.</div>
         </Card>
       )}
 
       <Card className="p-4">
-        <div className="text-sm text-zinc-300">Create a booking (manual for now)</div>
-        <div className="text-xs text-zinc-500 mt-2">
-          We’ll wire true self-serve booking (slot selection + event creation) once we add Google API OAuth.
-        </div>
+        <div className="text-sm text-zinc-300">Need to book a session?</div>
+        <div className="text-xs text-zinc-500 mt-2">Talk to the front desk and we’ll get you scheduled.</div>
       </Card>
     </div>
   );

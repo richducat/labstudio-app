@@ -48,7 +48,7 @@ export default function MarketView() {
     <div className="space-y-4 pb-20">
       <div className="px-1">
         <h1 className="text-2xl font-black italic uppercase">Shop</h1>
-        <div className="text-xs text-zinc-500 mt-1">Real products from thelabstudiogym.com (deep links to Stripe checkout).</div>
+        <div className="text-xs text-zinc-500 mt-1">Memberships, passes, and Studio Cafe.</div>
       </div>
 
       {/* Memberships / Passes */}
@@ -59,7 +59,7 @@ export default function MarketView() {
       ) : data.products.length === 0 ? (
         <Card className="p-4">
           <div className="text-sm text-zinc-300">No memberships/passes available yet.</div>
-          <div className="text-xs text-zinc-500 mt-2">(DB-backed — once products exist, they’ll show here.)</div>
+          {/* */}
         </Card>
       ) : (
         <div className="space-y-2">
@@ -120,7 +120,7 @@ export default function MarketView() {
       ) : cafe.length === 0 ? (
         <Card className="p-4">
           <div className="text-sm text-zinc-300">No cafe items available yet.</div>
-          <div className="text-xs text-zinc-500 mt-2">(DB-backed — once items exist, they’ll show here.)</div>
+          {/* */}
         </Card>
       ) : (
         <div className="space-y-2">
@@ -148,16 +148,7 @@ export default function MarketView() {
                     </div>
                   </div>
                 </div>
-                {it.product_url ? (
-                  <a
-                    href={it.product_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-block text-xs font-black text-zinc-950 bg-white/80 hover:bg-white px-3 py-2 rounded-xl"
-                  >
-                    View on site
-                  </a>
-                ) : null}
+                {/* No external website links from the app (avoid redundancy). */}
               </Card>
             ))}
           </div>

@@ -94,9 +94,7 @@ export default async function LoginPage({
         </button>
       </form>
 
-      <p style={{ marginTop: 24, color: 'var(--muted)', fontSize: 12 }}>
-        v0 access gate (no email). We’ll replace this with proper member signup/login.
-      </p>
+      {/* */}
     </main>
   );
 }

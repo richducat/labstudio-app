@@ -200,7 +200,7 @@ export default function NutritionView() {
     <div className="space-y-4 pb-20">
       <div className="px-1">
         <h1 className="text-2xl font-black italic uppercase">Nutrition</h1>
-        <div className="text-xs text-zinc-500 mt-1">Today macros + 7-day averages (real DB-backed).</div>
+        <div className="text-xs text-zinc-500 mt-1">Today’s macros and your 7‑day average.</div>
       </div>
 
       <Card className="p-4">
@@ -391,9 +391,7 @@ export default function NutritionView() {
           </button>
         </div>
 
-        <div className="text-[10px] text-zinc-600">
-          Tips: Select a food to auto-fill macros. For OpenFoodFacts items, use Amount (g) to scale from per-100g nutrition.
-        </div>
+        <div className="text-[10px] text-zinc-600">Tip: Search a food to auto-fill macros, then adjust as needed.</div>
       </Card>
 
       <Card className="p-4 space-y-3">

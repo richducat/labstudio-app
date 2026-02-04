@@ -11,8 +11,17 @@ type ShopProduct = {
   checkout_url: string | null;
 };
 
+type CafeItem = {
+  slug: string;
+  name: string;
+  category: string;
+  price_cents: number;
+  product_url: string | null;
+};
+
 export default function MarketView() {
   const [data, setData] = useState<{ products: ShopProduct[]; entitlements: string[] } | null>(null);
+  const [cafe, setCafe] = useState<CafeItem[] | null>(null);
 
   useEffect(() => {
     fetch('/api/lab/shop')
@@ -23,6 +32,14 @@ export default function MarketView() {
       .catch(() => {
         // ignore
       });
+
+    fetch('/api/lab/cafe')
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.ok) setCafe(j.items ?? []);
+        else setCafe([]);
+      })
+      .catch(() => setCafe([]));
   }, []);
 
   return (
@@ -32,46 +49,89 @@ export default function MarketView() {
         <div className="text-xs text-zinc-500 mt-1">Real products from thelabstudiogym.com (deep links to Stripe checkout).</div>
       </div>
 
+      {/* Memberships / Passes */}
       {!data ? (
         <Card className="p-4">
-          <div className="text-sm text-zinc-300">Loading…</div>
+          <div className="text-sm text-zinc-300">Loading memberships…</div>
         </Card>
       ) : data.products.length === 0 ? (
         <Card className="p-4">
-          <div className="text-sm text-zinc-300">No products available yet.</div>
+          <div className="text-sm text-zinc-300">No memberships/passes available yet.</div>
           <div className="text-xs text-zinc-500 mt-2">(DB-backed — once products exist, they’ll show here.)</div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {data.products.map((p) => {
-            const owned = data.entitlements.includes(p.slug);
-            return (
-              <Card key={p.slug} className="p-4 space-y-2">
+        <div className="space-y-2">
+          <div className="px-1 text-xs font-bold uppercase tracking-widest text-zinc-500">Memberships / Passes</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {data.products.map((p) => {
+              const owned = data.entitlements.includes(p.slug);
+              return (
+                <Card key={p.slug} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-bold">{p.name}</div>
+                      {p.description ? <div className="text-xs text-zinc-500 mt-1">{p.description}</div> : null}
+                    </div>
+                    {owned ? (
+                      <div className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full">Active</div>
+                    ) : null}
+                  </div>
+
+                  {p.checkout_url ? (
+                    <a
+                      href={p.checkout_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+                    >
+                      Checkout
+                    </a>
+                  ) : (
+                    <div className="text-xs text-zinc-500">Checkout link not configured.</div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Studio Cafe */}
+      {cafe === null ? (
+        <Card className="p-4">
+          <div className="text-sm text-zinc-300">Loading Studio Cafe…</div>
+        </Card>
+      ) : cafe.length === 0 ? (
+        <Card className="p-4">
+          <div className="text-sm text-zinc-300">No cafe items available yet.</div>
+          <div className="text-xs text-zinc-500 mt-2">(DB-backed — once items exist, they’ll show here.)</div>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          <div className="px-1 text-xs font-bold uppercase tracking-widest text-zinc-500">Studio Cafe</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {cafe.map((it) => (
+              <Card key={it.slug} className="p-4 space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="font-bold">{p.name}</div>
-                    {p.description ? <div className="text-xs text-zinc-500 mt-1">{p.description}</div> : null}
+                    <div className="font-bold">{it.name}</div>
+                    <div className="text-xs text-zinc-500 mt-1">{it.category.toUpperCase()}</div>
                   </div>
-                  {owned ? (
-                    <div className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full">Active</div>
-                  ) : null}
+                  <div className="text-sm font-black">${(it.price_cents / 100).toFixed(2)}</div>
                 </div>
-
-                {p.checkout_url ? (
+                {it.product_url ? (
                   <a
-                    href={p.checkout_url}
+                    href={it.product_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+                    className="inline-block text-xs font-black text-zinc-950 bg-white/80 hover:bg-white px-3 py-2 rounded-xl"
                   >
-                    Checkout
+                    View on site
                   </a>
-                ) : (
-                  <div className="text-xs text-zinc-500">Checkout link not configured.</div>
-                )}
+                ) : null}
               </Card>
-            );
-          })}
+            ))}
+          </div>
         </div>
       )}
     </div>

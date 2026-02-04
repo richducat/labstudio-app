@@ -99,6 +99,21 @@ export async function ensureSchema() {
 
   await q`create index if not exists lab_waivers_active_idx on lab_waivers(active);`;
 
+  // Studio Cafe items (for in-app ordering / tracking)
+  await q`
+    create table if not exists lab_cafe_items (
+      id bigserial primary key,
+      slug text unique not null,
+      name text not null,
+      category text not null,
+      price_cents integer not null,
+      product_url text,
+      active boolean not null default true,
+      created_at timestamptz not null default now()
+    );
+  `;
+  await q`create index if not exists lab_cafe_items_category_idx on lab_cafe_items(category);`;
+
   await q`
     create table if not exists lab_user_profile (
       user_id text primary key references lab_users(id) on delete cascade,

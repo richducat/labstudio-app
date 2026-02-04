@@ -19,6 +19,7 @@ import GamesView from './views/GamesView';
 import MarketView from './views/MarketView';
 import ProgressView from './views/ProgressView';
 import AmenitiesView from './views/AmenitiesView';
+import GymSetupBanner from './components/GymSetupBanner';
 
 type Tab =
   | 'home'
@@ -136,6 +137,9 @@ export default function TheLabUltimate({
             </a>
           </div>
         ) : null}
+
+        {/* Gym setup banner (waivers + choose access). DB-backed + manual confirmations. */}
+        <GymSetupBanner />
         {tab === 'home' && (
           <HomeView xp={xp} level={level} credits={credits} userProfile={{ name, goal }} setTab={setTab} />
         )}

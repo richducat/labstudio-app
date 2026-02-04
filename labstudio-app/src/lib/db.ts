@@ -129,6 +129,28 @@ export async function ensureSchema() {
   `;
   await q`create index if not exists lab_content_pages_active_idx on lab_content_pages(active);`;
 
+  // Gym setup / onboarding checklist (manual confirmations)
+  await q`
+    create table if not exists lab_user_setup (
+      user_id text primary key references lab_users(id) on delete cascade,
+      access_product_slug text,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    );
+  `;
+
+  await q`
+    create table if not exists lab_user_setup_steps (
+      id bigserial primary key,
+      user_id text not null references lab_users(id) on delete cascade,
+      step_slug text not null,
+      completed_at timestamptz,
+      created_at timestamptz not null default now(),
+      unique(user_id, step_slug)
+    );
+  `;
+  await q`create index if not exists lab_user_setup_steps_user_idx on lab_user_setup_steps(user_id);`;
+
   await q`
     create table if not exists lab_user_profile (
       user_id text primary key references lab_users(id) on delete cascade,

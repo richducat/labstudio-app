@@ -63,15 +63,44 @@ const NEED_ORDER = [
 
 function parseNeedsFromNextStep(nextStep) {
   const t = String(nextStep || '');
-  const line = t.split('\n').find(l => l.toLowerCase().startsWith('inferred needs'));
+  const line = t
+    .split('\n')
+    .find(l => l.toLowerCase().startsWith('inferred needs'));
   if (!line) return [];
   const m = line.split(':')[1];
   if (!m) return [];
   const parts = m.split('|').map(s => s.trim()).filter(Boolean);
   const ordered = NEED_ORDER.filter(x => parts.some(p => norm(p) === norm(x)));
-  // include any extras at end
   const extras = parts.filter(p => !ordered.some(x => norm(x) === norm(p)));
   return [...ordered, ...extras];
+}
+
+function extractNeedTagsFromText(text) {
+  const t = norm(text);
+  const tags = [];
+
+  if (/back|spine|lumbar|thoracic/.test(t)) tags.push('Back/Spine');
+  if (/neck|cervical/.test(t)) tags.push('Neck');
+  if (/toxic|burn pit|burnpit|agent orange|pact act|pact/.test(t)) tags.push('Toxic Exposure');
+
+  if (/\bptsd\b|post[- ]?traumatic/.test(t)) tags.push('PTSD');
+  if (/(mental|depress|anxiety|panic|adhd|bipolar|schizo|ocd|mst)/.test(t)) tags.push('Mental Health');
+
+  if (/sleep apnea|osa/.test(t)) tags.push('Sleep Apnea');
+  if (/tbi|traumatic brain/.test(t)) tags.push('TBI');
+  if (/migrain|headache/.test(t)) tags.push('Headaches/Migraines');
+
+  if (/knee/.test(t)) tags.push('Knee');
+  if (/shoulder/.test(t)) tags.push('Shoulder');
+  if (/hip/.test(t)) tags.push('Hip');
+  if (/ankle|foot/.test(t)) tags.push('Ankle/Foot');
+  if (/wrist|hand/.test(t)) tags.push('Wrist/Hand');
+  if (/elbow/.test(t)) tags.push('Elbow');
+
+  if (/ortho|orthopedic|msk|musculoskeletal|joint/.test(t)) tags.push('Orthopedic');
+
+  const ordered = NEED_ORDER.filter(x => tags.includes(x));
+  return uniq(ordered);
 }
 
 function scoreProviderForNeed(p, need) {
@@ -154,14 +183,46 @@ function pickProviders(providers, need, max = 3) {
   const stateSet = new Set(states.map(s => s.toUpperCase()));
   const targetDeals = deals.filter(d => stateSet.has(String(d.State || '').toUpperCase()));
 
-  // Fetch next_step for each target deal (needs line is stored there)
+  async function listAllPages(pathAndQueryBase) {
+    const out = [];
+    let page = 1;
+    for (;;) {
+      const sep = pathAndQueryBase.includes('?') ? '&' : '?';
+      const pathAndQuery = `${pathAndQueryBase}${sep}page=${page}&per_page=200`;
+      const res = await zohoCrmGet({ accessToken, apiDomain: ZOHO_API_DOMAIN, pathAndQuery });
+      const data = res?.data || res?.notes || res?.attachments || [];
+      if (Array.isArray(data) && data.length) out.push(...data);
+      if (!Array.isArray(data) || data.length < 200) break;
+      page += 1;
+      if (page > 10) break;
+    }
+    return out;
+  }
+
+  // Enrich each target deal: needs from Next_Step OR from deal fields/attachments
   const enriched = [];
   for (const d of targetDeals) {
     const dealId = d.id;
     const g = await zohoCrmGet({ accessToken, apiDomain: ZOHO_API_DOMAIN, pathAndQuery: `/crm/v2/Deals/${dealId}` });
     const full = g?.data?.[0] || {};
-    const nextStep = full.next_step || '';
-    const needs = parseNeedsFromNextStep(nextStep);
+
+    const nextStep = full.Next_Step || full.next_step || '';
+    const needsFromNext = parseNeedsFromNextStep(nextStep);
+
+    const attachments = await listAllPages(`/crm/v2/Deals/${dealId}/Attachments`);
+    const attachNames = attachments.map(a => a?.File_Name || a?.file_name || a?.name || '').filter(Boolean);
+
+    const textBlob = [
+      full.Deal_Name,
+      full.Conditions,
+      full.Disabilities,
+      full.Veteran_Current_Disabilities_stated,
+      full.Description,
+      attachNames.join(' '),
+    ].filter(Boolean).join('\n');
+
+    const needs = needsFromNext.length ? needsFromNext : extractNeedTagsFromText(textBlob);
+
     enriched.push({
       id: dealId,
       name: d.Deal_Name,

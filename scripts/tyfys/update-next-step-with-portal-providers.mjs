@@ -269,7 +269,7 @@ function clampText(s, maxChars = 4500) {
         apiDomain: ZOHO_API_DOMAIN,
         pathAndQuery: `/crm/v2/Deals/${dealId}`,
       });
-      const prev = dealGet?.data?.[0]?.next_step || dealGet?.data?.[0]?.Next_Step || '';
+      const prev = dealGet?.data?.[0]?.Next_Step || dealGet?.data?.[0]?.next_step || '';
 
       const notes = await getDealNotes({ accessToken, dealId });
       const attachments = await getDealAttachments({ accessToken, dealId });
@@ -303,7 +303,7 @@ function clampText(s, maxChars = 4500) {
           apiDomain: ZOHO_API_DOMAIN,
           path: `/crm/v2/Deals`,
           json: {
-            data: [{ id: dealId, next_step: newNext }],
+            data: [{ id: dealId, Next_Step: newNext }],
             trigger: ['workflow'],
           },
         });

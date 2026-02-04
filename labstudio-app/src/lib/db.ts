@@ -83,6 +83,22 @@ export async function ensureSchema() {
 
   await q`create index if not exists lab_user_entitlements_user_idx on lab_user_entitlements(user_id);`;
 
+  // Waivers (deep links to WaiverElectronic)
+  await q`
+    create table if not exists lab_waivers (
+      id bigserial primary key,
+      slug text unique not null,
+      title text not null,
+      description text,
+      url text not null,
+      applies_to text,
+      active boolean not null default true,
+      created_at timestamptz not null default now()
+    );
+  `;
+
+  await q`create index if not exists lab_waivers_active_idx on lab_waivers(active);`;
+
   await q`
     create table if not exists lab_user_profile (
       user_id text primary key references lab_users(id) on delete cascade,

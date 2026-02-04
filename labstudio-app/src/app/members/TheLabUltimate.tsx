@@ -65,7 +65,7 @@ export default function TheLabUltimate({
   initialProfile,
   needsOnboarding,
 }: {
-  initialUser: { display_name?: string; xp?: number; level?: number } | null;
+  initialUser: { display_name?: string; xp?: number; level?: number; food_credits?: number } | null;
   initialProfile: {
     first_name?: string | null;
     last_name?: string | null;
@@ -77,6 +77,7 @@ export default function TheLabUltimate({
   const [tabMeta, setTabMeta] = useState<Record<string, unknown> | null>(null);
   const xp = initialUser?.xp ?? 0;
   const level = initialUser?.level ?? 1;
+  const credits = initialUser?.food_credits ?? 0;
   const name =
     [initialProfile?.first_name, initialProfile?.last_name].filter(Boolean).join(' ') ||
     initialUser?.display_name ||
@@ -134,13 +135,7 @@ export default function TheLabUltimate({
           </div>
         ) : null}
         {tab === 'home' && (
-          <HomeView
-            xp={xp}
-            level={level}
-            credits={0}
-            userProfile={{ name, goal }}
-            setTab={setTab}
-          />
+          <HomeView xp={xp} level={level} credits={credits} userProfile={{ name, goal }} setTab={setTab} />
         )}
 
         {tab === 'coach' && <TobyCoachView />}
@@ -159,10 +154,7 @@ export default function TheLabUltimate({
         {tab === 'social' && <SocialView />}
         {tab === 'library' && <LibraryView />}
         {tab === 'progress' && (
-          <ProgressView
-            mode={(tabMeta?.mode as any) === 'prs' ? 'prs' : 'photos'}
-            onBack={() => setTab('home')}
-          />
+          <ProgressView mode={tabMeta?.mode === 'prs' ? 'prs' : 'photos'} onBack={() => setTab('home')} />
         )}
       </main>
 

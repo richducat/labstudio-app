@@ -6,6 +6,7 @@ export type LabUser = {
   display_name: string | null;
   xp: number;
   level: number;
+  food_credits: number;
   onboarding_complete: boolean;
 };
 
@@ -47,12 +48,14 @@ export async function ensureSchema() {
       display_name text,
       xp integer not null default 0,
       level integer not null default 1,
+      food_credits integer not null default 0,
       onboarding_complete boolean not null default false
     );
   `;
 
   // Backfill/upgrade older schemas (safe no-ops on fresh DBs).
   await q`alter table lab_users add column if not exists onboarding_complete boolean not null default false;`;
+  await q`alter table lab_users add column if not exists food_credits integer not null default 0;`;
 
   await q`
     create table if not exists lab_user_profile (
@@ -171,8 +174,8 @@ export async function getOrCreateUser(userId: string): Promise<LabUser> {
   if (existing?.[0]) return existing[0];
 
   const inserted = (await q`
-    insert into lab_users (id, display_name, xp, level)
-    values (${userId}, null, 0, 1)
+    insert into lab_users (id, display_name, xp, level, food_credits)
+    values (${userId}, null, 0, 1, 0)
     returning *;
   `) as unknown as LabUser[];
   return inserted[0];

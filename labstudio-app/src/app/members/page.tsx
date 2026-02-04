@@ -10,7 +10,7 @@ export default async function MembersHome() {
   const jar = await cookies();
   const uid = jar.get('labstudio_uid')?.value;
 
-  let initialUser: { display_name?: string; xp?: number; level?: number } | null = null;
+  let initialUser: { display_name?: string; xp?: number; level?: number; food_credits?: number } | null = null;
   let initialProfile: InitialProfile = null;
   let needsOnboarding = false;
 
@@ -31,7 +31,7 @@ export default async function MembersHome() {
       needsOnboarding = !u.onboarding_complete || !profileComplete;
 
       initialProfile = p;
-      initialUser = { display_name: u.display_name ?? undefined, xp: u.xp, level: u.level };
+      initialUser = { display_name: u.display_name ?? undefined, xp: u.xp, level: u.level, food_credits: u.food_credits ?? 0 };
     } catch {
       initialUser = null;
     }

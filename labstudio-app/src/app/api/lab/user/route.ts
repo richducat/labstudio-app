@@ -18,5 +18,14 @@ export async function GET() {
   await ensureSchema();
   const user = await getOrCreateUser(uid);
 
-  return NextResponse.json({ ok: true, user: { id: user.id, display_name: user.display_name, xp: user.xp, level: user.level } });
+  return NextResponse.json({
+    ok: true,
+    user: {
+      id: user.id,
+      display_name: user.display_name,
+      xp: user.xp,
+      level: user.level,
+      food_credits: user.food_credits ?? 0,
+    },
+  });
 }

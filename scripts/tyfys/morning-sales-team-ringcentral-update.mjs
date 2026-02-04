@@ -32,6 +32,10 @@ function getArg(name, def) {
   return v;
 }
 
+function hasFlag(name) {
+  return process.argv.includes(name);
+}
+
 function startOfLocalDay(d) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
@@ -234,11 +238,11 @@ async function getZohoUserIdsForRoster({ accessToken }) {
 }
 
 async function getSalesReadyLeadAttemptStats({ accessToken }) {
-  // Goal: measure follow-through on existing Sales Ready leads.
+  // Goal: measure follow-through on existing Sales_Ready leads.
   // We define:
   // - attempted = Last_Activity_Time exists
-  // - not_attempted = Last_Activity_Time is null
-  // NOTE: Status picklist value is "Sales_Ready" (per Richard).
+  // - neverAttempted = Last_Activity_Time is null
+  // NOTE: Zoho picklist *value* appears to be "Sales Ready" (spaces). (COQL matches values, not API keys.)
 
   const repToOwnerId = await getZohoUserIdsForRoster({ accessToken });
   const out = {};
@@ -247,14 +251,14 @@ async function getSalesReadyLeadAttemptStats({ accessToken }) {
     const ownerId = repToOwnerId.get(rep);
     if (!ownerId) continue;
 
-    const q = `select id, Lead_Status, Owner, Last_Activity_Time, Created_Time, Modified_Time from Leads where Owner.id = '${ownerId}' and Lead_Status = 'Sales_Ready' limit 200`;
+    const q = `select id, Lead_Status, Owner, Last_Activity_Time from Leads where Owner in ('${ownerId}') and Lead_Status = 'Sales Ready' limit 200`;
     const res = await zohoCrmCoql({ accessToken, apiDomain: ZOHO_API_DOMAIN, selectQuery: q });
     const leads = res?.data || [];
 
     const attempted = leads.filter(l => Boolean(l.Last_Activity_Time)).length;
-    const notAttempted = leads.length - attempted;
+    const neverAttempted = leads.length - attempted;
 
-    out[rep] = { total: leads.length, attempted, notAttempted };
+    out[rep] = { total: leads.length, attempted, neverAttempted };
   }
 
   return out;
@@ -348,7 +352,7 @@ async function getSalesReadyLeadBucketDetails({ accessToken, maxLeadsPerRep = 20
     const ownerId = repToOwnerId.get(rep);
     if (!ownerId) continue;
 
-    const q = `select id, Full_Name, Phone, Mobile, Lead_Status, Owner, Last_Activity_Time, Created_Time, Modified_Time from Leads where Owner.id = '${ownerId}' and Lead_Status = 'Sales_Ready' limit ${maxLeadsPerRep}`;
+    const q = `select id, Phone, Mobile, Lead_Status, Owner, Last_Activity_Time from Leads where Owner in ('${ownerId}') and Lead_Status = 'Sales Ready' limit ${maxLeadsPerRep}`;
     const res = await zohoCrmCoql({ accessToken, apiDomain: ZOHO_API_DOMAIN, selectQuery: q });
     const leads = res?.data || [];
 
@@ -492,6 +496,8 @@ async function postToRingCentralChat({ chatId, text }) {
     process.exit(1);
   }
 
+  const dryRun = hasFlag('--dryRun');
+
   const now = new Date();
   const todayStart = startOfLocalDay(now);
   const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
@@ -534,24 +540,35 @@ async function postToRingCentralChat({ chatId, text }) {
       ? `If you don’t have meetings today (${noMeetingReps.join(', ')}), take advantage of your buckets and work your Sales_Ready leads hard.`
       : null;
 
-    // Sales_Ready bucket stats: attempted vs spoken to vs never attempted
-    // Spoken-to is computed from RingCentral connected calls (>=30s) across all available history.
-    // We use a conservative far-back date; RC retention may still cap what we can see.
-    const rcFrom = new Date('2015-01-01T00:00:00Z');
+    // Sales_Ready bucket stats:
+    // - attempted / neverAttempted come from Zoho (reliable)
+    // - spokenTo comes from RingCentral connected calls (>=30s). This can fail if RC limits history/rate.
 
-    let salesReadyBucketStats = null;
+    let salesReadyAttemptStats = null;
     try {
-      salesReadyBucketStats = await computeSalesReadyBucketStats({ accessToken: zohoToken, rcFrom, rcTo: now });
-    } catch {
-      salesReadyBucketStats = null;
+      salesReadyAttemptStats = await getSalesReadyLeadAttemptStats({ accessToken: zohoToken });
+    } catch (e) {
+      console.warn('Sales_Ready attempt stats failed:', e?.message || e);
+      salesReadyAttemptStats = null;
     }
 
-    const bucketLines = salesReadyBucketStats
+    let salesReadySpokenStats = null;
+    try {
+      const rcFrom = new Date('2015-01-01T00:00:00Z');
+      salesReadySpokenStats = await computeSalesReadyBucketStats({ accessToken: zohoToken, rcFrom, rcTo: now });
+    } catch (e) {
+      console.warn('Sales_Ready spoken-to stats failed (RC limits/rate?):', e?.message || e);
+      salesReadySpokenStats = null;
+    }
+
+    const bucketLines = salesReadyAttemptStats
       ? [
           'TOTAL LEADS IN YOUR BUCKET CONTACTED (ATTEMPTED vs SPOKEN TO vs NEVER ATTEMPTED)',
-          ...SALES_ROSTER.filter(r => salesReadyBucketStats?.[r]).map(r => {
-            const s = salesReadyBucketStats[r];
-            return `${r} (Sales_Ready): total ${s.total} | attempted ${s.attempted} | spoken to ${s.spokenTo} | never attempted ${s.neverAttempted}`;
+          ...SALES_ROSTER.filter(r => salesReadyAttemptStats?.[r]).map(r => {
+            const a = salesReadyAttemptStats[r];
+            const spokenTo = salesReadySpokenStats?.[r]?.spokenTo;
+            const spokenTxt = Number.isFinite(spokenTo) ? String(spokenTo) : 'n/a';
+            return `${r} (Sales_Ready): total ${a.total} | attempted ${a.attempted} | spoken to ${spokenTxt} | never attempted ${a.neverAttempted}`;
           }),
         ].join('\n')
       : null;
@@ -573,6 +590,12 @@ async function postToRingCentralChat({ chatId, text }) {
     ].filter(Boolean);
 
     const text = sections.join('\n\n') + '\n';
+
+    if (dryRun) {
+      process.stdout.write(text + '\n');
+      process.stdout.write('DRY RUN: did not post to RingCentral.\n');
+      return;
+    }
 
     await postToRingCentralChat({ chatId, text });
     process.stdout.write('Posted MORNING update to RingCentral chat.\n');

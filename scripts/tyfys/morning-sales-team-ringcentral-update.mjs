@@ -328,6 +328,86 @@ function formatYesterdayPerfLines({ repAgg, outboundSmsByRep }) {
   return lines.join('\n');
 }
 
+function digits10(v) {
+  const d = String(v || '').replace(/\D/g, '');
+  if (!d) return null;
+  return d.length >= 10 ? d.slice(-10) : d;
+}
+
+async function getSalesReadyLeadBucketDetails({ accessToken, maxLeadsPerRep = 200 }) {
+  // For each rep, pull Sales_Ready leads with phone numbers + Last_Activity_Time.
+  // Then compute:
+  // - neverAttempted: Last_Activity_Time is null
+  // - attempted: Last_Activity_Time exists
+  // - spokenTo: has at least one connected call (>=30s) to the lead phone within our RingCentral call-log window
+
+  const repToOwnerId = await getZohoUserIdsForRoster({ accessToken });
+  const byRep = {};
+
+  for (const rep of SALES_ROSTER) {
+    const ownerId = repToOwnerId.get(rep);
+    if (!ownerId) continue;
+
+    const q = `select id, Full_Name, Phone, Mobile, Lead_Status, Owner, Last_Activity_Time, Created_Time, Modified_Time from Leads where Owner.id = '${ownerId}' and Lead_Status = 'Sales_Ready' limit ${maxLeadsPerRep}`;
+    const res = await zohoCrmCoql({ accessToken, apiDomain: ZOHO_API_DOMAIN, selectQuery: q });
+    const leads = res?.data || [];
+
+    const normalized = leads.map(l => {
+      const phones = [digits10(l.Phone), digits10(l.Mobile)].filter(Boolean);
+      return { id: l.id, phones, attempted: Boolean(l.Last_Activity_Time) };
+    });
+
+    byRep[rep] = normalized;
+  }
+
+  return byRep;
+}
+
+async function computeSalesReadyBucketStats({ accessToken, rcFrom, rcTo }) {
+  // Pull RC call logs per rep extension for the window; compute spokenTo phone set (connected >=30s)
+  const leadsByRep = await getSalesReadyLeadBucketDetails({ accessToken });
+
+  const out = {};
+  for (const rep of SALES_ROSTER) {
+    const extId = RC_EXTENSION_ID_BY_REP[rep];
+    const leads = leadsByRep[rep] || [];
+
+    if (!extId) continue;
+
+    // Note: RC call-log retention limits apply; this gives a "spoken to" view within that window.
+    const callLog = await ringcentralGetJson(
+      `/restapi/v1.0/account/~/extension/${extId}/call-log?dateFrom=${encodeURIComponent(isoNoMs(rcFrom))}&dateTo=${encodeURIComponent(isoNoMs(rcTo))}&perPage=1000`,
+    );
+
+    const spokenPhones = new Set();
+    for (const r of callLog.records || []) {
+      if ((Number(r.duration) || 0) < 30) continue;
+      // consider both directions
+      const from = digits10(r.from?.phoneNumber || r.from?.name);
+      const to = digits10(r.to?.phoneNumber || r.to?.name);
+      if (from) spokenPhones.add(from);
+      if (to) spokenPhones.add(to);
+    }
+
+    let total = leads.length;
+    let attempted = 0;
+    let neverAttempted = 0;
+    let spokenTo = 0;
+
+    for (const l of leads) {
+      if (l.attempted) attempted += 1;
+      else neverAttempted += 1;
+
+      const hasSpoken = (l.phones || []).some(p => spokenPhones.has(p));
+      if (hasSpoken) spokenTo += 1;
+    }
+
+    out[rep] = { total, attempted, spokenTo, neverAttempted };
+  }
+
+  return out;
+}
+
 async function getCallBonusTracker({ throughDayEndLocal /* Date */ }) {
   // 25 outbound calls/day, 5 days in a row, business days only.
   // Efficient: one account-level call-log pull for a lookback window and group by day.
@@ -431,47 +511,50 @@ async function postToRingCentralChat({ chatId, text }) {
 
     const motivation = MOTIVATION[Math.floor(Math.random() * MOTIVATION.length)];
 
-    // Sales Ready follow-through stats (attempted vs not attempted)
-    let salesReadyStats = null;
-    try {
-      salesReadyStats = await getSalesReadyLeadAttemptStats({ accessToken: zohoToken });
-    } catch {
-      salesReadyStats = null;
-    }
-
     const noMeetingReps = Object.entries(meetingsByRep.counts || {}).filter(([, c]) => !c).map(([r]) => r);
     const noMeetingLine = noMeetingReps.length
-      ? `If you don’t have meetings today (${noMeetingReps.join(', ')}), take advantage of your buckets and work your Sales Ready leads hard.`
+      ? `If you don’t have meetings today (${noMeetingReps.join(', ')}), take advantage of your buckets and work your Sales_Ready leads hard.`
       : null;
 
-    const salesReadyLines = salesReadyStats
+    // Sales_Ready bucket stats: attempted vs spoken to vs never attempted
+    // Spoken-to is computed from RingCentral connected calls (>=30s) within a rolling window.
+    const rcSpokenWindowDays = 90;
+    const rcFrom = new Date(now.getTime() - rcSpokenWindowDays * 24 * 60 * 60 * 1000);
+
+    let salesReadyBucketStats = null;
+    try {
+      salesReadyBucketStats = await computeSalesReadyBucketStats({ accessToken: zohoToken, rcFrom, rcTo: now });
+    } catch {
+      salesReadyBucketStats = null;
+    }
+
+    const bucketLines = salesReadyBucketStats
       ? [
-          'Sales Ready follow-through (attempted vs not attempted):',
-          ...SALES_ROSTER.filter(r => salesReadyStats?.[r]).map(r => {
-            const s = salesReadyStats[r];
-            return `- ${r}: total ${s.total} | attempted ${s.attempted} | not attempted ${s.notAttempted}`;
+          'TOTAL LEADS IN YOUR BUCKET CONTACTED (ATTEMPTED vs SPOKEN TO vs NEVER ATTEMPTED)',
+          ...SALES_ROSTER.filter(r => salesReadyBucketStats?.[r]).map(r => {
+            const s = salesReadyBucketStats[r];
+            return `${r} (Sales_Ready): total ${s.total} | attempted ${s.attempted} | spoken to ${s.spokenTo} | never attempted ${s.neverAttempted}`;
           }),
         ].join('\n')
       : null;
 
-    const text = [
-      `Good morning team,`,
-      `It’s ${dow}, Feb ${dom} (${left} days left in the month) and it’s going to be a ${busy} (team avg: ${avg.toFixed(2)} meetings/person).`,
-      `“${motivation}”`,
-      'Customer / Pipeline Status',
-      `- Strong movement in the last 24h: ${pipeline.dealsUpdated} deals updated`,
-      `- Closings happening: ${pipeline.closedWon} Closed-Won`,
-      `- Calendar filling: ${pipeline.meetingsBooked} new meetings booked`,
-      'Keep the pace steady and the notes clean — momentum is there.',
-      'Meetings Today (by rep)',
-      meetingsByRep.text || '- None',
-      noMeetingLine,
-      salesReadyLines,
-      `Yesterday’s Outbound Performance (Calls + SMS + Talk Time) (${yesterdayStart.toLocaleDateString('en-US')})`,
-      formatYesterdayPerfLines({ repAgg: yAgg, outboundSmsByRep: ySms }),
-      'Call Bonus Tracker (25 outbound calls/day, 5 days in a row = $50):',
-      ...SALES_ROSTER.map(rep => `- ${rep}: ${bonusStreaks[rep] || 0}/5 days`),
-    ].filter(Boolean).join('\n');
+    // Use section blocks joined by blank lines to avoid RC "wall-of-text"
+    const sections = [
+      [`Good morning team,`, `It’s ${dow}, Feb ${dom} (${left} days left in the month) and it’s going to be a ${busy} (team avg: ${avg.toFixed(2)} meetings/person).`, `“${motivation}”`].join('\n'),
+      [
+        'CUSTOMER / PIPELINE STATUS',
+        `- Strong movement in the last 24h: ${pipeline.dealsUpdated} deals updated`,
+        `- Closings happening: ${pipeline.closedWon} Closed-Won`,
+        `- Calendar filling: ${pipeline.meetingsBooked} new meetings booked`,
+        'Keep the pace steady and the notes clean — momentum is there.',
+      ].join('\n'),
+      ['MEETINGS TODAY (BY REP)', meetingsByRep.text || '- None', noMeetingLine].filter(Boolean).join('\n'),
+      bucketLines,
+      [`YESTERDAY’S OUTBOUND PERFORMANCE (CALLS + SMS + TALK TIME) (${yesterdayStart.toLocaleDateString('en-US')})`, formatYesterdayPerfLines({ repAgg: yAgg, outboundSmsByRep: ySms })].join('\n'),
+      ['CALL BONUS TRACKER (25 OUTBOUND CALLS/DAY, 5 DAYS IN A ROW = $50):', ...SALES_ROSTER.map(rep => `- ${rep}: ${bonusStreaks[rep] || 0}/5 days`)].join('\n'),
+    ].filter(Boolean);
+
+    const text = sections.join('\n\n') + '\n';
 
     await postToRingCentralChat({ chatId, text });
     process.stdout.write('Posted MORNING update to RingCentral chat.\n');

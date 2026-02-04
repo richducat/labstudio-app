@@ -66,6 +66,7 @@ export async function ensureSchema() {
       description text,
       price_cents integer,
       checkout_url text,
+      image_url text,
       active boolean not null default true,
       created_at timestamptz not null default now()
     );
@@ -82,6 +83,9 @@ export async function ensureSchema() {
   `;
 
   await q`create index if not exists lab_user_entitlements_user_idx on lab_user_entitlements(user_id);`;
+
+  // Backfill/upgrade older schemas.
+  await q`alter table lab_products add column if not exists image_url text;`;
 
   // Waivers (deep links to WaiverElectronic)
   await q`
@@ -108,10 +112,12 @@ export async function ensureSchema() {
       category text not null,
       price_cents integer not null,
       product_url text,
+      image_url text,
       active boolean not null default true,
       created_at timestamptz not null default now()
     );
   `;
+  await q`alter table lab_cafe_items add column if not exists image_url text;`;
   await q`create index if not exists lab_cafe_items_category_idx on lab_cafe_items(category);`;
 
   // Content pages (static marketing/info pages mirrored inside app; DB-backed)

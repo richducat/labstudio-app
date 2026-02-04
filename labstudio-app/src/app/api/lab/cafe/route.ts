@@ -22,8 +22,8 @@ async function seedDefaultCafeItems() {
   // (Captured on 2026-02-04)
   const items = [
     // Drinks
-    { slug: 'water-bottle', name: 'Water Bottle', category: 'drinks', price_cents: cents(1.0), product_url: 'https://thelabstudiogym.com/studio-cafe/ols/products/water-bottle' },
-    { slug: 'gatorade', name: 'Gatorade', category: 'drinks', price_cents: cents(3.0), product_url: 'https://thelabstudiogym.com/studio-cafe/ols/products/gatorade' },
+    { slug: 'water-bottle', name: 'Water Bottle', category: 'drinks', price_cents: cents(1.0), product_url: 'https://thelabstudiogym.com/studio-cafe/ols/products/water-bottle', image_url: 'https://img1.wsimg.com/isteam/ip/4a2b6a1b-7fad-4799-8bae-97bcaf5fdd7b/ols/67b33600-7e1f-426b-96e5-1c0922b28185.50e1a4fe.webp/:/rs=w:1200,h:1200' },
+    { slug: 'gatorade', name: 'Gatorade', category: 'drinks', price_cents: cents(3.0), product_url: 'https://thelabstudiogym.com/studio-cafe/ols/products/gatorade', image_url: 'https://upload.wikimedia.org/wikipedia/commons/e/e4/G_lemon_Lime_1.jpg' },
     { slug: 'alani-energy', name: 'Alani Energy', category: 'drinks', price_cents: cents(3.75), product_url: 'https://thelabstudiogym.com/studio-cafe/ols/products/alani-energy' },
     { slug: 'celsius', name: 'Celsius', category: 'drinks', price_cents: cents(3.75), product_url: 'https://thelabstudiogym.com/studio-cafe/ols/products/bloom-energy-drink' },
     { slug: 'nurri-protein', name: 'Nurri Protein Ultra filtered Milk Based', category: 'drinks', price_cents: cents(4.5), product_url: 'https://thelabstudiogym.com/studio-cafe/ols/products/nurri-protein-ultra-filtered-milk-based' },
@@ -43,13 +43,14 @@ async function seedDefaultCafeItems() {
 
   for (const it of items) {
     await q`
-      insert into lab_cafe_items (slug, name, category, price_cents, product_url, active)
-      values (${it.slug}, ${it.name}, ${it.category}, ${it.price_cents}, ${it.product_url}, true)
+      insert into lab_cafe_items (slug, name, category, price_cents, product_url, image_url, active)
+      values (${it.slug}, ${it.name}, ${it.category}, ${it.price_cents}, ${it.product_url}, ${it.image_url ?? null}, true)
       on conflict (slug) do update set
         name = excluded.name,
         category = excluded.category,
         price_cents = excluded.price_cents,
         product_url = excluded.product_url,
+        image_url = excluded.image_url,
         active = excluded.active;
     `;
   }
@@ -76,7 +77,7 @@ export async function GET() {
   }
 
   const items = (await q`
-    select slug, name, category, price_cents, product_url
+    select slug, name, category, price_cents, product_url, image_url
     from lab_cafe_items
     where active = true
     order by category asc, price_cents asc, name asc;
@@ -90,6 +91,7 @@ export async function GET() {
       category: i.category,
       price_cents: i.price_cents,
       product_url: i.product_url,
+      image_url: i.image_url,
     })),
   });
 }

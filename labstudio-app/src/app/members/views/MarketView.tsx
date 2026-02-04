@@ -9,6 +9,7 @@ type ShopProduct = {
   description: string | null;
   price_cents: number | null;
   checkout_url: string | null;
+  image_url?: string | null;
 };
 
 type CafeItem = {
@@ -17,6 +18,7 @@ type CafeItem = {
   category: string;
   price_cents: number;
   product_url: string | null;
+  image_url?: string | null;
 };
 
 export default function MarketView() {
@@ -67,14 +69,28 @@ export default function MarketView() {
               const owned = data.entitlements.includes(p.slug);
               return (
                 <Card key={p.slug} className="p-4 space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-bold">{p.name}</div>
-                      {p.description ? <div className="text-xs text-zinc-500 mt-1">{p.description}</div> : null}
-                    </div>
-                    {owned ? (
-                      <div className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full">Active</div>
+                  <div className="flex items-start gap-3">
+                    {p.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.image_url}
+                        alt={p.name}
+                        className="w-16 h-16 rounded-xl object-cover border border-white/10 bg-zinc-900"
+                        loading="lazy"
+                      />
                     ) : null}
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-bold">{p.name}</div>
+                          {p.description ? <div className="text-xs text-zinc-500 mt-1">{p.description}</div> : null}
+                        </div>
+                        {owned ? (
+                          <div className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full">Active</div>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
 
                   {p.checkout_url ? (
@@ -112,12 +128,25 @@ export default function MarketView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {cafe.map((it) => (
               <Card key={it.slug} className="p-4 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-bold">{it.name}</div>
-                    <div className="text-xs text-zinc-500 mt-1">{it.category.toUpperCase()}</div>
+                <div className="flex items-start gap-3">
+                  {it.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={it.image_url}
+                      alt={it.name}
+                      className="w-16 h-16 rounded-xl object-cover border border-white/10 bg-zinc-900"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-bold">{it.name}</div>
+                        <div className="text-xs text-zinc-500 mt-1">{it.category.toUpperCase()}</div>
+                      </div>
+                      <div className="text-sm font-black">${(it.price_cents / 100).toFixed(2)}</div>
+                    </div>
                   </div>
-                  <div className="text-sm font-black">${(it.price_cents / 100).toFixed(2)}</div>
                 </div>
                 {it.product_url ? (
                   <a

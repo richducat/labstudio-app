@@ -363,8 +363,30 @@ async function getSalesReadyLeadBucketDetails({ accessToken, maxLeadsPerRep = 20
   return byRep;
 }
 
+async function getExtensionCallLogAll({ extId, from, to }) {
+  // Paginate through RingCentral call-log using navigation.nextPage.
+  // Returns concatenated records.
+  let path = `/restapi/v1.0/account/~/extension/${extId}/call-log?dateFrom=${encodeURIComponent(isoNoMs(from))}&dateTo=${encodeURIComponent(isoNoMs(to))}&perPage=1000`;
+  const records = [];
+
+  for (let i = 0; i < 25; i++) {
+    const page = await ringcentralGetJson(path);
+    records.push(...(page.records || []));
+
+    const next = page?.navigation?.nextPage?.uri;
+    if (!next) break;
+
+    // RC returns a full URI; we only need the path+query portion.
+    const u = new URL(next);
+    path = u.pathname + u.search;
+  }
+
+  return records;
+}
+
 async function computeSalesReadyBucketStats({ accessToken, rcFrom, rcTo }) {
-  // Pull RC call logs per rep extension for the window; compute spokenTo phone set (connected >=30s)
+  // Pull RC call logs per rep extension; compute spokenTo phone set (connected >=30s).
+  // "All time" here means "all available RC history" within the date window.
   const leadsByRep = await getSalesReadyLeadBucketDetails({ accessToken });
 
   const out = {};
@@ -374,15 +396,11 @@ async function computeSalesReadyBucketStats({ accessToken, rcFrom, rcTo }) {
 
     if (!extId) continue;
 
-    // Note: RC call-log retention limits apply; this gives a "spoken to" view within that window.
-    const callLog = await ringcentralGetJson(
-      `/restapi/v1.0/account/~/extension/${extId}/call-log?dateFrom=${encodeURIComponent(isoNoMs(rcFrom))}&dateTo=${encodeURIComponent(isoNoMs(rcTo))}&perPage=1000`,
-    );
+    const callLogRecords = await getExtensionCallLogAll({ extId, from: rcFrom, to: rcTo });
 
     const spokenPhones = new Set();
-    for (const r of callLog.records || []) {
+    for (const r of callLogRecords || []) {
       if ((Number(r.duration) || 0) < 30) continue;
-      // consider both directions
       const from = digits10(r.from?.phoneNumber || r.from?.name);
       const to = digits10(r.to?.phoneNumber || r.to?.name);
       if (from) spokenPhones.add(from);
@@ -517,9 +535,9 @@ async function postToRingCentralChat({ chatId, text }) {
       : null;
 
     // Sales_Ready bucket stats: attempted vs spoken to vs never attempted
-    // Spoken-to is computed from RingCentral connected calls (>=30s) within a rolling window.
-    const rcSpokenWindowDays = 90;
-    const rcFrom = new Date(now.getTime() - rcSpokenWindowDays * 24 * 60 * 60 * 1000);
+    // Spoken-to is computed from RingCentral connected calls (>=30s) across all available history.
+    // We use a conservative far-back date; RC retention may still cap what we can see.
+    const rcFrom = new Date('2015-01-01T00:00:00Z');
 
     let salesReadyBucketStats = null;
     try {

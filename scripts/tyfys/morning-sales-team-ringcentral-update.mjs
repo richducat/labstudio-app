@@ -238,7 +238,7 @@ async function getSalesReadyLeadAttemptStats({ accessToken }) {
   // We define:
   // - attempted = Last_Activity_Time exists
   // - not_attempted = Last_Activity_Time is null
-  // NOTE: If the org uses a different status value than "Sales Ready", update here.
+  // NOTE: Status picklist value is "Sales_Ready" (per Richard).
 
   const repToOwnerId = await getZohoUserIdsForRoster({ accessToken });
   const out = {};
@@ -247,7 +247,7 @@ async function getSalesReadyLeadAttemptStats({ accessToken }) {
     const ownerId = repToOwnerId.get(rep);
     if (!ownerId) continue;
 
-    const q = `select id, Lead_Status, Owner, Last_Activity_Time, Created_Time, Modified_Time from Leads where Owner.id = '${ownerId}' and Lead_Status = 'Sales Ready' limit 200`;
+    const q = `select id, Lead_Status, Owner, Last_Activity_Time, Created_Time, Modified_Time from Leads where Owner.id = '${ownerId}' and Lead_Status = 'Sales_Ready' limit 200`;
     const res = await zohoCrmCoql({ accessToken, apiDomain: ZOHO_API_DOMAIN, selectQuery: q });
     const leads = res?.data || [];
 

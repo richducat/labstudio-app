@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity, Calendar, MessageSquare, Brain, ShoppingBag, Sparkles } from 'lucide-react';
+import { Activity, Calendar, MessageSquare, User, ShoppingBag, Sparkles } from 'lucide-react';
 
 import TobyCoachView from './TobyCoachView';
 import HomeView from './views/HomeView';
@@ -19,6 +19,7 @@ import GamesView from './views/GamesView';
 import MarketView from './views/MarketView';
 import ProgressView from './views/ProgressView';
 import AmenitiesView from './views/AmenitiesView';
+import ProfileView from './views/ProfileView';
 import GymSetupBanner from './components/GymSetupBanner';
 
 type Tab =
@@ -28,6 +29,7 @@ type Tab =
   | 'games'
   | 'market'
   | 'amenities'
+  | 'profile'
   | 'workout'
   | 'nutrition'
   | 'habits'
@@ -139,7 +141,7 @@ export default function TheLabUltimate({
         ) : null}
 
         {/* Gym setup banner (waivers + choose access). DB-backed + manual confirmations. */}
-        <GymSetupBanner />
+        <GymSetupBanner onOpenProfile={() => setTab('profile')} />
         {tab === 'home' && (
           <HomeView xp={xp} level={level} credits={credits} userProfile={{ name, goal }} setTab={setTab} />
         )}
@@ -150,6 +152,7 @@ export default function TheLabUltimate({
         {tab === 'games' && <GamesView />}
         {tab === 'market' && <MarketView />}
         {tab === 'amenities' && <AmenitiesView />}
+        {tab === 'profile' && <ProfileView />}
 
         {tab === 'workout' && <WorkoutView onSelect={() => {}} />}
         {tab === 'nutrition' && <NutritionView />}
@@ -186,6 +189,7 @@ export default function TheLabUltimate({
           </div>
 
           <NavBtn icon={Sparkles} label="Perks" active={tab === 'amenities'} onClick={() => setTab('amenities')} />
+          <NavBtn icon={User} label="Me" active={tab === 'profile'} onClick={() => setTab('profile')} />
           <NavBtn icon={ShoppingBag} label="Shop" active={tab === 'market'} onClick={() => setTab('market')} />
         </div>
       </nav>

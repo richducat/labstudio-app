@@ -29,6 +29,13 @@ async function seedDefaultWaivers() {
       url: 'https://app.waiverelectronic.com/render/templateByRefId/68740df405f61ad0e0932532',
       applies_to: 'monthly_members',
     },
+    {
+      slug: 'pt-training-agreement',
+      title: 'PT Waiver + Training Agreement (Elite 1-on-1)',
+      description: 'Required before starting Elite 1-on-1 Training.',
+      url: 'https://app.waiverelectronic.com/render/templateByRefId/68af9be90dcc71585e8682fb',
+      applies_to: 'elite_training',
+    },
   ];
 
   for (const w of defaults) {

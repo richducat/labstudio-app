@@ -114,6 +114,21 @@ export async function ensureSchema() {
   `;
   await q`create index if not exists lab_cafe_items_category_idx on lab_cafe_items(category);`;
 
+  // Content pages (static marketing/info pages mirrored inside app; DB-backed)
+  await q`
+    create table if not exists lab_content_pages (
+      id bigserial primary key,
+      slug text unique not null,
+      title text not null,
+      body_md text not null,
+      source_url text,
+      active boolean not null default true,
+      updated_at timestamptz not null default now(),
+      created_at timestamptz not null default now()
+    );
+  `;
+  await q`create index if not exists lab_content_pages_active_idx on lab_content_pages(active);`;
+
   await q`
     create table if not exists lab_user_profile (
       user_id text primary key references lab_users(id) on delete cascade,

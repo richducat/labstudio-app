@@ -57,6 +57,32 @@ export async function ensureSchema() {
   await q`alter table lab_users add column if not exists onboarding_complete boolean not null default false;`;
   await q`alter table lab_users add column if not exists food_credits integer not null default 0;`;
 
+  // Shop: products + entitlements (deep link to Stripe checkout)
+  await q`
+    create table if not exists lab_products (
+      id bigserial primary key,
+      slug text unique not null,
+      name text not null,
+      description text,
+      price_cents integer,
+      checkout_url text,
+      active boolean not null default true,
+      created_at timestamptz not null default now()
+    );
+  `;
+
+  await q`
+    create table if not exists lab_user_entitlements (
+      id bigserial primary key,
+      user_id text not null references lab_users(id) on delete cascade,
+      product_slug text not null references lab_products(slug) on delete cascade,
+      created_at timestamptz not null default now(),
+      unique(user_id, product_slug)
+    );
+  `;
+
+  await q`create index if not exists lab_user_entitlements_user_idx on lab_user_entitlements(user_id);`;
+
   await q`
     create table if not exists lab_user_profile (
       user_id text primary key references lab_users(id) on delete cascade,

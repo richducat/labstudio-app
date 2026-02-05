@@ -605,7 +605,7 @@ export default function HomeView({
               {orderedTiles
                 .filter((tile) => tile.visible)
                 .map((tile) => {
-                  const Icon = (tile as any).icon;
+                  const Icon = tile.icon;
 
                   let value = tile.value;
                   let trend = tile.trend;

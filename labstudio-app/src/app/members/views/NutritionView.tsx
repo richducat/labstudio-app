@@ -152,9 +152,10 @@ export default function NutritionView() {
 
       if (j?.ok && Array.isArray(j.foods)) setSuggestions(j.foods as FoodSuggestion[]);
       else setSuggestions([]);
-    } catch (e) {
+    } catch (e: unknown) {
       // ignore abort errors and fetch errors
-      if ((e as any)?.name !== 'AbortError') setSuggestions([]);
+      const errName = (e && typeof e === 'object' && 'name' in e) ? String((e as { name?: unknown }).name) : '';
+      if (errName !== 'AbortError') setSuggestions([]);
     } finally {
       if (!ac.signal.aborted) setSuggestBusy(false);
     }

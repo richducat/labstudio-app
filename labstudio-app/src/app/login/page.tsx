@@ -21,10 +21,12 @@ async function loginAction(formData: FormData) {
   // Set a simple session cookie (v0). Later we can sign/encrypt it.
   const { cookies } = await import('next/headers');
   const jar = await cookies();
+  const secure = process.env.NODE_ENV === 'production';
+
   jar.set('labstudio_session', 'ok', {
     httpOnly: true,
     sameSite: 'lax',
-    secure: true,
+    secure,
     path: '/',
     maxAge: 60 * 60 * 24 * 30,
   });
@@ -36,7 +38,7 @@ async function loginAction(formData: FormData) {
     jar.set('labstudio_uid', randomUUID(), {
       httpOnly: true,
       sameSite: 'lax',
-      secure: true,
+      secure,
       path: '/',
       maxAge: 60 * 60 * 24 * 365,
     });

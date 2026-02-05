@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Card from '../components/Card';
+import { addToCart, cartTotals, clearCart, readCart, setLineQty, type CartState } from '@/lib/cart';
 
 type ShopProduct = {
   slug: string;
@@ -27,8 +28,9 @@ export default function MarketView() {
   const router = useRouter();
   const [data, setData] = useState<{ products: ShopProduct[]; entitlements: string[] } | null>(null);
   const [cafe, setCafe] = useState<CafeItem[] | null>(null);
-  // Legacy modal checkout state (kept for now; product pages are the primary UX).
-  const [checkoutProduct, setCheckoutProduct] = useState<ShopProduct | null>(null);
+  // Cart (local-only for now)
+  const [cart, setCart] = useState<CartState>(() => readCart());
+  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/lab/shop')
@@ -49,15 +51,29 @@ export default function MarketView() {
       .catch(() => setCafe([]));
   }, []);
 
-  const checkoutPrice = useMemo(() => {
-    if (!checkoutProduct?.price_cents) return null;
-    return `$${(checkoutProduct.price_cents / 100).toFixed(2)}`;
-  }, [checkoutProduct?.price_cents]);
+  const totals = useMemo(() => cartTotals(cart), [cart]);
+
+  const checkoutCart = async () => {
+    try {
+      const res = await fetch('/api/lab/shop/checkout-cart', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ lines: cart.lines.map((l) => ({ price_id: l.price_id, quantity: l.quantity })) }),
+      });
+      const j = await res.json();
+      if (j?.ok && j.url) {
+        window.location.href = String(j.url);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <div className="space-y-4 pb-20">
-      {checkoutProduct ? (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 p-3" onClick={() => setCheckoutProduct(null)}>
+      {/* Cart */}
+      {cartOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 p-3" onClick={() => setCartOpen(false)}>
           <div
             className="w-full max-w-lg rounded-3xl border border-white/10 bg-zinc-950 p-4"
             onClick={(e) => {
@@ -66,72 +82,91 @@ export default function MarketView() {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Checkout</div>
-                <div className="text-lg font-black italic mt-1">{checkoutProduct.name}</div>
-                {checkoutProduct.description ? <div className="text-xs text-zinc-400 mt-1">{checkoutProduct.description}</div> : null}
+                <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Cart</div>
+                <div className="text-lg font-black italic mt-1">{totals.item_count} item(s)</div>
               </div>
               <button
                 type="button"
                 className="text-xs font-black text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl"
-                onClick={() => setCheckoutProduct(null)}
+                onClick={() => setCartOpen(false)}
               >
                 Close
               </button>
             </div>
 
-            {checkoutProduct.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={checkoutProduct.image_url}
-                alt={checkoutProduct.name}
-                className="w-full h-44 mt-3 rounded-2xl object-cover border border-white/10 bg-zinc-900"
-              />
-            ) : null}
+            {cart.lines.length ? (
+              <div className="mt-3 space-y-2">
+                {cart.lines.map((l) => (
+                  <div key={l.price_id} className="flex items-center justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-bold truncate">{l.name}</div>
+                      <div className="text-xs text-zinc-500">${(l.unit_amount_cents / 100).toFixed(2)} each</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="px-2 py-1 rounded-lg bg-zinc-800"
+                        onClick={() => setCart(setLineQty(l.price_id, l.quantity - 1))}
+                      >
+                        -
+                      </button>
+                      <div className="w-8 text-center font-mono">{l.quantity}</div>
+                      <button
+                        type="button"
+                        className="px-2 py-1 rounded-lg bg-zinc-800"
+                        onClick={() => setCart(setLineQty(l.price_id, l.quantity + 1))}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 text-xs text-zinc-500">Cart is empty.</div>
+            )}
 
-            <div className="mt-3 flex items-center justify-between">
-              <div className="text-sm text-zinc-300">{checkoutPrice ?? ''}</div>
-              <div className="text-xs text-zinc-500">Secure checkout powered by Stripe</div>
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm font-black">Subtotal</div>
+              <div className="text-sm font-black">${(totals.subtotal_cents / 100).toFixed(2)}</div>
             </div>
 
-            {checkoutProduct.stripe_price_id ? (
+            <div className="mt-4 grid grid-cols-2 gap-2">
               <button
                 type="button"
-                className="mt-4 w-full text-center text-sm font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-4 py-3 rounded-2xl"
-                onClick={async () => {
-                  try {
-                    const res = await fetch('/api/lab/shop/checkout', {
-                      method: 'POST',
-                      headers: { 'content-type': 'application/json' },
-                      body: JSON.stringify({ price_id: checkoutProduct.stripe_price_id }),
-                    });
-                    const j = await res.json();
-                    if (j?.ok && j.url) window.location.href = String(j.url);
-                  } catch {
-                    // ignore
-                  }
-                }}
+                className="text-xs font-black text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-3 rounded-xl"
+                onClick={() => setCart(clearCart())}
               >
-                Continue to secure checkout
+                Clear
               </button>
-            ) : checkoutProduct.checkout_url ? (
-              <a
-                href={checkoutProduct.checkout_url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 block text-center text-sm font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-4 py-3 rounded-2xl"
+              <button
+                type="button"
+                disabled={!cart.lines.length}
+                className="text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 px-3 py-3 rounded-xl"
+                onClick={checkoutCart}
               >
-                Continue to secure checkout
-              </a>
-            ) : (
-              <div className="mt-4 text-xs text-zinc-500">Not available right now.</div>
-            )}
+                Checkout
+              </button>
+            </div>
+
+            <div className="mt-2 text-[11px] text-zinc-500">Note: cart can’t mix subscriptions + one-time items yet.</div>
           </div>
         </div>
       ) : null}
 
-      <div className="px-1">
-        <h1 className="text-2xl font-black italic uppercase">Shop</h1>
-        <div className="text-xs text-zinc-500 mt-1">Memberships, passes, and Studio Cafe.</div>
+      <div className="px-1 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-black italic uppercase">Shop</h1>
+          <div className="text-xs text-zinc-500 mt-1">Memberships, passes, and Studio Cafe.</div>
+        </div>
+
+        <button
+          type="button"
+          className="shrink-0 text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+          onClick={() => setCartOpen(true)}
+        >
+          Cart ({totals.item_count})
+        </button>
       </div>
 
       {/* Memberships / Passes */}
@@ -190,7 +225,42 @@ export default function MarketView() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-sm font-black text-zinc-100">{price ?? ''}</div>
 
-                    {clickable ? (
+                    {p.stripe_price_id ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const next = addToCart(
+                              {
+                                price_id: String(p.stripe_price_id),
+                                slug: p.slug,
+                                name: p.name,
+                                unit_amount_cents: p.price_cents ?? 0,
+                                image_url: p.image_url ?? null,
+                              },
+                              1
+                            );
+                            setCart(next);
+                          }}
+                          className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            router.push(`/members/shop/${encodeURIComponent(p.slug)}`);
+                          }}
+                          className="inline-block text-xs font-black text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl"
+                        >
+                          View
+                        </button>
+                      </div>
+                    ) : clickable ? (
                       <button
                         type="button"
                         onClick={(e) => {

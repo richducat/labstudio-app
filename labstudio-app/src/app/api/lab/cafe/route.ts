@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { dbConfigured, ensureSchema, getOrCreateUser } from '@/lib/db';
 import { neon } from '@neondatabase/serverless';
+import { getStripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
 
@@ -9,6 +10,54 @@ function sql() {
   const url = process.env.DATABASE_URL || '';
   if (!url) throw new Error('DATABASE_URL not configured');
   return neon(url);
+}
+
+async function fetchOgImage(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'user-agent': 'labstudio-app/1.0',
+        accept: 'text/html,*/*',
+      },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+
+    // Try og:image first
+    const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*>/i);
+    if (og?.[1]) return og[1];
+
+    // Fallback: twitter:image
+    const tw = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["'][^>]*>/i);
+    if (tw?.[1]) return tw[1];
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function buildStripeImageMap(): Promise<Map<string, string>> {
+  const m = new Map<string, string>();
+  if (!process.env.STRIPE_SECRET_KEY) return m;
+
+  const stripe = getStripe();
+  const products = await stripe.products.list({ active: true, limit: 100 });
+
+  for (const p of products.data) {
+    const img = p.images?.[0];
+    if (!img) continue;
+
+    const slug = String(p.metadata?.slug || '').trim();
+    if (slug) m.set(slug, img);
+
+    // Also map by id and name for loose matching
+    m.set(p.id, img);
+    m.set(p.name.toLowerCase(), img);
+  }
+
+  return m;
 }
 
 function cents(n: number) {
@@ -83,15 +132,46 @@ export async function GET() {
     order by category asc, price_cents asc, name asc;
   `) as any[];
 
+  // Hydrate missing images:
+  // - If Stripe has an image for the same slug (metadata.slug), prefer that.
+  // - Otherwise, pull OG image from the product_url.
+  const stripeImages = await buildStripeImageMap();
+
+  const hydrated = await Promise.all(
+    items.map(async (i) => {
+      let imageUrl: string | null = i.image_url ?? null;
+
+      if (!imageUrl) {
+        const bySlug = stripeImages.get(String(i.slug || '').trim());
+        const byName = stripeImages.get(String(i.name || '').toLowerCase());
+        imageUrl = bySlug || byName || null;
+      }
+
+      if (!imageUrl && i.product_url) {
+        imageUrl = await fetchOgImage(String(i.product_url));
+      }
+
+      if (imageUrl && imageUrl !== i.image_url) {
+        await q`
+          update lab_cafe_items
+          set image_url = ${imageUrl}
+          where slug = ${i.slug};
+        `;
+      }
+
+      return {
+        slug: i.slug,
+        name: i.name,
+        category: i.category,
+        price_cents: i.price_cents,
+        product_url: i.product_url,
+        image_url: imageUrl,
+      };
+    })
+  );
+
   return NextResponse.json({
     ok: true,
-    items: items.map((i) => ({
-      slug: i.slug,
-      name: i.name,
-      category: i.category,
-      price_cents: i.price_cents,
-      product_url: i.product_url,
-      image_url: i.image_url,
-    })),
+    items: hydrated,
   });
 }

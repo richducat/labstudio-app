@@ -8,7 +8,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function MembersHome() {
   const jar = await cookies();
+  const session = jar.get('labstudio_session')?.value;
   const uid = jar.get('labstudio_uid')?.value;
+
+  if (session !== 'ok' || !uid) {
+    redirect('/login?next=/members');
+  }
 
   let initialUser: { display_name?: string; xp?: number; level?: number; food_credits?: number } | null = null;
   let initialProfile: InitialProfile = null;

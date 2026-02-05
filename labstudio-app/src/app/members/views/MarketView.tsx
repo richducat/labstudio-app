@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Card from '../components/Card';
 
 type ShopProduct = {
@@ -23,8 +24,10 @@ type CafeItem = {
 };
 
 export default function MarketView() {
+  const router = useRouter();
   const [data, setData] = useState<{ products: ShopProduct[]; entitlements: string[] } | null>(null);
   const [cafe, setCafe] = useState<CafeItem[] | null>(null);
+  // Legacy modal checkout state (kept for now; product pages are the primary UX).
   const [checkoutProduct, setCheckoutProduct] = useState<ShopProduct | null>(null);
 
   useEffect(() => {
@@ -147,15 +150,17 @@ export default function MarketView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {data.products.map((p) => {
               const owned = data.entitlements.includes(p.slug);
-              const clickable = Boolean(p.checkout_url);
+              const clickable = Boolean(p.stripe_price_id || p.checkout_url);
+
+              const price = p.price_cents != null ? `$${(p.price_cents / 100).toFixed(2)}` : null;
 
               return (
                 <Card
                   key={p.slug}
                   className={`p-4 space-y-2 ${clickable ? 'cursor-pointer hover:border-yellow-500/30' : ''}`}
                   onClick={() => {
-                    if (!p.checkout_url) return;
-                    setCheckoutProduct(p);
+                    if (!clickable) return;
+                    router.push(`/members/shop/${encodeURIComponent(p.slug)}`);
                   }}
                 >
                   <div className="flex items-start gap-3">
@@ -182,21 +187,25 @@ export default function MarketView() {
                     </div>
                   </div>
 
-                  {p.checkout_url ? (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setCheckoutProduct(p);
-                      }}
-                      className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
-                    >
-                      Checkout
-                    </button>
-                  ) : (
-                    <div className="text-xs text-zinc-500">Not available right now.</div>
-                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-black text-zinc-100">{price ?? ''}</div>
+
+                    {clickable ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/members/shop/${encodeURIComponent(p.slug)}`);
+                        }}
+                        className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+                      >
+                        View
+                      </button>
+                    ) : (
+                      <div className="text-xs text-zinc-500">Not available right now.</div>
+                    )}
+                  </div>
                 </Card>
               );
             })}

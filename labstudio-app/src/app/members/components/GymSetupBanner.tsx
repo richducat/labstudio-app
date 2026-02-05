@@ -11,36 +11,30 @@ type SetupStep = {
   completed: boolean;
 };
 
-type ShopProduct = {
-  slug: string;
-  name: string;
-  description: string | null;
-  price_cents: number | null;
-  checkout_url: string | null;
-};
-
 export default function GymSetupBanner({ onOpenProfile }: { onOpenProfile: () => void }) {
   const [setup, setSetup] = useState<{ access_product_slug: string | null } | null>(null);
   const [steps, setSteps] = useState<SetupStep[] | null>(null);
-  const [products, setProducts] = useState<ShopProduct[] | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const load = async () => {
-    const [s, p] = await Promise.all([
-      fetch('/api/lab/setup').then((r) => r.json()),
-      fetch('/api/lab/shop').then((r) => r.json()),
-    ]);
-    if (s?.ok) {
-      setSetup({ access_product_slug: s.setup?.access_product_slug ?? null });
-      setSteps(s.steps ?? []);
-    }
-    if (p?.ok) {
-      setProducts(p.products ?? []);
-    }
-  };
+  const busy = false;
 
   useEffect(() => {
-    void load();
+    let mounted = true;
+
+    fetch('/api/lab/setup')
+      .then((r) => r.json())
+      .then((s) => {
+        if (!mounted) return;
+        if (s?.ok) {
+          setSetup({ access_product_slug: s.setup?.access_product_slug ?? null });
+          setSteps(s.steps ?? []);
+        }
+      })
+      .catch(() => {
+        // ignore
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const requiredIncomplete = useMemo(() => {
@@ -49,34 +43,7 @@ export default function GymSetupBanner({ onOpenProfile }: { onOpenProfile: () =>
     return stepIncomplete || accessIncomplete;
   }, [steps, setup?.access_product_slug]);
 
-  const completeStep = async (step_slug: string, complete: boolean) => {
-    setBusy(true);
-    try {
-      await fetch('/api/lab/setup', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: complete ? 'complete_step' : 'uncomplete_step', step_slug }),
-      });
-      await load();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const setAccess = async (access_product_slug: string) => {
-    setBusy(true);
-    try {
-      await fetch('/api/lab/setup', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'set_access', access_product_slug }),
-      });
-      await load();
-    } finally {
-      setBusy(false);
-    }
-  };
-
+// removed unused setup mutation helpers
   if (steps == null || setup == null) return null;
 
   // Banner stays visible until required items are done.

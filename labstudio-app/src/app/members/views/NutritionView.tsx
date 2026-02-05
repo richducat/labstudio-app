@@ -65,7 +65,6 @@ export default function NutritionView() {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const recalcFromSelection = (nextAmountG: number) => {

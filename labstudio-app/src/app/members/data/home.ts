@@ -1,8 +1,6 @@
 import {
   Activity,
   Camera,
-  CheckSquare,
-  Dumbbell,
   Heart,
   Scale,
   TrendingUp,

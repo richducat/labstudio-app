@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Activity,
   AlertCircle,
   BookOpen,
   Calendar,
@@ -210,7 +209,6 @@ export default function HomeView({
 
   useEffect(() => {
     void loadCoach();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const generateCoach = async () => {

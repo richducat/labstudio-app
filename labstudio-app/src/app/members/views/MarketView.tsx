@@ -8,8 +8,9 @@ type ShopProduct = {
   name: string;
   description: string | null;
   price_cents: number | null;
-  checkout_url: string | null;
+  checkout_url?: string | null;
   image_url?: string | null;
+  stripe_price_id?: string | null;
 };
 
 type CafeItem = {
@@ -89,7 +90,27 @@ export default function MarketView() {
               <div className="text-xs text-zinc-500">Secure checkout powered by Stripe</div>
             </div>
 
-            {checkoutProduct.checkout_url ? (
+            {checkoutProduct.stripe_price_id ? (
+              <button
+                type="button"
+                className="mt-4 w-full text-center text-sm font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-4 py-3 rounded-2xl"
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/lab/shop/checkout', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ price_id: checkoutProduct.stripe_price_id }),
+                    });
+                    const j = await res.json();
+                    if (j?.ok && j.url) window.location.href = String(j.url);
+                  } catch {
+                    // ignore
+                  }
+                }}
+              >
+                Continue to secure checkout
+              </button>
+            ) : checkoutProduct.checkout_url ? (
               <a
                 href={checkoutProduct.checkout_url}
                 target="_blank"

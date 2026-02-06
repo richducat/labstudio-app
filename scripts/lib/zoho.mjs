@@ -62,9 +62,32 @@ export async function getZohoAccessToken() {
   return tokenObj.access_token;
 }
 
+async function fetchWithRetry(url, init = {}, { retries = 3, timeoutMs = 30_000 } = {}) {
+  let attempt = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...init, signal: controller.signal });
+      } finally {
+        clearTimeout(t);
+      }
+    } catch (err) {
+      attempt += 1;
+      const code = err?.cause?.code || err?.code;
+      const isTimeout = code === 'UND_ERR_CONNECT_TIMEOUT' || code === 'UND_ERR_SOCKET' || err?.name === 'AbortError';
+      if (!isTimeout || attempt > retries) throw err;
+      const backoff = Math.min(4000, 250 * 2 ** (attempt - 1));
+      await new Promise((r) => setTimeout(r, backoff));
+    }
+  }
+}
+
 export async function zohoCrmCoql({ accessToken, apiDomain, selectQuery }) {
   const url = `${apiDomain}/crm/v2/coql`;
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     method: 'POST',
     headers: {
       Authorization: `Zoho-oauthtoken ${accessToken}`,
@@ -86,7 +109,7 @@ export async function zohoCrmCoql({ accessToken, apiDomain, selectQuery }) {
 
 export async function zohoCrmGet({ accessToken, apiDomain, pathAndQuery }) {
   const url = `${apiDomain}${pathAndQuery}`;
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     headers: {
       Authorization: `Zoho-oauthtoken ${accessToken}`,
       Accept: 'application/json',
@@ -101,7 +124,7 @@ export async function zohoCrmGet({ accessToken, apiDomain, pathAndQuery }) {
 
 export async function zohoCrmPut({ accessToken, apiDomain, path, json }) {
   const url = `${apiDomain}${path}`;
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     method: 'PUT',
     headers: {
       Authorization: `Zoho-oauthtoken ${accessToken}`,
@@ -119,7 +142,7 @@ export async function zohoCrmPut({ accessToken, apiDomain, path, json }) {
 
 export async function zohoCrmPost({ accessToken, apiDomain, path, json }) {
   const url = `${apiDomain}${path}`;
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     method: 'POST',
     headers: {
       Authorization: `Zoho-oauthtoken ${accessToken}`,
@@ -157,14 +180,14 @@ export async function zohoCrmUploadAttachment({ accessToken, apiDomain, module, 
   const form = new FormData();
   form.append('file', new Blob([buf]), filename);
 
-  const res = await fetch(url, {
+  const res = await fetchWithRetry(url, {
     method: 'POST',
     headers: {
       Authorization: `Zoho-oauthtoken ${accessToken}`,
       // Do NOT set Content-Type; fetch will set multipart boundary.
     },
     body: form,
-  });
+  }, { timeoutMs: 60_000, retries: 4 });
 
   const out = await res.json().catch(() => ({}));
   if (!res.ok) {

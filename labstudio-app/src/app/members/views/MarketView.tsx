@@ -300,7 +300,13 @@ export default function MarketView() {
           <div className="px-1 text-xs font-bold uppercase tracking-widest text-zinc-500">Studio Cafe</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {cafe.map((it) => (
-              <Card key={it.slug} className="p-4 space-y-2">
+              <Card
+                key={it.slug}
+                className="p-4 space-y-2 cursor-pointer hover:border-yellow-500/30"
+                onClick={() => {
+                  router.push(`/members/cafe/${encodeURIComponent(it.slug)}`);
+                }}
+              >
                 <div className="flex items-start gap-3">
                   {it.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -320,27 +326,41 @@ export default function MarketView() {
                       <div className="text-sm font-black">${(it.price_cents / 100).toFixed(2)}</div>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-end">
+                    <div className="mt-2 flex items-center justify-end gap-2">
                       <button
-                          type="button"
-                          onClick={() => {
-                            const next = addToCart(
-                              {
-                                price_id: `cafe:${it.slug}`,
-                                slug: it.slug,
-                                name: it.name,
-                                unit_amount_cents: it.price_cents,
-                                image_url: it.image_url ?? null,
-                                mode: 'one_time',
-                              },
-                              1
-                            );
-                            setCart(next);
-                          }}
-                          className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
->
-                          Add
-                        </button>
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/members/cafe/${encodeURIComponent(it.slug)}`);
+                        }}
+                        className="inline-block text-xs font-black text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl"
+                      >
+                        View
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const next = addToCart(
+                            {
+                              price_id: `cafe:${it.slug}`,
+                              slug: it.slug,
+                              name: it.name,
+                              unit_amount_cents: it.price_cents,
+                              image_url: it.image_url ?? null,
+                              mode: 'one_time',
+                            },
+                            1
+                          );
+                          setCart(next);
+                        }}
+                        className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+                      >
+                        Add
+                      </button>
                     </div>
                   </div>
                 </div>

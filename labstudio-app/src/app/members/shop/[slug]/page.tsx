@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 type ShopProduct = {
   slug: string;
+  stripe_product_id?: string | null;
   name: string;
   description: string | null;
   price_cents: number | null;
@@ -25,7 +26,9 @@ export default function ShopProductPage({ params }: { params: { slug: string } }
       .then((j) => {
         if (!mounted) return;
         if (j?.ok && Array.isArray(j.products)) {
-          const found = (j.products as ShopProduct[]).find((x) => x.slug === slug) || null;
+          const found =
+            (j.products as ShopProduct[]).find((x) => x.slug === slug || x.stripe_product_id === slug) ||
+            null;
           setP(found);
         } else {
           setP(null);

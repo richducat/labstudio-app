@@ -6,7 +6,8 @@ import { getStripe } from '@/lib/stripe';
 export const runtime = 'nodejs';
 
 type StripeShopProduct = {
-  slug: string;
+  slug: string; // preferred human slug (metadata.slug) or product id fallback
+  stripe_product_id: string;
   name: string;
   description: string | null;
   price_cents: number | null;
@@ -49,6 +50,7 @@ async function listStripeProducts() {
 
     out.push({
       slug,
+      stripe_product_id: p.id,
       name: p.name,
       description: p.description ?? null,
       price_cents: price?.unit_amount ?? null,

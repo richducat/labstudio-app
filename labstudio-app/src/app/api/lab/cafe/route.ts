@@ -122,14 +122,15 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'DATABASE_URL not configured' }, { status: 400 });
   }
 
+  // IMPORTANT: Cafe browse should not depend on uid cookie.
+  // If uid exists, we keep user creation for future per-user behavior.
   const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
-  if (!uid) {
-    return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
-  }
+  const uid = jar.get('labstudio_uid')?.value || null;
 
   await ensureSchema();
-  await getOrCreateUser(uid);
+  if (uid) {
+    await getOrCreateUser(uid);
+  }
 
   const q = sql();
   const count = (await q`select count(*)::int as c from lab_cafe_items;`) as any[];

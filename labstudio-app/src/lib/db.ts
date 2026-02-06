@@ -113,11 +113,15 @@ export async function ensureSchema() {
       price_cents integer not null,
       product_url text,
       image_url text,
+      stripe_product_id text,
+      stripe_price_id text,
       active boolean not null default true,
       created_at timestamptz not null default now()
     );
   `;
   await q`alter table lab_cafe_items add column if not exists image_url text;`;
+  await q`alter table lab_cafe_items add column if not exists stripe_product_id text;`;
+  await q`alter table lab_cafe_items add column if not exists stripe_price_id text;`;
   await q`create index if not exists lab_cafe_items_category_idx on lab_cafe_items(category);`;
 
   // Content pages (static marketing/info pages mirrored inside app; DB-backed)

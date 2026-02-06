@@ -2,13 +2,20 @@ import { NextResponse } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { dbConfigured, ensureSchema, getOrCreateUser } from '@/lib/db';
 import { getStripe } from '@/lib/stripe';
+import { neon } from '@neondatabase/serverless';
 
 export const runtime = 'nodejs';
 
 type CartLine = {
-  price_id: string;
+  price_id: string; // either a Stripe Price ID, or "cafe:<slug>"
   quantity: number;
 };
+
+function sql() {
+  const url = process.env.DATABASE_URL || '';
+  if (!url) throw new Error('DATABASE_URL not configured');
+  return neon(url);
+}
 
 export async function POST(req: Request) {
   if (!dbConfigured()) {
@@ -37,13 +44,19 @@ export async function POST(req: Request) {
 
   const stripe = getStripe();
 
-  // Decide mode: if any line is recurring, require subscription mode.
-  // (Stripe Checkout can’t mix subscription + one-time in one session.)
-  const prices = await Promise.all(lines.map((l) => stripe.prices.retrieve(l.price_id)));
-  const hasRecurring = prices.some((p) => p.type === 'recurring');
-  const hasOneTime = prices.some((p) => p.type !== 'recurring');
+  const cafeLines = lines.filter((l) => l.price_id.startsWith('cafe:'));
+  const stripeLines = lines.filter((l) => !l.price_id.startsWith('cafe:'));
 
-  if (hasRecurring && hasOneTime) {
+  // Stripe-side price lookups for non-cafe lines.
+  const prices = await Promise.all(stripeLines.map((l) => stripe.prices.retrieve(l.price_id)));
+  const hasRecurring = prices.some((p) => p.type === 'recurring');
+  const hasOneTimeStripe = prices.some((p) => p.type !== 'recurring');
+
+  // Cafe items always require payment mode (one-time).
+  const hasCafe = cafeLines.length > 0;
+
+  // Stripe Checkout can’t mix subscription + one-time in one session.
+  if ((hasRecurring && (hasOneTimeStripe || hasCafe)) || (hasCafe && hasRecurring)) {
     return NextResponse.json(
       {
         ok: false,
@@ -55,12 +68,54 @@ export async function POST(req: Request) {
 
   const mode: 'subscription' | 'payment' = hasRecurring ? 'subscription' : 'payment';
 
+  const q = sql();
+  const cafeSlugs = cafeLines.map((l) => l.price_id.replace(/^cafe:/, '')).filter(Boolean);
+  const cafeItems = cafeSlugs.length
+    ? ((await q`
+        select slug, name, price_cents, image_url
+        from lab_cafe_items
+        where slug = any(${cafeSlugs});
+      `) as any[])
+    : [];
+  const cafeBySlug = new Map<string, any>(cafeItems.map((i) => [String(i.slug), i]));
+
+  const line_items: any[] = [];
+
+  // Stripe price-based line items
+  for (const l of stripeLines) {
+    line_items.push({ price: l.price_id, quantity: l.quantity });
+  }
+
+  // Cafe items: use Stripe "price_data" so we don't require pre-created Stripe products.
+  for (const l of cafeLines) {
+    const slug = l.price_id.replace(/^cafe:/, '');
+    const item = cafeBySlug.get(slug);
+    if (!item) continue;
+
+    line_items.push({
+      quantity: l.quantity,
+      price_data: {
+        currency: 'usd',
+        unit_amount: Number(item.price_cents ?? 0),
+        product_data: {
+          name: String(item.name || slug),
+          images: item.image_url ? [String(item.image_url)] : undefined,
+          metadata: { cafe_slug: String(slug) },
+        },
+      },
+    });
+  }
+
+  if (line_items.length === 0) {
+    return NextResponse.json({ ok: false, error: 'Cart items not found' }, { status: 400 });
+  }
+
   const h = await headers();
   const origin = h.get('origin') || 'http://localhost:3000';
 
   const session = await stripe.checkout.sessions.create({
     mode,
-    line_items: lines.map((l) => ({ price: l.price_id, quantity: l.quantity })),
+    line_items,
     allow_promotion_codes: true,
     success_url: `${origin}/members?checkout=success`,
     cancel_url: `${origin}/members?checkout=cancel`,

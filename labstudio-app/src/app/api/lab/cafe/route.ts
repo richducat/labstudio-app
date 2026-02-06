@@ -19,7 +19,8 @@ async function fetchOgImage(url: string): Promise<string | null> {
         'user-agent': 'labstudio-app/1.0',
         accept: 'text/html,*/*',
       },
-      cache: 'no-store',
+      // Cache aggressively to avoid per-request page scrapes (major lag source).
+      next: { revalidate: 60 * 60 * 24 },
     });
     if (!res.ok) return null;
     const html = await res.text();
@@ -38,14 +39,25 @@ async function fetchOgImage(url: string): Promise<string | null> {
   }
 }
 
-async function buildStripeImageMap(): Promise<Map<string, string>> {
-  const m = new Map<string, string>();
-  if (!process.env.STRIPE_SECRET_KEY) return m;
+let stripeProductCache: { at: number; products: Awaited<ReturnType<ReturnType<typeof getStripe>['products']['list']>>['data'] } | null = null;
 
+async function getStripeProductsCached() {
+  if (!process.env.STRIPE_SECRET_KEY) return [];
+  const now = Date.now();
+  if (stripeProductCache && now - stripeProductCache.at < 5 * 60 * 1000) {
+    return stripeProductCache.products;
+  }
   const stripe = getStripe();
   const products = await stripe.products.list({ active: true, limit: 100 });
+  stripeProductCache = { at: now, products: products.data };
+  return products.data;
+}
 
-  for (const p of products.data) {
+async function buildStripeImageMap(): Promise<Map<string, string>> {
+  const m = new Map<string, string>();
+  const products = await getStripeProductsCached();
+
+  for (const p of products) {
     const img = p.images?.[0];
     if (!img) continue;
 
@@ -126,20 +138,23 @@ export async function GET() {
   }
 
   const items = (await q`
-    select slug, name, category, price_cents, product_url, image_url
+    select slug, name, category, price_cents, product_url, image_url, stripe_product_id, stripe_price_id
     from lab_cafe_items
     where active = true
     order by category asc, price_cents asc, name asc;
   `) as any[];
 
-  // Hydrate missing images:
-  // - If Stripe has an image for the same slug (metadata.slug), prefer that.
-  // - Otherwise, pull OG image from the product_url.
+  // Hydrate missing images + Stripe price ids (cached + persisted):
+  // - Image: prefer Stripe image (metadata.slug match), else OG image.
+  // - Checkout: resolve stripe_price_id for one-time purchases.
   const stripeImages = await buildStripeImageMap();
+  const stripeProducts = await getStripeProductsCached();
 
   const hydrated = await Promise.all(
     items.map(async (i) => {
       let imageUrl: string | null = i.image_url ?? null;
+      let stripeProductId: string | null = i.stripe_product_id ?? null;
+      let stripePriceId: string | null = i.stripe_price_id ?? null;
 
       if (!imageUrl) {
         const bySlug = stripeImages.get(String(i.slug || '').trim());
@@ -151,10 +166,41 @@ export async function GET() {
         imageUrl = await fetchOgImage(String(i.product_url));
       }
 
-      if (imageUrl && imageUrl !== i.image_url) {
+      // Resolve Stripe product/price for cafe items (one-time only)
+      if (process.env.STRIPE_SECRET_KEY && !stripePriceId) {
+        const slug = String(i.slug || '').trim();
+        const name = String(i.name || '').toLowerCase();
+
+        const found =
+          stripeProducts.find((p) => String(p.metadata?.slug || '').trim() === slug) ||
+          stripeProducts.find((p) => p.name.toLowerCase() === name) ||
+          null;
+
+        if (found) {
+          stripeProductId = found.id;
+          try {
+            const stripe = getStripe();
+            const prices = await stripe.prices.list({ product: found.id, active: true, limit: 10 });
+            const oneTime = prices.data
+              .filter((pr) => pr.type === 'one_time' && pr.unit_amount != null)
+              .sort((a, b) => Number(a.unit_amount ?? 0) - Number(b.unit_amount ?? 0));
+            stripePriceId = oneTime[0]?.id ?? null;
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      if (
+        (imageUrl && imageUrl !== i.image_url) ||
+        (stripeProductId && stripeProductId !== i.stripe_product_id) ||
+        (stripePriceId && stripePriceId !== i.stripe_price_id)
+      ) {
         await q`
           update lab_cafe_items
-          set image_url = ${imageUrl}
+          set image_url = coalesce(${imageUrl}, image_url),
+              stripe_product_id = coalesce(${stripeProductId}, stripe_product_id),
+              stripe_price_id = coalesce(${stripePriceId}, stripe_price_id)
           where slug = ${i.slug};
         `;
       }
@@ -166,6 +212,7 @@ export async function GET() {
         price_cents: i.price_cents,
         product_url: i.product_url,
         image_url: imageUrl,
+        stripe_price_id: stripePriceId,
       };
     })
   );

@@ -22,6 +22,7 @@ type CafeItem = {
   price_cents: number;
   product_url: string | null;
   image_url?: string | null;
+  stripe_price_id?: string | null;
 };
 
 export default function MarketView() {
@@ -239,6 +240,7 @@ export default function MarketView() {
                                 name: p.name,
                                 unit_amount_cents: p.price_cents ?? 0,
                                 image_url: p.image_url ?? null,
+                                mode: 'subscription',
                               },
                               1
                             );
@@ -316,6 +318,29 @@ export default function MarketView() {
                         <div className="text-xs text-zinc-500 mt-1">{it.category.toUpperCase()}</div>
                       </div>
                       <div className="text-sm font-black">${(it.price_cents / 100).toFixed(2)}</div>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-end">
+                      <button
+                          type="button"
+                          onClick={() => {
+                            const next = addToCart(
+                              {
+                                price_id: `cafe:${it.slug}`,
+                                slug: it.slug,
+                                name: it.name,
+                                unit_amount_cents: it.price_cents,
+                                image_url: it.image_url ?? null,
+                                mode: 'one_time',
+                              },
+                              1
+                            );
+                            setCart(next);
+                          }}
+                          className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+>
+                          Add
+                        </button>
                     </div>
                   </div>
                 </div>

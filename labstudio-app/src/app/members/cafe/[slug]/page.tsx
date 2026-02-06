@@ -20,9 +20,16 @@ export default function CafeItemPage({ params }: { params: { slug: string } }) {
 
   useEffect(() => {
     let mounted = true;
-    fetch('/api/lab/cafe')
-      .then((r) => r.json())
-      .then((j) => {
+    const run = async (attempt = 0) => {
+      try {
+        const r = await fetch('/api/lab/cafe');
+        // Edge case: older sessions can be missing labstudio_uid; middleware sets it on the response.
+        // The first API call can still see no uid and return 401; retry once.
+        if (r.status === 401 && attempt === 0) {
+          await new Promise((res) => setTimeout(res, 300));
+          return run(1);
+        }
+        const j = await r.json().catch(() => null);
         if (!mounted) return;
         if (j?.ok && Array.isArray(j.items)) {
           const found = (j.items as CafeItem[]).find((x) => x.slug === slug) || null;
@@ -30,15 +37,16 @@ export default function CafeItemPage({ params }: { params: { slug: string } }) {
         } else {
           setIt(null);
         }
-      })
-      .catch(() => {
+      } catch {
         if (!mounted) return;
         setIt(null);
-      })
-      .finally(() => {
+      } finally {
         if (!mounted) return;
         setLoading(false);
-      });
+      }
+    };
+
+    run();
 
     return () => {
       mounted = false;

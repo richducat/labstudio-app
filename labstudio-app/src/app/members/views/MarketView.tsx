@@ -43,13 +43,23 @@ export default function MarketView() {
         // ignore
       });
 
-    fetch('/api/lab/cafe')
-      .then((r) => r.json())
-      .then((j) => {
+    const fetchCafe = async (attempt = 0) => {
+      try {
+        const r = await fetch('/api/lab/cafe');
+        if (r.status === 401 && attempt === 0) {
+          // See note in /members/cafe/[slug] page.
+          await new Promise((res) => setTimeout(res, 300));
+          return fetchCafe(1);
+        }
+        const j = await r.json().catch(() => null);
         if (j?.ok) setCafe(j.items ?? []);
         else setCafe([]);
-      })
-      .catch(() => setCafe([]));
+      } catch {
+        setCafe([]);
+      }
+    };
+
+    fetchCafe();
   }, []);
 
   const totals = useMemo(() => cartTotals(cart), [cart]);

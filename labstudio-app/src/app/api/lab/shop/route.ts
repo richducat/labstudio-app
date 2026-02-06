@@ -67,14 +67,15 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'DATABASE_URL not configured' }, { status: 400 });
   }
 
+  // IMPORTANT: Shop browse should not require auth cookies.
+  // We only use cookies when present (future: entitlements, user-specific pricing).
   const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
-  if (!uid) {
-    return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
-  }
+  const uid = jar.get('labstudio_uid')?.value || null;
 
-  await ensureSchema();
-  await getOrCreateUser(uid);
+  if (uid) {
+    await ensureSchema();
+    await getOrCreateUser(uid);
+  }
 
   // If Stripe is configured, use it as the source of truth.
   if (process.env.STRIPE_SECRET_KEY) {

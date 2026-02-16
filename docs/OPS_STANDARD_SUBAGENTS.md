@@ -38,8 +38,9 @@ No “we’ll get back to it” without a recorded state.
 - The sub-agent produces a branch/PR + test steps + a short log entry to anchors.
 
 ## Deployment Policy (default)
-- Default deploy target is **Preview deployments** for PR branches.
-- Production deploys require an explicit “deploy to prod” instruction per project.
+- **Default deploy target is Production** once a Work Order reaches PR_READY and passes its test steps.
+- Preview deployments may still be used when helpful, but are not required.
+- Guardrails still apply (no destructive ops without care; no external messaging without policy compliance).
 
 ## Visibility
 - Control Room shows:

@@ -7,6 +7,11 @@
 - **DONE (ultimate) = fully polished, all functions working 100% as intended; App Store-ready** (could ship, get approved, and everything works).
 - This universal definition applies to: LabStudio, Paid Media Buyer Pro, and any other app/web project/site.
 
+## Milestone ladder (how we ship on the way to DONE)
+- **Milestone 0 (M0) — Revenue-ready web release:** the core user journey works end-to-end with real persistence + payments; no mock data; clear UX; no crashes.
+- **Milestone 1 (M1) — Polished + stable:** fast, clean UX, solid error handling, monitoring, support/admin tools, onboarding, and documentation.
+- **Milestone 2 (M2) — Universal DONE:** App Store-ready, fully polished, 100% functions working as intended.
+
 ## Non-negotiables
 - Courts + kids/school rights monitoring: never miss emails; summarize + draft-only replies.
 - Reduce friction: if ≥70% sure, decide + execute; don’t ask clarifying questions unless safety/irreversible.

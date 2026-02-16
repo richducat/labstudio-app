@@ -35,6 +35,11 @@
 ## LabStudio
 - Restore missing features without losing work.
 - **Definition of DONE (ultimate):** fully polished, all functions working 100% as intended; App Store-ready (could ship, get approved, and everything works).
+- **Toby deal (subscription AI only):** AI subscription revenue is split **50/50** with Toby.
+- Monetization: design AI as tiered subscriptions for:
+  - retail consumers
+  - consumer trainers
+  - gym corporations
 - No mock data in user-visible UI (DB-backed/integration-backed only).
 
 ## Paid Media Buyer Pro (PMBP)

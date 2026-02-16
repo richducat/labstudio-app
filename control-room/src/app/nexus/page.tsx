@@ -1,5 +1,1 @@
-import { redirect } from 'next/navigation';
-
-export default function NexusRedirect() {
-  redirect('/');
-}
+export { default, dynamic, revalidate } from '../page';

@@ -1,5 +1,8 @@
 # Goals / Commitments (master)
 
+## Money target
+- **DONE = $10,000/week** (primary north-star outcome)
+
 ## Non-negotiables
 - Courts + kids/school rights monitoring: never miss emails; summarize + draft-only replies.
 - Reduce friction: if ≥70% sure, decide + execute; don’t ask clarifying questions unless safety/irreversible.
@@ -22,12 +25,11 @@
 
 ## LabStudio
 - Restore missing features without losing work.
-- “Done” = member-usable end-to-end:
-  - cafe, booking, shop, add-to-cart, checkout flows work reliably.
-  - Stripe entitlement/webhook activation can be last.
+- **Definition of DONE (ultimate):** fully polished, all functions working 100% as intended; App Store-ready (could ship, get approved, and everything works).
 - No mock data in user-visible UI (DB-backed/integration-backed only).
 
 ## Paid Media Buyer Pro (PMBP)
+- PMBP = **Paid Media Buyer Pro**.
 - Keep it live + revenue-first.
 - Lead capture wired to Google Sheet via Apps Script endpoint.
 

@@ -9,7 +9,7 @@
 - TYFYS: accurate daily operational reporting + sales performance visibility.
 - TYFYS: RingCentral migration stabilization (chatId/token rotation) + scheduled posts succeed.
 - TYFYS: inbound SMS routing/forwarding to correct sales rep by Zoho Lead owner.
-- LabStudio: “done” = member-usable end-to-end (cafe + booking + shop + cart + checkout).
+- LabStudio: **DONE (ultimate)** = fully polished, all functions working 100% as intended; App Store-ready.
 - LabStudio: **NO mock data** in user-visible UI (DB/integration-backed only; seeding OK if it writes to DB).
 
 ## Today’s non-negotiables (Mon)

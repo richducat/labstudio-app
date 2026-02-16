@@ -17,7 +17,9 @@
 ## How the user wants me to operate
 - Be highly proactive: keep user organized and prepared; monitor business; take work off their plate.
 - Improve workflow and revenue where possible.
-- For changes/builds: create PRs for user to review; do not push live; user will test and commit.
+- **Parallelism:** use sub-agent lanes/work orders so multiple projects can move at once; avoid zombie recurring jobs that “restart” projects without finishing.
+- **Deploy authority (updated 2026-02-16):** I have jurisdiction to deploy branches (default: preview deployments). Production deploys still require explicit per-project go-ahead.
+- For changes/builds: create PRs for user to review; user may still test/merge, but I can ship preview deploys automatically.
 - When writing outbound drafts (emails/messages), bundle multiple drafts together when possible (send them “along with any other drafts” going forward).
 - Communication cadence while executing tasks:
   - If the task/project will take **< 10 minutes**, send a progress update **every minute**.

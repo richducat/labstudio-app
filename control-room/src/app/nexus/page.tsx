@@ -120,6 +120,89 @@ function fmtMaybeDate(ms?: number | null) {
   }
 }
 
+function QuickCapture({ onCreated }: { onCreated: () => void }) {
+  const [title, setTitle] = useState("");
+  const [list, setList] = useState("Cool Cat Inbox");
+  const [due, setDue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function add() {
+    const t = title.trim();
+    if (!t) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/reminders/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: t, list, due: due.trim() || undefined }),
+      });
+      const j = await res.json();
+      if (!res.ok || j?.ok === false) {
+        setMsg(j?.error || "Failed to add reminder");
+      } else {
+        setTitle("");
+        setDue("");
+        setMsg("Added");
+        onCreated();
+        setTimeout(() => setMsg(null), 1200);
+      }
+    } catch (e: any) {
+      setMsg(String(e?.message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-4 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+      <div className="text-xs font-mono text-slate-400">Quick capture</div>
+      <div className="mt-2 flex flex-col gap-2">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void add();
+          }}
+          placeholder="Type a task and hit Enter…"
+          className="w-full rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-600"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={list}
+            onChange={(e) => setList(e.target.value)}
+            className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-200 outline-none"
+          >
+            <option>Cool Cat Inbox</option>
+            <option>Household</option>
+            <option>Routine</option>
+            <option>TYFYS</option>
+            <option>Everett</option>
+            <option>Berkeley</option>
+          </select>
+          <input
+            value={due}
+            onChange={(e) => setDue(e.target.value)}
+            placeholder='Due (e.g. "today", "tomorrow", "2026-02-16 17:00")'
+            className="flex-1 min-w-[220px] rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-200 placeholder:text-slate-500 outline-none"
+          />
+          <button
+            onClick={() => void add()}
+            disabled={busy || !title.trim()}
+            className="rounded-lg bg-cyan-500/90 px-3 py-2 text-xs font-semibold text-black disabled:opacity-40"
+          >
+            {busy ? "Adding…" : "Add"}
+          </button>
+          {msg ? (
+            <span className="text-xs font-mono text-slate-400">{msg}</span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function NexusPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -497,6 +580,8 @@ export default function NexusPage() {
                     {overdueRem.length} overdue • {todayRem.length} today
                   </span>
                 </div>
+
+                <QuickCapture onCreated={refresh} />
 
                 {reminders?.ok === false ? (
                   <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">

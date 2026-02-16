@@ -154,8 +154,9 @@ async function listLeadsPage({ accessToken, page, perPage, days }) {
       if (created >= startOfDay) newCounts.set(rep, (newCounts.get(rep) || 0) + 1);
     }
 
-    const totalNew = SALES_ROSTER.reduce((sum, r) => sum + (newCounts.get(r) || 0), 0);
-    const byRepLine = SALES_ROSTER.map(r => `${r}: ${newCounts.get(r) || 0}`).join(' ');
+    const NEW_LEADS_ROSTER = ['Amy', 'Adam', 'Jared'];
+    const totalNew = NEW_LEADS_ROSTER.reduce((sum, r) => sum + (newCounts.get(r) || 0), 0);
+    const byRepLine = NEW_LEADS_ROSTER.map(r => `${r}: ${newCounts.get(r) || 0}`).join(' ');
     newLeadsBlock = `New leads today: ${totalNew}\nBy rep: ${byRepLine}`;
   }
 

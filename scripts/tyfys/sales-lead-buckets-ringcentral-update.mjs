@@ -155,8 +155,8 @@ async function listLeadsPage({ accessToken, page, perPage, days }) {
     }
 
     const totalNew = SALES_ROSTER.reduce((sum, r) => sum + (newCounts.get(r) || 0), 0);
-    const byRepLine = SALES_ROSTER.map(r => `${r} ${newCounts.get(r) || 0}`).join(' | ');
-    newLeadsBlock = `New leads today so far (Created_Time since 12:00am ET): total ${totalNew}\n- ${byRepLine}`;
+    const byRepLine = SALES_ROSTER.map(r => `${r}: ${newCounts.get(r) || 0}`).join(' ');
+    newLeadsBlock = `New leads today: ${totalNew}\nBy rep: ${byRepLine}`;
   }
 
   const header = `Lead buckets (Zoho Leads) — as of ${now.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })} ET`;

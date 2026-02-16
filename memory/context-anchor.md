@@ -1,59 +1,50 @@
-# Context Anchor — 2026-02-16 (Mon) — 08:22 ET
+# Context Anchor — 2026-02-16 (Mon) — 08:42 ET
 
-## Top 10 commitments (what we do *no matter what*)
-1) **Courts + school monitoring is Sev-1**: never miss rights-critical email; summarize + draft-only replies.
-2) **Draft-first outbound everywhere** unless Richard explicitly approves send.
-3) **Do not email Karen back** (draft-only; route/prepare, don’t send).
-4) **Reduce friction**: if ≥70% sure, decide + execute; only ask for safety/irreversible/costly ambiguity.
-5) **TYFYS automation reliability**: Zoho + RingCentral jobs must run daily without silent failure.
-6) **Inbound SMS forwarding**: route inbound replies to correct rep line (by Zoho Lead owner) without client-facing mistakes.
-7) **Provider reply monitoring**: catch doctor/provider responses quickly and tee up next actions.
-8) **Backups**: hourly git auto-sync + nightly OpenClaw state bundle (Drive + local sync).
-9) **LabStudio “member-usable end-to-end”**: cafe + booking + shop + add-to-cart/cart + checkout must work reliably; **no mock data** in UI.
-10) **Keep changes PR-sized + reviewable**: create PR-ready work; do not push live; Richard tests/commits.
+## Top 10 commitments (keep me honest)
+- Courts + kids/school rights monitoring is Sev-1: never miss emails; summarize + **draft-only** replies.
+- **Draft-first for all outbound** until explicitly approved; **do NOT email Karen back**.
+- Reduce friction: if ≥70% sure, decide + execute; only ask when safety/irreversible/costly.
+- TYFYS: stabilize + increase throughput of Zoho + RingCentral automations (reliability first).
+- TYFYS: accurate daily reporting + sales performance visibility (rep-safe where required).
+- TYFYS: RC migration stabilization (tokens/chatId routing) so scheduled posts succeed.
+- TYFYS: inbound SMS forwarding to correct sales rep by Zoho Lead owner.
+- LabStudio: “done” = member-usable end-to-end (cafe + booking + shop + cart + checkout).
+- LabStudio: **NO mock data** in user-visible UI (DB/integration-backed only; seeding OK if it writes DB).
+- Backups: keep hourly git auto-sync + nightly OpenClaw state bundle working.
 
-## Today’s non-negotiables (Mon)
-- **Custody / kids**: Mondays/Tuesdays = kids with mom (no pickup).
-- **Courts/school watch**:
-  - 7:30am email watch (jobId `0a9c010d-...`) already scheduled.
-  - 4:40pm email watch (jobId `f110cf0a-...`) scheduled.
-- **RingCentral updates (weekday AM cadence)**:
-  - 8:30am Morning Sales Team RC update (`cf636099-...`)
-  - 8:32am lead buckets (`bd09ab42-...`)
-  - 8:35am KPI scoreboard (`728172ee-...`)
-  - 8:40am DriftGuard verification (`b925e5db-...`)
-- **Backups**:
-  - Hourly git auto-sync at :05 (`d43e5f81-...`)
-  - Nightly OpenClaw state backup to Drive 2:30am (`188a18be-...`) + local sync 2:40am (`854bc3fc-...`)
+## Today’s non-negotiables
+- **Custody baseline:** Mondays/Tuesdays = mom has the kids (no pickup).
+- **Courts + school email watch**
+  - 4:40pm ET: courts/school watch cron (jobId f110cf0a-fad5-4fb0-afc5-1445be871215)
+  - (Also 7:30am ET watch exists; already scheduled daily)
+- **Backups**
+  - Hourly backup auto-commit/push (jobId d43e5f81-9be4-43ff-8e6d-bc8082ef99ab)
+  - Nightly OpenClaw state bundle → Drive + local sync (jobIds 188a18be-88ee-4b81-95e0-8e7d1a9a236a, 854bc3fc-30b3-49c4-a0f3-b9f79153a307)
+- **RingCentral scheduled updates (weekday)**
+  - 8:30am ET Morning Sales Team RC Update (cf636099-5635-427e-89c4-ef75d48b9d55)
+  - 8:32am ET lead buckets (bd09ab42-9b14-4e1e-b844-a89bf6e9086e)
+  - 8:35am ET KPI scoreboard (728172ee-2e2e-4c5e-be97-5af59a3cffd6)
+  - 4:00pm ET Day Cap update (08f00dea-1aa3-41d0-8ae2-319118b13e02)
 
 ## Active workstreams + next actions
-### Rights-critical (courts + school)
-- Next action: keep the 4:40pm watch FAST (2 queries, max 10 each) and draft-only if needed.
+### Rights-critical monitoring
+- Keep cron jobs fast + reliable; draft-only replies.
+- If any court/school hit shows a deadline: create draft reply + add an immediate reminder.
 
-### TYFYS (ops + sales reliability)
-- Keep cron pipeline green through business hours:
-  - inbound SMS forward-to-owner every 30m (jobId `12384d05-...`) — **Jared excluded** by design.
-  - provider replies watch 9/1/5 (jobId `b9db713f-...`).
-  - fulfillment tasker 8:45am (jobId `dfeef5d2-...`) + provider handoff tasker 1:45pm (jobId `e7052083-...`).
-- Next action: if any RC/Zoho script errors today, smallest safe fix first (token refresh, extend timeout, reduce scope) and log to this file.
+### TYFYS (reliability + throughput)
+- Maintain: inbound SMS forwarder + provider replies watch + fulfillment/provider taskers.
+- Next action: if any RC/Zoho job outputs zeros or errors, investigate auth/token + paging first; keep fixes minimal.
 
-### LabStudio
-- Goal: “done” = member-usable end-to-end (cafe/booking/shop/cart/checkout). Stripe entitlement/webhooks can be last.
-- Next action: schedule an afternoon ship block after meetings; keep changes PR-sized (<400 net lines) with test steps.
+### LabStudio ship block
+- Focus: end-to-end member flows (cafe/booking/shop/cart/checkout) + persistence + success states.
+- Next action: when work block opens, pick 1 “member journey” bug and push through to local green with test steps + PR-ready writeup.
 
 ### Personal organization
-- Next action: convert outcomes from today’s meetings (Morning Sync, Ammar, Karen, Ads consult) into concrete next tasks immediately (Reminders/Second Brain).
+- Keep time-blocking + Apple Reminders as task truth; convert meetings into immediate next steps.
 
-## Cron health (quick check)
-- **Enabled jobs w/ lastStatus=error in last 24h:** none detected from the current cron list.
-- **Notable historical errors (outside 24h, disabled one-shots):**
-  - Several KickCraft/Everett Telegram-topic posts failed with `Unsupported channel: whatsapp` (jobIds `df8f1ae3-...`, `464cbf82-...`, `806bdedf-...`, `0338f6fa-...`).
+## Detected breakages (cron health)
+- **Enabled jobs with lastStatus=error in last 24h:** none detected.
+- Historical (older) errors spotted (disabled one-shots): several Telegram-topic test jobs failed with `Unsupported channel: whatsapp` (Feb 14). No action needed unless those are re-enabled.
 
-## Detected breakages + queued fixes (apply next work block)
-1) **Broken delivery channel on old KickCraft/Everett one-shot jobs**
-   - Symptom: `Unsupported channel: whatsapp` despite Telegram `to` target.
-   - Likely cause: job ran in a WhatsApp-bound session / delivery.channel not explicitly set to `telegram`.
-   - Fix to apply next: if we ever resurrect these, set `delivery.channel="telegram"` explicitly and ensure they run in a Telegram-capable session; otherwise delete the dead one-shots to reduce noise.
-
----
-Last refreshed by context-anchor cron.
+## Fix queue (apply on next available work block)
+- If any Telegram delivery is intended, ensure delivery.channel is explicitly `telegram` and the runtime channel mismatch isn’t used for those one-shot tests (avoid reintroducing `Unsupported channel: whatsapp`).

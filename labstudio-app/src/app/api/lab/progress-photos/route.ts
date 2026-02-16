@@ -31,13 +31,14 @@ export async function GET() {
   await getOrCreateUser(uid);
 
   const q = sql();
+  type PhotoRow = { id: number; created_at: string; note: string | null; image_data_url: string };
   const rows = (await q`
     select id, created_at, note, image_data_url
     from lab_progress_photos
     where user_id = ${uid}
     order by created_at desc
     limit 10;
-  `) as any[];
+  `) as PhotoRow[];
 
   return NextResponse.json({ ok: true, photos: rows });
 }
@@ -68,11 +69,12 @@ export async function POST(req: Request) {
   await getOrCreateUser(uid);
 
   const q = sql();
+  type InsertedRow = { id: number; created_at: string };
   const rows = (await q`
     insert into lab_progress_photos (user_id, image_data_url, note)
     values (${uid}, ${imageDataUrl}, ${note})
     returning id, created_at;
-  `) as any[];
+  `) as InsertedRow[];
 
   return NextResponse.json({ ok: true, saved: rows?.[0] ?? null });
 }

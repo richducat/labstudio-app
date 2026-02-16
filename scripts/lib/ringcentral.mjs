@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const CACHE_PATH = path.resolve('memory/ringcentral-token.json');
+const DEFAULT_CACHE_PATH = path.resolve('memory/ringcentral-token.json');
+const PER_USER_REFRESH_PATH = path.resolve('memory/ringcentral-refresh-tokens.json');
 const ENV_PATH = path.resolve('.env.local');
 
 function reqEnv(name) {
@@ -14,18 +15,42 @@ function basicAuthHeader(id, secret) {
   return 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64');
 }
 
-async function readCache() {
+function tenantKey(tenant) {
+  const t = String(tenant || '').trim();
+  if (!t) return '';
+  return t.toUpperCase();
+}
+
+function envName(tenant, base) {
+  const t = tenantKey(tenant);
+  return t ? `RINGCENTRAL_${t}_${base}` : `RINGCENTRAL_${base}`;
+}
+
+function cachePathForTenant(tenant) {
+  const t = tenantKey(tenant);
+  if (!t) return DEFAULT_CACHE_PATH;
+  return path.resolve(`memory/ringcentral-token.${t.toLowerCase()}.json`);
+}
+
+function cachePathForTenantAndUser(tenant, userKey) {
+  const t = tenantKey(tenant);
+  const u = String(userKey || '').trim().toLowerCase();
+  if (!t || !u) return cachePathForTenant(tenant);
+  return path.resolve(`memory/ringcentral-token.${t.toLowerCase()}.${u}.json`);
+}
+
+async function readCache(cachePath) {
   try {
-    const raw = await fs.readFile(CACHE_PATH, 'utf8');
+    const raw = await fs.readFile(cachePath, 'utf8');
     return JSON.parse(raw);
   } catch {
     return null;
   }
 }
 
-async function writeCache(obj) {
-  await fs.mkdir(path.dirname(CACHE_PATH), { recursive: true });
-  await fs.writeFile(CACHE_PATH, JSON.stringify(obj, null, 2) + '\n', 'utf8');
+async function writeCache(cachePath, obj) {
+  await fs.mkdir(path.dirname(cachePath), { recursive: true });
+  await fs.writeFile(cachePath, JSON.stringify(obj, null, 2) + '\n', 'utf8');
 }
 
 async function patchEnvLocal(key, value) {
@@ -48,10 +73,10 @@ async function patchEnvLocal(key, value) {
   }
 }
 
-export async function ringcentralRefreshToken({ refreshToken }) {
-  const apiServer = process.env.RINGCENTRAL_API_SERVER || 'https://platform.ringcentral.com';
-  const clientId = reqEnv('RINGCENTRAL_CLIENT_ID');
-  const clientSecret = reqEnv('RINGCENTRAL_CLIENT_SECRET');
+export async function ringcentralRefreshToken({ refreshToken, tenant } = {}) {
+  const apiServer = process.env[envName(tenant, 'API_SERVER')] || process.env.RINGCENTRAL_API_SERVER || 'https://platform.ringcentral.com';
+  const clientId = reqEnv(envName(tenant, 'CLIENT_ID'));
+  const clientSecret = reqEnv(envName(tenant, 'CLIENT_SECRET'));
 
   const url = `${apiServer}/restapi/oauth/token`;
   const body = new URLSearchParams({
@@ -81,35 +106,112 @@ export async function ringcentralRefreshToken({ refreshToken }) {
   };
 }
 
-export async function ringcentralGetAccessToken() {
+export async function ringcentralGetAccessToken({ tenant, userKey } = {}) {
+  const cachePath = userKey ? cachePathForTenantAndUser(tenant, userKey) : cachePathForTenant(tenant);
+
   // 1) Use cached access token if valid
-  const cache = await readCache();
+  const cache = await readCache(cachePath);
   if (cache?.access_token && cache?.expires_at_ms && cache.expires_at_ms - Date.now() > 60_000) {
     return cache.access_token;
   }
 
   // 2) Refresh using the most recent refresh token we can find.
-  const envRefresh = process.env.RINGCENTRAL_REFRESH_TOKEN;
-  const refreshToken = cache?.refresh_token || envRefresh;
-  if (!refreshToken) throw new Error('Missing RINGCENTRAL_REFRESH_TOKEN');
+  let envRefresh = null;
+  let refreshEnvKey = null;
 
-  const refreshed = await ringcentralRefreshToken({ refreshToken });
-
-  // Persist refresh token rotation if present.
-  if (refreshed.refresh_token && refreshed.refresh_token !== envRefresh) {
-    await patchEnvLocal('RINGCENTRAL_REFRESH_TOKEN', refreshed.refresh_token);
-    process.env.RINGCENTRAL_REFRESH_TOKEN = refreshed.refresh_token;
+  if (!userKey) {
+    refreshEnvKey = envName(tenant, 'REFRESH_TOKEN');
+    envRefresh = process.env[refreshEnvKey];
   }
 
-  await writeCache(refreshed);
+  const refreshToken = cache?.refresh_token || envRefresh;
+  if (!refreshToken) {
+    if (userKey) throw new Error(`Missing RingCentral refresh token for userKey=${userKey} (tenant=${tenantKey(tenant)})`);
+    throw new Error(`Missing ${refreshEnvKey}`);
+  }
+
+  const refreshed = await ringcentralRefreshToken({ refreshToken, tenant });
+
+  // Persist refresh token rotation if present.
+  if (refreshed.refresh_token) {
+    if (!userKey && refreshed.refresh_token !== envRefresh) {
+      await patchEnvLocal(refreshEnvKey, refreshed.refresh_token);
+      process.env[refreshEnvKey] = refreshed.refresh_token;
+    }
+  }
+
+  await writeCache(cachePath, refreshed);
   return refreshed.access_token;
 }
 
-async function ringcentralRequestJson({ method, pathAndQuery, body }) {
-  const apiServer = process.env.RINGCENTRAL_API_SERVER || 'https://platform.ringcentral.com';
+async function readPerUserRefreshTokens() {
+  try {
+    return JSON.parse(await fs.readFile(PER_USER_REFRESH_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+async function writePerUserRefreshTokens(obj) {
+  await fs.mkdir(path.dirname(PER_USER_REFRESH_PATH), { recursive: true });
+  await fs.writeFile(PER_USER_REFRESH_PATH, JSON.stringify(obj, null, 2) + '\n', 'utf8');
+}
+
+export async function ringcentralGetAccessTokenForUser({ tenant, userKey } = {}) {
+  const u = String(userKey || '').trim().toLowerCase();
+  if (!u) throw new Error('ringcentralGetAccessTokenForUser: missing userKey');
+
+  // Prefer per-user refresh tokens file.
+  const tokens = await readPerUserRefreshTokens();
+  const tKey = String(tenantKey(tenant) || '').toLowerCase();
+
+  // Common shapes we support:
+  // 1) { "new:amy": "<rt>" }
+  // 2) { "amy": "<rt>" }
+  // 3) { "NEW": { "amy": { refresh_token: "<rt>" } } }
+  const directKey = tKey ? `${tKey}:${u}` : null;
+  const direct = directKey ? tokens?.[directKey] : null;
+  const tenantObj = tokens?.[tenantKey(tenant)] || tokens?.[tKey] || tokens;
+
+  const rt =
+    (typeof direct === 'string' ? direct : direct?.refresh_token) ||
+    tenantObj?.[u]?.refresh_token ||
+    tokens?.[u]?.refresh_token ||
+    (typeof tenantObj?.[u] === 'string' ? tenantObj[u] : null) ||
+    (typeof tokens?.[u] === 'string' ? tokens[u] : null);
+  if (!rt) throw new Error(`No refresh token found in ${PER_USER_REFRESH_PATH} for userKey=${u} tenant=${tenantKey(tenant)}`);
+
+  // Use per-user cache path; patch rotation back into file.
+  const cachePath = cachePathForTenantAndUser(tenant, u);
+  const cache = await readCache(cachePath);
+  if (cache?.access_token && cache?.expires_at_ms && cache.expires_at_ms - Date.now() > 60_000) return cache.access_token;
+
+  const refreshed = await ringcentralRefreshToken({ refreshToken: cache?.refresh_token || rt, tenant });
+
+  // Persist rotation back to file in the same shape we found.
+  if (refreshed.refresh_token && refreshed.refresh_token !== rt) {
+    // best-effort: store under tokens[u] if present, else tenantObj[u]
+    if (tokens?.[u]) {
+      tokens[u] = { ...(typeof tokens[u] === 'object' ? tokens[u] : {}), refresh_token: refreshed.refresh_token };
+    } else {
+      const tkey = tenantKey(tenant);
+      if (!tokens[tkey]) tokens[tkey] = {};
+      tokens[tkey][u] = { ...(typeof tokens[tkey][u] === 'object' ? tokens[tkey][u] : {}), refresh_token: refreshed.refresh_token };
+    }
+    await writePerUserRefreshTokens(tokens);
+  }
+
+  await writeCache(cachePath, refreshed);
+  return refreshed.access_token;
+}
+
+async function ringcentralRequestJson({ method, pathAndQuery, body, tenant, userKey }) {
+  const apiServer = process.env[envName(tenant, 'API_SERVER')] || process.env.RINGCENTRAL_API_SERVER || 'https://platform.ringcentral.com';
 
   async function doFetch() {
-    const token = await ringcentralGetAccessToken();
+    const token = userKey
+      ? await ringcentralGetAccessTokenForUser({ tenant, userKey })
+      : await ringcentralGetAccessToken({ tenant });
     const url = `${apiServer}${pathAndQuery}`;
     const res = await fetch(url, {
       method,
@@ -129,7 +231,7 @@ async function ringcentralRequestJson({ method, pathAndQuery, body }) {
   // If our cached access token was revoked (common when re-authorizing), retry once with a fresh refresh.
   if (res.status === 401 && String(json?.message || '').includes('Token not found')) {
     try {
-      await fs.unlink(CACHE_PATH);
+      await fs.unlink(userKey ? cachePathForTenantAndUser(tenant, userKey) : cachePathForTenant(tenant));
     } catch {}
     ;({ res, json } = await doFetch());
   }
@@ -141,22 +243,28 @@ async function ringcentralRequestJson({ method, pathAndQuery, body }) {
   return json;
 }
 
-export async function ringcentralGetJson(pathAndQuery) {
-  return ringcentralRequestJson({ method: 'GET', pathAndQuery });
+export async function ringcentralGetJson(pathAndQuery, { tenant, userKey } = {}) {
+  return ringcentralRequestJson({ method: 'GET', pathAndQuery, tenant, userKey });
 }
 
-export async function ringcentralPostJson(pathAndQuery, body) {
-  return ringcentralRequestJson({ method: 'POST', pathAndQuery, body });
+export async function ringcentralPostJson(pathAndQuery, body, { tenant, userKey } = {}) {
+  return ringcentralRequestJson({ method: 'POST', pathAndQuery, body, tenant, userKey });
 }
 
-export async function ringcentralSendSms({ fromNumber, toNumber, text }) {
+export async function ringcentralSendSms({ fromNumber, toNumber, text, tenant, userKey, extensionId } = {}) {
   if (!fromNumber) throw new Error('ringcentralSendSms: missing fromNumber');
   if (!toNumber) throw new Error('ringcentralSendSms: missing toNumber');
   if (!text) throw new Error('ringcentralSendSms: missing text');
 
-  return ringcentralPostJson('/restapi/v1.0/account/~/extension/~/sms', {
-    from: { phoneNumber: fromNumber },
-    to: [{ phoneNumber: toNumber }],
-    text,
-  });
+  const extPath = extensionId ? String(extensionId) : '~';
+
+  return ringcentralPostJson(
+    `/restapi/v1.0/account/~/extension/${extPath}/sms`,
+    {
+      from: { phoneNumber: fromNumber },
+      to: [{ phoneNumber: toNumber }],
+      text,
+    },
+    { tenant, userKey },
+  );
 }

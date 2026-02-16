@@ -33,13 +33,23 @@ export async function GET() {
   await getOrCreateUser(uid);
 
   const q = sql();
+
+  type StrengthPrRow = {
+    id: number;
+    created_at: string;
+    lift: string;
+    value: number;
+    unit: string;
+    reps: number | null;
+  };
+
   const rows = (await q`
     select id, created_at, lift, value, unit, reps
     from lab_strength_prs
     where user_id = ${uid}
     order by created_at desc
     limit 20;
-  `) as any[];
+  `) as StrengthPrRow[];
 
   return NextResponse.json({ ok: true, latest: rows?.[0] ?? null, history: rows });
 }
@@ -60,6 +70,7 @@ export async function POST(req: Request) {
   const valueNum = body.value == null || body.value === '' ? NaN : Number(body.value);
   const unit = (body.unit || 'lb').trim().slice(0, 10);
   const repsNum = body.reps == null || body.reps === '' ? null : Number(body.reps);
+  const reps = repsNum != null && Number.isFinite(repsNum) ? repsNum : null;
 
   if (!lift) return NextResponse.json({ ok: false, error: 'Missing lift' }, { status: 400 });
   if (!Number.isFinite(valueNum)) return NextResponse.json({ ok: false, error: 'Invalid value' }, { status: 400 });
@@ -68,11 +79,13 @@ export async function POST(req: Request) {
   await getOrCreateUser(uid);
 
   const q = sql();
+
+  type InsertedRow = { id: number; created_at: string };
   const rows = (await q`
     insert into lab_strength_prs (user_id, lift, value, unit, reps)
-    values (${uid}, ${lift}, ${valueNum}, ${unit}, ${Number.isFinite(repsNum as any) ? repsNum : null})
+    values (${uid}, ${lift}, ${valueNum}, ${unit}, ${reps})
     returning id, created_at;
-  `) as any[];
+  `) as InsertedRow[];
 
   return NextResponse.json({ ok: true, saved: rows?.[0] ?? null });
 }

@@ -34,6 +34,14 @@ async function mustUid() {
   return uid;
 }
 
+type CoachFocusRow = {
+  id: number;
+  created_at: string;
+  text: string;
+  pinned: boolean;
+  pinned_at: string | null;
+};
+
 async function getPinnedAndHistory(uid: string) {
   const q = sql();
   const pinned = (await q`
@@ -42,7 +50,7 @@ async function getPinnedAndHistory(uid: string) {
     where user_id = ${uid} and pinned = true
     order by pinned_at desc
     limit 1;
-  `) as any[];
+  `) as CoachFocusRow[];
 
   const history = (await q`
     select id, created_at, text, pinned, pinned_at
@@ -50,7 +58,7 @@ async function getPinnedAndHistory(uid: string) {
     where user_id = ${uid}
     order by created_at desc
     limit 12;
-  `) as any[];
+  `) as CoachFocusRow[];
 
   return { pinned: pinned?.[0] ?? null, history };
 }
@@ -128,7 +136,7 @@ export async function POST(req: Request) {
     where user_id = ${uid}
     order by created_at desc
     limit 5;
-  `) as any[];
+  `) as Array<{ text: string | null }>;
 
   const focusMemory = recentFocus.map((r) => String(r.text || '')).filter(Boolean);
 
@@ -188,7 +196,7 @@ Return plain text only.`;
     insert into lab_coach_focus (user_id, text, pinned)
     values (${uid}, ${text.slice(0, 5000)}, false)
     returning id, created_at, text, pinned, pinned_at;
-  `) as any[];
+  `) as CoachFocusRow[];
 
   const { pinned, history } = await getPinnedAndHistory(uid);
 

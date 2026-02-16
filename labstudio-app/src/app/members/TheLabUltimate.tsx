@@ -160,7 +160,7 @@ export default function TheLabUltimate({
         {tab === 'library' && <LibraryView />}
         {tab === 'progress' && (
           <ProgressView
-            mode={(tabMeta?.mode as any) === 'prs' ? 'prs' : 'photos'}
+            mode={tabMeta && typeof tabMeta.mode === 'string' && tabMeta.mode === 'prs' ? 'prs' : 'photos'}
             onBack={() => setTab('home')}
           />
         )}

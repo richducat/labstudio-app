@@ -17,8 +17,37 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { loadEnvLocal } from '../lib/load-env-local.mjs';
-import { getZohoAccessToken, zohoCrmCoql } from '../lib/zoho.mjs';
+import { getZohoAccessToken, zohoCrmCoql, zohoCrmGet } from '../lib/zoho.mjs';
 import { ringcentralGetJson, ringcentralSendSms } from '../lib/ringcentral.mjs';
+
+const ADMIN_USER_KEY = 'new-admin';
+const FROM_NUMBER_TO_EXTENSION_CACHE_PATH = path.resolve('memory/ringcentral-from-number-to-extension.json');
+
+async function readFromNumberCache() {
+  try { return JSON.parse(await fs.readFile(FROM_NUMBER_TO_EXTENSION_CACHE_PATH, 'utf8')); } catch { return {}; }
+}
+async function writeFromNumberCache(obj) {
+  await fs.mkdir(path.dirname(FROM_NUMBER_TO_EXTENSION_CACHE_PATH), { recursive: true });
+  await fs.writeFile(FROM_NUMBER_TO_EXTENSION_CACHE_PATH, JSON.stringify(obj, null, 2) + '\n', 'utf8');
+}
+
+async function resolveExtensionIdForFromNumber({ fromNumber, tenant }) {
+  const n = normalizePhone(fromNumber);
+  if (!n) return null;
+
+  const cache = await readFromNumberCache();
+  if (cache[n]?.extensionId) return cache[n].extensionId;
+
+  // Query account phone numbers using admin token to find which extension owns this direct number.
+  const out = await ringcentralGetJson('/restapi/v1.0/account/~/phone-number?perPage=1000', { tenant, userKey: ADMIN_USER_KEY });
+  const rec = (out?.records || []).find(r => normalizePhone(r?.phoneNumber) === n);
+  const extId = rec?.extension?.id || null;
+
+  cache[n] = { extensionId: extId, extensionNumber: rec?.extension?.extensionNumber || null, updatedAt: new Date().toISOString() };
+  await writeFromNumberCache(cache);
+
+  return extId;
+}
 
 loadEnvLocal();
 
@@ -27,6 +56,8 @@ const DOC_EXPORT_URL = 'https://docs.google.com/document/d/1g2hC0qzFcAPjkawu4ArA
 
 const BOOKING_LINE = 'Book here if easier: zbooking.us/hh8dC';
 
+const DEFAULT_LEAD_SLA_HOURS = 48;
+
 const LINE_NUMBERS = {
   DEVIN: '+13212147853',
   ADAM: '+14072168511',
@@ -34,6 +65,17 @@ const LINE_NUMBERS = {
   JARED: '+16822675268',
   KAREN: '+17724099069',
 };
+
+function lineToUserKey(fromNumber) {
+  const n = normalizePhone(fromNumber);
+  if (!n) return null;
+  if (n === normalizePhone(LINE_NUMBERS.DEVIN)) return 'devin';
+  if (n === normalizePhone(LINE_NUMBERS.ADAM)) return 'adam';
+  if (n === normalizePhone(LINE_NUMBERS.AMY)) return 'amy';
+  if (n === normalizePhone(LINE_NUMBERS.JARED)) return 'jared';
+  if (n === normalizePhone(LINE_NUMBERS.KAREN)) return 'karen';
+  return null;
+}
 
 const QUIET_START_PT_HOUR = 21; // 9pm PT
 const QUIET_END_PT_HOUR = 8; // 8am PT
@@ -49,6 +91,21 @@ function getArg(name, def) {
 const dryRun = process.argv.includes('--dry-run');
 const lookbackMin = Number(getArg('--lookbackMin', '60'));
 const mode = getArg('--mode', 'schedule'); // schedule | reactive
+const tenant = getArg('--tenant', 'new'); // RingCentral tenant/app namespace (default: new)
+
+// New: proactive lead SLA outreach (owner-based) for leads untouched for N hours.
+// Enabled by default in schedule mode (per Richard request), can be disabled with --no-lead-sla.
+const leadSlaEnabled = !process.argv.includes('--no-lead-sla') && mode === 'schedule';
+const leadSlaHours = Number(getArg('--leadSlaHours', String(DEFAULT_LEAD_SLA_HOURS)));
+const leadLimit = Number(getArg('--leadLimit', '120'));
+
+const repsArg = getArg('--reps', ''); // optional: comma-separated rep keys (adam,amy,jared,devin,karen)
+const allowedRepKeys = new Set(
+  String(repsArg || '')
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean),
+);
 
 function normalizePhone(v) {
   const s = String(v || '').trim();
@@ -203,6 +260,33 @@ function shouldStopFromInbound(text) {
   return ['stop', 'unsubscribe', 'do not contact', 'wrong number', 'wrong #'].some(k => t.includes(k));
 }
 
+function isDisqualifiedLeadStatus(status) {
+  const t = String(status || '').trim().toLowerCase();
+  if (!t) return false;
+  // Conservative: treat these as “no / stop / do not contact / dead”.
+  return [
+    'do not',
+    'dnc',
+    'junk',
+    'spam',
+    'dead',
+    'not qualified',
+    'unqualified',
+    'rejected',
+    'wrong',
+    'duplicate',
+    'not interested',
+    'no',
+    'stop',
+  ].some((k) => t.includes(k));
+}
+
+function newestIso(a, b) {
+  if (!a) return b || null;
+  if (!b) return a || null;
+  return new Date(a).getTime() >= new Date(b).getTime() ? a : b;
+}
+
 async function zohoFindLeadOrDeal({ accessToken, apiDomain, phone }) {
   // Try Leads first.
   const qLead = `select id, First_Name, Last_Name, Full_Name, Email, Phone, Mobile, Owner, Lead_Status from Leads where (Phone = '${phone}' or Mobile = '${phone}') limit 1`;
@@ -219,6 +303,59 @@ async function zohoFindLeadOrDeal({ accessToken, apiDomain, phone }) {
   return null;
 }
 
+async function zohoFetchActiveUsersById({ accessToken, apiDomain }) {
+  const j = await zohoCrmGet({ accessToken, apiDomain, pathAndQuery: '/crm/v2/users?type=ActiveUsers' });
+  const users = j?.users || [];
+  const m = new Map();
+  for (const u of users) {
+    m.set(String(u.id), String(u.full_name || ''));
+  }
+  return m;
+}
+
+async function zohoFetchLeadSlaCandidates({ accessToken, apiDomain, slaHours, limit }) {
+  const cutoff = new Date(Date.now() - slaHours * 3600 * 1000);
+  const cutoffIso = cutoff.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+
+  // Leads module does NOT support Modified_Time in this org; use Last_Activity_Time + Created_Time.
+  // We pull a capped set and filter locally.
+  const q = `select id, Full_Name, Owner, Phone, Mobile, Lead_Status, Created_Time, Last_Activity_Time from Leads where Created_Time <= '${cutoffIso}' limit ${Math.min(Math.max(Number(limit) || 120, 1), 200)}`;
+  const res = await zohoCrmCoql({ accessToken, apiDomain, selectQuery: q });
+  const rows = res?.data || [];
+
+  const userNameById = await zohoFetchActiveUsersById({ accessToken, apiDomain }).catch(() => new Map());
+
+  const out = [];
+  for (const l of rows) {
+    if (isDisqualifiedLeadStatus(l?.Lead_Status)) continue;
+
+    const phone = normalizePhone(l?.Mobile || l?.Phone);
+    if (!phone) continue;
+
+    const lastTouch = l?.Last_Activity_Time || l?.Created_Time;
+    if (!lastTouch) continue;
+
+    const lastTouchMs = new Date(lastTouch).getTime();
+    if (!Number.isFinite(lastTouchMs) || lastTouchMs > cutoff.getTime()) continue;
+
+    const ownerId = String(l?.Owner?.id || '');
+    const ownerName = String(l?.Owner?.name || userNameById.get(ownerId) || '').trim() || null;
+
+    out.push({
+      id: String(l.id),
+      name: String(l.Full_Name || '').trim(),
+      ownerName,
+      phone,
+      lastTouch,
+      leadStatus: l?.Lead_Status || null,
+    });
+  }
+
+  // oldest first (stale first)
+  out.sort((a, b) => new Date(a.lastTouch).getTime() - new Date(b.lastTouch).getTime());
+  return out;
+}
+
 function ownerToLine(ownerName) {
   const n = String(ownerName || '').toLowerCase();
   if (n.includes('adam')) return LINE_NUMBERS.ADAM;
@@ -230,6 +367,12 @@ function ownerToLine(ownerName) {
   return null;
 }
 
+function fromNumberAllowed(fromNumber) {
+  if (!allowedRepKeys.size) return true;
+  const keyByNumber = Object.entries(LINE_NUMBERS).find(([, num]) => num === fromNumber)?.[0]?.toLowerCase();
+  return keyByNumber ? allowedRepKeys.has(keyByNumber) : false;
+}
+
 async function fetchRecentSms({ fromDate }) {
   // message-store includes inbound/outbound; filter type=SMS.
   const qs = new URLSearchParams({
@@ -237,7 +380,7 @@ async function fetchRecentSms({ fromDate }) {
     perPage: '200',
     messageType: 'SMS',
   });
-  return ringcentralGetJson(`/restapi/v1.0/account/~/extension/~/message-store?${qs.toString()}`);
+  return ringcentralGetJson(`/restapi/v1.0/account/~/extension/~/message-store?${qs.toString()}`, { tenant });
 }
 
 function getRecordCounterparty(rec) {
@@ -299,6 +442,76 @@ async function main() {
     return;
   }
 
+  // Proactive SLA-based outreach for stale leads (schedule mode only)
+  if (leadSlaEnabled) {
+    const candidates = await zohoFetchLeadSlaCandidates({
+      accessToken: zohoToken,
+      apiDomain,
+      slaHours: leadSlaHours,
+      limit: leadLimit,
+    }).catch(() => []);
+
+    for (const l of candidates) {
+      // Respect stop flags if we have them.
+      const c = (state.contacts[l.phone] ||= {
+        firstSeenAt: null,
+        lastInboundAt: null,
+        lastOutboundAt: null,
+        lastLine: null,
+        day0At: null,
+        stopped: false,
+        sent: {},
+      });
+      if (c.stopped) continue;
+
+      // Only send if we haven't touched them in the last 48h (either direction) according to our local history.
+      // If we have no local history, rely on Zoho lastTouch filter.
+      const lastLocalTouch = newestIso(c.lastInboundAt, c.lastOutboundAt);
+      if (lastLocalTouch) {
+        const ms = new Date(lastLocalTouch).getTime();
+        if (Date.now() - ms < leadSlaHours * 3600 * 1000) continue;
+      }
+
+      const fromNumber = ownerToLine(l.ownerName);
+      if (!fromNumber) continue;
+      if (!fromNumberAllowed(fromNumber)) continue;
+
+      // In schedule mode, only send during the windows; prefer morning template in AM window and evening template in PM window.
+      const wantMorning = inMorningWindowPt();
+      const wantEvening = inEveningWindowPt();
+      if (!wantMorning && !wantEvening) continue;
+
+      const day = chooseDayNumber({ day0At: c.day0At });
+      const sentDay = (c.sent ||= {});
+      const sentMeta = (sentDay[day] ||= { morningAt: null, eveningAt: null });
+
+      // If we already sent a morning/evening text today, don't send another.
+      const shouldSendMorning = wantMorning && !sentMeta.morningAt;
+      const shouldSendEvening = !shouldSendMorning && wantEvening && !sentMeta.eveningAt;
+      if (!shouldSendMorning && !shouldSendEvening) continue;
+
+      const msg = shouldSendEvening
+        ? (templates?.[day]?.evening || templates?.[1]?.evening)
+        : (templates?.[day]?.morning || templates?.[1]?.morning);
+      if (!msg) continue;
+
+      const text = `${msg}\n\n${BOOKING_LINE}`;
+
+      if (dryRun) {
+        process.stdout.write(`[dry-run] SLA${leadSlaHours}h LEAD(${l.ownerName || 'n/a'}) to ${l.phone} from ${fromNumber}: ${text}\n`);
+      } else {
+        const extensionId = await resolveExtensionIdForFromNumber({ fromNumber, tenant });
+        await ringcentralSendSms({ fromNumber, toNumber: l.phone, text, tenant, userKey: ADMIN_USER_KEY, extensionId });
+      }
+
+      const nowIso2 = new Date().toISOString();
+      if (shouldSendMorning) sentMeta.morningAt = nowIso2;
+      if (shouldSendEvening) sentMeta.eveningAt = nowIso2;
+      c.lastOutboundAt = nowIso2;
+      // continue scanning; cap volume naturally by leadLimit + window
+    }
+  }
+
   const nowIso = new Date().toISOString();
   const sendMorning = mode === 'reactive' ? true : inMorningWindowPt();
   const sendEvening = mode === 'schedule' ? inEveningWindowPt() : false;
@@ -332,10 +545,16 @@ async function main() {
     // Determine fromNumber.
     let fromNumber = null;
     if (kind === 'lead' || kind === 'unknown') {
-      fromNumber = ownerToLine(ownerName) || LINE_NUMBERS.AMY;
+      fromNumber = ownerToLine(ownerName);
+      // If rep filtering is enabled and we can't map owner->line, skip (avoid sending from wrong rep).
+      if (allowedRepKeys.size && !fromNumber) continue;
+      fromNumber = fromNumber || LINE_NUMBERS.AMY;
     } else {
       fromNumber = c.lastLine || LINE_NUMBERS.DEVIN;
     }
+
+    // If rep filtering is enabled, only send when the chosen fromNumber is one of the allowed rep lines.
+    if (!fromNumberAllowed(fromNumber)) continue;
 
     const msg = wantEvening ? (templates?.[day]?.evening || templates?.[1]?.evening) : (templates?.[day]?.morning || templates?.[1]?.morning);
     if (!msg) continue;
@@ -345,7 +564,8 @@ async function main() {
     if (dryRun) {
       process.stdout.write(`[dry-run] ${wantEvening ? 'EVENING' : 'MORNING'} ${kind.toUpperCase()}(${ownerName || 'n/a'}) to ${phone} from ${fromNumber}: ${text}\n`);
     } else {
-      await ringcentralSendSms({ fromNumber, toNumber: phone, text });
+      const extensionId = await resolveExtensionIdForFromNumber({ fromNumber, tenant });
+      await ringcentralSendSms({ fromNumber, toNumber: phone, text, tenant, userKey: ADMIN_USER_KEY, extensionId });
     }
 
     if (wantEvening) sentMeta.eveningAt = nowIso;

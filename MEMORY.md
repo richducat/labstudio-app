@@ -16,6 +16,7 @@
 
 ## How the user wants me to operate
 - Be highly proactive: keep user organized and prepared; monitor business; take work off their plate.
+- **North star: make money + increase efficiency/throughput.** Prioritize revenue-first work and automations that reduce Richard’s cognitive load.
 - Improve workflow and revenue where possible.
 - For changes/builds: create PRs for user to review; do not push live; user will test and commit.
 - When writing outbound drafts (emails/messages), bundle multiple drafts together when possible (send them “along with any other drafts” going forward).
@@ -26,6 +27,7 @@
 - Communication cadence while executing tasks:
   - If the task/project will take **< 10 minutes**, send a progress update **every minute**.
   - If the task/project will take **≥ 10 minutes**, send a progress update **every 3 minutes** (and immediately when major milestones/blocks happen).
+- **Anti-drift requirement:** perform regular self-review to prevent forgetting/goal drift and to ensure automations don’t silently break or overwrite each other. Keep a single source of truth for priorities (goals-master + context-anchor) and prefer fixing original jobs over replacing them.
 
 ## LabStudio / Personal Apps (active)
 - LabStudio requirement: **NO mock data** in user-visible UI. Only real DB-backed/integration-backed data; seeding is allowed if it writes to the DB.

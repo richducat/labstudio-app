@@ -35,10 +35,17 @@ for repo in "${REPOS[@]}"; do
   git -C "$repo" remote -v || true
 
   # Pull first to minimize push conflicts.
-  if ! git -C "$repo" pull --rebase --autostash; then
-    echo "[fail] pull --rebase failed (leaving repo untouched): $repo"
-    failed=$((failed+1))
-    continue
+  # If the current branch has no upstream (common on newly-created branches),
+  # `git pull` fails with "There is no tracking information...".
+  # In that case: skip pull, proceed to commit, then `git push -u origin HEAD`.
+  if git -C "$repo" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    if ! git -C "$repo" pull --rebase --autostash; then
+      echo "[fail] pull --rebase failed (leaving repo untouched): $repo"
+      failed=$((failed+1))
+      continue
+    fi
+  else
+    echo "[warn] no upstream tracking branch; skipping pull: $repo"
   fi
 
   if [[ -z "$(git -C "$repo" status --porcelain)" ]]; then
@@ -59,11 +66,27 @@ for repo in "${REPOS[@]}"; do
   # Commit message is intentionally consistent for easy searching.
   git -C "$repo" commit -m "chore(backup): auto-sync $TS_UTC" --no-gpg-sign || true
 
-  # Push (uses repo's configured upstream).
-  if ! git -C "$repo" push; then
-    echo "[fail] push failed: $repo"
-    failed=$((failed+1))
-    continue
+  # Push.
+  # - If upstream exists: normal push.
+  # - If no upstream: set it via `git push -u origin HEAD` (requires origin remote).
+  if git -C "$repo" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    if ! git -C "$repo" push; then
+      echo "[fail] push failed: $repo"
+      failed=$((failed+1))
+      continue
+    fi
+  else
+    if git -C "$repo" remote get-url origin >/dev/null 2>&1; then
+      if ! git -C "$repo" push -u origin HEAD; then
+        echo "[fail] push -u origin HEAD failed: $repo"
+        failed=$((failed+1))
+        continue
+      fi
+    else
+      echo "[fail] no upstream and no origin remote configured: $repo"
+      failed=$((failed+1))
+      continue
+    fi
   fi
 
   echo "[ok] committed + pushed"

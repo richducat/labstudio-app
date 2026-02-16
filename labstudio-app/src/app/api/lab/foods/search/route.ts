@@ -19,10 +19,15 @@ function n(v: unknown): number | null {
   return Number.isFinite(x) ? x : null;
 }
 
-function pickNumberByNutrientId(foodNutrients: any[] | undefined, nutrientId: number) {
+function pickNumberByNutrientId(foodNutrients: unknown[] | undefined, nutrientId: number) {
   if (!Array.isArray(foodNutrients)) return null;
-  const hit = foodNutrients.find((fn) => fn?.nutrientId === nutrientId);
-  return n(hit?.value);
+  const hit = foodNutrients.find((fn) => {
+    if (!fn || typeof fn !== 'object') return false;
+    const rec = fn as Record<string, unknown>;
+    return rec.nutrientId === nutrientId;
+  });
+  if (!hit || typeof hit !== 'object') return null;
+  return n((hit as Record<string, unknown>).value);
 }
 
 async function usdaSearch(q: string, limit: number): Promise<UnifiedFood[]> {
@@ -36,11 +41,18 @@ async function usdaSearch(q: string, limit: number): Promise<UnifiedFood[]> {
 
   const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   if (!res.ok) return [];
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json: unknown = await res.json().catch(() => ({}));
 
-  const foods = Array.isArray(json?.foods) ? json.foods : [];
-  return foods.slice(0, limit).map((f: any) => {
-    const foodNutrients = Array.isArray(f?.foodNutrients) ? f.foodNutrients : [];
+  const foods =
+    json && typeof json === 'object' && Array.isArray((json as Record<string, unknown>).foods)
+      ? ((json as Record<string, unknown>).foods as unknown[])
+      : [];
+
+  return foods.slice(0, limit).map((f) => {
+    const foodNutrients =
+      f && typeof f === 'object' && Array.isArray((f as Record<string, unknown>).foodNutrients)
+        ? ((f as Record<string, unknown>).foodNutrients as unknown[])
+        : [];
 
     // USDA nutrient IDs (common):
     // 1008 = Energy (kcal)
@@ -52,15 +64,17 @@ async function usdaSearch(q: string, limit: number): Promise<UnifiedFood[]> {
     const carbs_g = pickNumberByNutrientId(foodNutrients, 1005);
     const fat_g = pickNumberByNutrientId(foodNutrients, 1004);
 
-    const description = String(f?.description || '').trim();
-    const brand = String(f?.brandName || '').trim() || undefined;
+    const frec = f && typeof f === 'object' ? (f as Record<string, unknown>) : {};
+
+    const description = String(frec.description || '').trim();
+    const brand = String(frec.brandName || '').trim() || undefined;
 
     // USDA search results can be "per 100g" or "per serving" depending on item.
     // We treat as unknown for now; UI will not auto-scale unless basis==per_100g.
     const label = [brand, description].filter(Boolean).join(' — ') || 'Food';
 
     return {
-      id: `usda:${String(f?.fdcId)}`,
+      id: `usda:${String(frec.fdcId)}`,
       source: 'usda',
       label,
       brand,
@@ -83,14 +97,19 @@ async function offSearch(q: string, limit: number): Promise<UnifiedFood[]> {
 
   const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   if (!res.ok) return [];
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json: unknown = await res.json().catch(() => ({}));
 
-  const products = Array.isArray(json?.products) ? json.products : [];
-  return products.slice(0, limit).map((p: any) => {
-    const name = String(p?.product_name || p?.generic_name || '').trim();
-    const brand = String(p?.brands || '').split(',')[0]?.trim() || undefined;
+  const products =
+    json && typeof json === 'object' && Array.isArray((json as Record<string, unknown>).products)
+      ? ((json as Record<string, unknown>).products as unknown[])
+      : [];
 
-    const nutr = p?.nutriments || {};
+  return products.slice(0, limit).map((p) => {
+    const prec = p && typeof p === 'object' ? (p as Record<string, unknown>) : {};
+    const name = String(prec.product_name || prec.generic_name || '').trim();
+    const brand = String(prec.brands || '').split(',')[0]?.trim() || undefined;
+
+    const nutr = (prec.nutriments && typeof prec.nutriments === 'object' ? (prec.nutriments as Record<string, unknown>) : {}) as Record<string, unknown>;
     // OFF is typically per 100g
     const calories = n(nutr['energy-kcal_100g'] ?? nutr['energy-kcal']);
     const protein_g = n(nutr['proteins_100g']);
@@ -100,7 +119,7 @@ async function offSearch(q: string, limit: number): Promise<UnifiedFood[]> {
     const label = [brand, name || 'Food'].filter(Boolean).join(' — ');
 
     return {
-      id: `off:${String(p?.code || p?._id || p?.id || name)}`,
+      id: `off:${String(prec.code || prec._id || prec.id || name)}`,
       source: 'off',
       label,
       brand,

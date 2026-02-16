@@ -34,23 +34,28 @@ export async function POST(req: Request) {
   await ensureSchema();
   await getOrCreateUser(uid);
 
-  const weight = body.weight === '' || body.weight == null ? null : Number(body.weight);
-  const bodyFat = body.bodyFat === '' || body.bodyFat == null ? null : Number(body.bodyFat);
-  const restingHr = body.restingHr === '' || body.restingHr == null ? null : Number(body.restingHr);
+  const weightRaw = body.weight === '' || body.weight == null ? null : Number(body.weight);
+  const bodyFatRaw = body.bodyFat === '' || body.bodyFat == null ? null : Number(body.bodyFat);
+  const restingHrRaw = body.restingHr === '' || body.restingHr == null ? null : Number(body.restingHr);
+
+  const weight = weightRaw != null && Number.isFinite(weightRaw) ? weightRaw : null;
+  const bodyFat = bodyFatRaw != null && Number.isFinite(bodyFatRaw) ? bodyFatRaw : null;
+  const restingHr = restingHrRaw != null && Number.isFinite(restingHrRaw) ? restingHrRaw : null;
   const note = body.note?.slice(0, 2000) ?? null;
 
   const q = sql();
+  type InsertedRow = { id: number; created_at: string };
   const rows = (await q`
     insert into lab_daily_stats (user_id, weight_lbs, body_fat_pct, resting_hr, note)
     values (
       ${uid},
-      ${Number.isFinite(weight as any) ? weight : null},
-      ${Number.isFinite(bodyFat as any) ? bodyFat : null},
-      ${Number.isFinite(restingHr as any) ? restingHr : null},
+      ${weight},
+      ${bodyFat},
+      ${restingHr},
       ${note}
     )
     returning id, created_at;
-  `) as any[];
+  `) as InsertedRow[];
 
   return NextResponse.json({ ok: true, saved: rows?.[0] ?? null });
 }

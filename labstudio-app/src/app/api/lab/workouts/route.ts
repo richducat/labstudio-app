@@ -30,18 +30,21 @@ export async function POST(req: Request) {
 
   const body = (await req.json().catch(() => ({}))) as Body;
   const kind = (body.kind || 'workout').slice(0, 50);
-  const durationMin = body.durationMin == null || body.durationMin === '' ? null : Number(body.durationMin);
+  const durationRaw = body.durationMin == null || body.durationMin === '' ? null : Number(body.durationMin);
+  const durationMin = durationRaw != null && Number.isFinite(durationRaw) ? durationRaw : null;
   const note = body.note?.slice(0, 2000) ?? null;
 
   await ensureSchema();
   await getOrCreateUser(uid);
 
   const q = sql();
+
+  type InsertedRow = { id: number; created_at: string };
   const rows = (await q`
     insert into lab_workout_log (user_id, kind, duration_min, note)
-    values (${uid}, ${kind}, ${Number.isFinite(durationMin as any) ? durationMin : null}, ${note})
+    values (${uid}, ${kind}, ${durationMin}, ${note})
     returning id, created_at;
-  `) as any[];
+  `) as InsertedRow[];
 
   return NextResponse.json({ ok: true, saved: rows?.[0] ?? null });
 }

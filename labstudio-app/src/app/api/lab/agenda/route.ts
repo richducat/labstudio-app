@@ -40,22 +40,25 @@ export async function GET() {
 
   const day = todayInNY();
 
+  type CountRow = { count: number };
+
   // “Auto” agenda items based on real logs.
   const [dailyStatsCount, progressPhotoCount, nutritionCount] = await Promise.all([
     q`select count(*)::int as count
       from lab_daily_stats
       where user_id = ${uid}
-        and (created_at at time zone 'America/New_York')::date = ${day}::date;`,
+        and (created_at at time zone 'America/New_York')::date = ${day}::date;` as Promise<CountRow[]>,
     q`select count(*)::int as count
       from lab_progress_photos
       where user_id = ${uid}
-        and (created_at at time zone 'America/New_York')::date = ${day}::date;`,
+        and (created_at at time zone 'America/New_York')::date = ${day}::date;` as Promise<CountRow[]>,
     q`select count(*)::int as count
       from lab_nutrition_log
       where user_id = ${uid}
-        and (created_at at time zone 'America/New_York')::date = ${day}::date;`,
+        and (created_at at time zone 'America/New_York')::date = ${day}::date;` as Promise<CountRow[]>,
   ]);
 
+  type HabitRow = { id: number; name: string; sort_order: number | null; checked: boolean };
   const habits = (await q`
     select
       h.id,
@@ -70,17 +73,28 @@ export async function GET() {
     where h.user_id = ${uid}
       and h.active = true
     order by h.sort_order asc, h.created_at asc;
-  `) as any[];
+  `) as HabitRow[];
 
+  type PlannedRow = {
+    id: number;
+    day: string;
+    time_label: string | null;
+    title: string;
+    type: string | null;
+    action: string | null;
+    sort_order: number | null;
+    completed_at: string | null;
+  };
   const planned = (await q`
     select id, day, time_label, title, type, action, sort_order, completed_at
     from lab_agenda_items
     where user_id = ${uid}
       and day = ${day}::date
     order by sort_order asc, created_at asc;
-  `) as any[];
+  `) as PlannedRow[];
 
-  const items: any[] = [];
+  type AgendaItem = { id: string; title: string; time: string | null; type: string; action: string; completed: boolean };
+  const items: AgendaItem[] = [];
 
   items.push({
     id: 'auto:daily-stats',

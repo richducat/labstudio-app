@@ -130,14 +130,17 @@ export default function NexusPage() {
 
   const [cron, setCron] = useState<CronHealth | null>(null);
   const [activity, setActivity] = useState<ActivityResp | null>(null);
+  const [reminders, setReminders] = useState<any>(null);
 
   async function refresh() {
-    const [c, a] = await Promise.all([
+    const [c, a, r] = await Promise.all([
       fetch("/api/cron-health", { cache: "no-store" }).then((r) => r.json()),
       fetch("/api/activity", { cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/reminders", { cache: "no-store" }).then((r) => r.json()),
     ]);
     setCron(c);
     setActivity(a);
+    setReminders(r);
   }
 
   useEffect(() => {
@@ -148,6 +151,8 @@ export default function NexusPage() {
 
   const commits = activity?.recentCommits || [];
   const errors = cron?.errors || [];
+  const overdueRem = reminders?.overdue || [];
+  const todayRem = reminders?.today || [];
 
   const filteredCommits = useMemo(() => {
     if (!searchTerm) return commits;
@@ -483,6 +488,57 @@ export default function NexusPage() {
                     +{errors.length - 6} more
                   </div>
                 ) : null}
+              </div>
+
+              <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl p-5 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-slate-200">Tasks</h3>
+                  <span className="text-xs font-mono text-slate-500">
+                    {overdueRem.length} overdue • {todayRem.length} today
+                  </span>
+                </div>
+
+                {reminders?.ok === false ? (
+                  <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                    reminders error: {String(reminders?.errors?.[0]?.error || "unknown")}
+                  </div>
+                ) : null}
+
+                <div className="space-y-3">
+                  {overdueRem.slice(0, 4).map((t: any) => (
+                    <div
+                      key={t.id}
+                      className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3"
+                    >
+                      <div className="text-sm font-semibold text-rose-100">
+                        {t.title}
+                      </div>
+                      <div className="mt-1 text-xs font-mono text-rose-200/70">
+                        overdue • {t.listName}
+                      </div>
+                    </div>
+                  ))}
+
+                  {todayRem.slice(0, 4).map((t: any) => (
+                    <div
+                      key={t.id}
+                      className="rounded-xl border border-slate-800 bg-slate-950/40 p-3"
+                    >
+                      <div className="text-sm font-semibold text-slate-100">
+                        {t.title}
+                      </div>
+                      <div className="mt-1 text-xs font-mono text-slate-500">
+                        today • {t.listName}
+                      </div>
+                    </div>
+                  ))}
+
+                  {!overdueRem.length && !todayRem.length ? (
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-3 text-xs text-emerald-200">
+                      No overdue or due-today reminders.
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <div className="bg-gradient-to-br from-indigo-900/40 to-slate-900/40 border border-indigo-500/20 rounded-xl p-5 relative overflow-hidden">

@@ -30,6 +30,7 @@
 ## LabStudio / Personal Apps (active)
 - LabStudio requirement: **NO mock data** in user-visible UI. Only real DB-backed/integration-backed data; seeding is allowed if it writes to the DB.
 - For demos: use temporary Google Calendar under `richducat@gmail.com` for bookings (later migrate to the user’s calendar).
+- GitHub hygiene (2026-02-16): repos must have a stable default branch (`main`) for continuity. Feature branches are for work-in-progress only; do not set random feature branches as default.
 
 ### Deploy + continuity runbook (generalized; learned 2026-02-02)
 - Generic runbook: `/Users/richardducat/clawd/docs/RUNBOOK_DEPLOY_GENERIC.md`

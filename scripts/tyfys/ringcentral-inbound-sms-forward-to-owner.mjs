@@ -26,7 +26,7 @@ import { ringcentralGetJson, ringcentralSendSms } from '../lib/ringcentral.mjs';
 
 loadEnvLocal();
 
-const STATE_PATH = path.resolve('memory/tyfys-ringcentral-inbound-forward.json');
+const STATE_PATH = path.resolve('memory/tyfys-ringcentral-inbound-sms-forwarder.json');
 
 const LINE_NUMBERS = {
   DEVIN: '+13212147853',

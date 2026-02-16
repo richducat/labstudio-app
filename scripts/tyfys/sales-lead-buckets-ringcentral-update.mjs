@@ -99,6 +99,7 @@ async function listLeadsPage({ accessToken, page, perPage, days }) {
   const days = Number(getArg('--days', '365'));
   const perPage = Number(getArg('--perPage', '200'));
   const maxPages = Number(getArg('--pages', '10'));
+  const includeNewLeadsToday = process.argv.includes('--include-new-leads-today');
 
   const now = new Date();
   const accessToken = await getZohoAccessToken();
@@ -137,10 +138,35 @@ async function listLeadsPage({ accessToken, page, perPage, days }) {
   const rows = SALES_ROSTER.map(r => byRep.get(r)).filter(Boolean);
   const bullets = fmtBullets(rows);
 
+  let newLeadsBlock = null;
+  if (includeNewLeadsToday) {
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0); // local time (server runs ET)
+
+    const newCounts = new Map();
+    for (const rep of SALES_ROSTER) newCounts.set(rep, 0);
+
+    for (const l of leads) {
+      const rep = normRep(l?.Owner?.name);
+      if (!rep) continue;
+      const created = l?.Created_Time ? new Date(l.Created_Time) : null;
+      if (!created) continue;
+      if (created >= startOfDay) newCounts.set(rep, (newCounts.get(rep) || 0) + 1);
+    }
+
+    const totalNew = SALES_ROSTER.reduce((sum, r) => sum + (newCounts.get(r) || 0), 0);
+    const byRepLine = SALES_ROSTER.map(r => `${r} ${newCounts.get(r) || 0}`).join(' | ');
+    newLeadsBlock = `New leads today so far (Created_Time since 12:00am ET): total ${totalNew}\n- ${byRepLine}`;
+  }
+
   const header = `Lead buckets (Zoho Leads) — as of ${now.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })} ET`;
   const footer = `Focus today: clear >7d first, then 24–48h. Keep Zoho notes + next steps current.`;
 
-  const text = [header, bullets, footer].join('\n\n');
+  const parts = [header];
+  if (newLeadsBlock) parts.push(newLeadsBlock);
+  parts.push(bullets, footer);
+
+  const text = parts.join('\n\n');
 
   if (dryRun) {
     process.stdout.write(`[dry-run] Would post to chatId=${chatId}:\n\n${text}\n`);

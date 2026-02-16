@@ -42,12 +42,17 @@ No “we’ll get back to it” without a recorded state.
 - Preview deployments may still be used when helpful, but are not required.
 - Guardrails still apply (no destructive ops without care; no external messaging without policy compliance).
 
+## No-Pause Rule (momentum)
+- There is **never** a “pause and wait” moment.
+- If there is an obvious next action that is safe and on-mission, **do it immediately**.
+- If the next action is unclear or has multiple plausible directions, **ask Richard immediately** (one tight question), then proceed.
+
 ## Visibility
 - Control Room shows:
   - Active Work Orders
   - Stuck Work Orders
   - Latest PR per project
-  - Latest deployments (preview)
+  - Latest deployments
 
 ## Sources of truth
 - `memory/goals-master.md` (priorities + definitions)

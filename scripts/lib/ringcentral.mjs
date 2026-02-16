@@ -70,7 +70,12 @@ export async function ringcentralRefreshToken({ refreshToken }) {
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(`RingCentral token refresh failed (${res.status}): ${json?.error || ''} ${json?.error_description || JSON.stringify(json)}`);
+    const err = `${json?.error || ''} ${json?.error_description || JSON.stringify(json)}`.trim();
+    const hint =
+      String(json?.error || '').includes('invalid_grant')
+        ? '\n\nAction needed: RingCentral refresh token is invalid/revoked (invalid_grant). Re-authorize the RingCentral app for this workspace and update RINGCENTRAL_REFRESH_TOKEN in .env.local (and/or delete memory/ringcentral-token.json so it can rotate cleanly).'
+        : '';
+    throw new Error(`RingCentral token refresh failed (${res.status}): ${err}${hint}`);
   }
 
   const expiresAtMs = Date.now() + (Number(json.expires_in) || 3600) * 1000;

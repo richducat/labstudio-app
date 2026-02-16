@@ -3,6 +3,10 @@
 ## Money target
 - **DONE = $10,000/week** (primary north-star outcome)
 
+## Universal Definition of DONE (all apps/sites/projects)
+- **DONE (ultimate) = fully polished, all functions working 100% as intended; App Store-ready** (could ship, get approved, and everything works).
+- This universal definition applies to: LabStudio, Paid Media Buyer Pro, and any other app/web project/site.
+
 ## Non-negotiables
 - Courts + kids/school rights monitoring: never miss emails; summarize + draft-only replies.
 - Reduce friction: if ≥70% sure, decide + execute; don’t ask clarifying questions unless safety/irreversible.
@@ -30,6 +34,7 @@
 
 ## Paid Media Buyer Pro (PMBP)
 - PMBP = **Paid Media Buyer Pro**.
+- **Definition of DONE (ultimate):** fully polished, all functions working 100% as intended; App Store-ready (could ship, get approved, and everything works).
 - Keep it live + revenue-first.
 - Lead capture wired to Google Sheet via Apps Script endpoint.
 

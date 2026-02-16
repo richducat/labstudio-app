@@ -1,0 +1,16 @@
+{
+  "buttons": [
+    {
+      "id": "driftguard-sentinel",
+      "label": "Run DriftGuard sentinel now",
+      "jobId": "db4d77db-27aa-4b35-bfeb-a0c38af3ff30",
+      "confirmText": "Run DriftGuard cron error sentinel now?"
+    },
+    {
+      "id": "git-auto-sync",
+      "label": "Run git auto-sync now",
+      "jobId": "d43e5f81-9be4-43ff-8e6d-bc8082ef99ab",
+      "confirmText": "Run workspace git auto-sync now?"
+    }
+  ]
+}

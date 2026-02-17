@@ -51,27 +51,46 @@ export default function HomeView({
     upcomingBookings?: Array<{ summary: string; start: string; end: string; location: string | null; description: string | null }>;
     recentWorkouts?: Array<{ id: number; created_at: string; kind: string | null; duration_min: number | null; note: string | null }>;
     sessionLog?: { bookedUpcoming30d: number; completed7d: number; missedApprox30d: number };
-    progress?: { photos30d: number; calories7dAvg: number; latestPr: { lift: string; value: number; unit: string; reps: number | null } | null };
+    progress?: {
+      photos30d: number;
+      calories7dAvg: number;
+      workouts7d?: { count: number; minutes: number };
+      latestPr: { lift: string; value: number; unit: string; reps: number | null } | null;
+    };
+    agenda?: Array<{ id: string; title: string; time: string | null; type: string; action: string; completed: boolean }>;
   } | null>(null);
 
+  const [homeError, setHomeError] = useState<string | null>(null);
+
+  const loadHome = async () => {
+    try {
+      setHomeError(null);
+      const r = await fetch('/api/lab/home');
+      const data = await r.json().catch(() => ({}));
+
+      if (!r.ok || !data?.ok) {
+        const msg = String(data?.error || `Failed to load home data (${r.status})`);
+        setHomeData(null);
+        setHomeError(msg);
+        return;
+      }
+
+      setHomeData(data.home);
+    } catch {
+      setHomeData(null);
+      setHomeError('Failed to load home data. Please try again.');
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-    fetch('/api/lab/home')
-      .then((r) => r.json())
-      .then((data) => {
-        if (!mounted) return;
-        if (data?.ok) setHomeData(data.home);
-      })
-      .catch(() => {
-        // ignore
-      });
-    return () => {
-      mounted = false;
-    };
+    void loadHome();
   }, []);
 
-  const todaysCals = homeData?.nutrition?.calories ?? 0;
-  const todaysProtein = homeData?.nutrition?.protein_g ?? 0;
+  const homeLoaded = homeData !== null && !homeError;
+
+  // Avoid “default looks-real” values before /api/lab/home returns.
+  const todaysCals = homeLoaded ? (homeData?.nutrition?.calories ?? 0) : null;
+  const todaysProtein = homeLoaded ? (homeData?.nutrition?.protein_g ?? 0) : null;
 
   const [showQuickLog, setShowQuickLog] = useState(false);
   const [statsLog, setStatsLog] = useState({ weight: '', bodyFat: '', restingHr: '', note: '' });
@@ -176,13 +195,7 @@ export default function HomeView({
     setPhotoNote('');
     setShowQuickLog(false);
     // refresh home data
-    try {
-      const r = await fetch('/api/lab/home');
-      const data = await r.json();
-      if (data?.ok) setHomeData(data.home);
-    } catch {
-      // ignore
-    }
+    await loadHome();
   };
 
   const bfText = useMemo(() => {
@@ -210,7 +223,6 @@ export default function HomeView({
 
   useEffect(() => {
     void loadCoach();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const generateCoach = async () => {
@@ -428,26 +440,26 @@ export default function HomeView({
                 <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Nutrition Today</div>
                 <div className="flex justify-between items-center">
                   <div className="text-xs text-zinc-400">Cals</div>
-                  <div className="font-mono font-bold">{Math.round(todaysCals)}</div>
+                  <div className="font-mono font-bold">{todaysCals == null ? '—' : Math.round(todaysCals)}</div>
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="text-xs text-zinc-400">Protein</div>
-                  <div className="font-mono font-bold text-emerald-400">{Math.round(todaysProtein)}g</div>
+                  <div className="font-mono font-bold text-emerald-400">{todaysProtein == null ? '—' : Math.round(todaysProtein)}g</div>
                 </div>
               </div>
               <div className="p-4 space-y-3">
                 <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Session Log</div>
                 <div className="flex justify-between items-center">
                   <div className="text-xs text-zinc-400">Booked (next 30d)</div>
-                  <div className="font-mono font-bold">{homeData?.sessionLog?.bookedUpcoming30d ?? 0}</div>
+                  <div className="font-mono font-bold">{homeLoaded ? (homeData?.sessionLog?.bookedUpcoming30d ?? 0) : '—'}</div>
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="text-xs text-zinc-400">Completed (last 7d)</div>
-                  <div className="font-mono font-bold text-blue-400">{homeData?.sessionLog?.completed7d ?? 0}</div>
+                  <div className="font-mono font-bold text-blue-400">{homeLoaded ? (homeData?.sessionLog?.completed7d ?? 0) : '—'}</div>
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="text-xs text-zinc-400">Missed (approx 30d)</div>
-                  <div className="font-mono font-bold text-zinc-600">{homeData?.sessionLog?.missedApprox30d ?? 0}</div>
+                  <div className="font-mono font-bold text-zinc-600">{homeLoaded ? (homeData?.sessionLog?.missedApprox30d ?? 0) : '—'}</div>
                 </div>
               </div>
             </div>
@@ -457,9 +469,14 @@ export default function HomeView({
             <div className="flex items-center justify-between mb-3">
               <div>
                 <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Workouts</div>
-                <div className="text-sm text-zinc-300">Completed (last 7 days)</div>
+                <div className="text-sm text-zinc-300">Last 7 days</div>
               </div>
-              <div className="text-xs font-bold text-white bg-violet-600 px-3 py-1.5 rounded-full">Log</div>
+              <div className="flex items-center gap-2">
+                <div className="text-[10px] font-mono text-zinc-400 bg-black/20 border border-white/10 px-2 py-1 rounded">
+                  {homeLoaded ? `${homeData?.progress?.workouts7d?.count ?? 0} • ${homeData?.progress?.workouts7d?.minutes ?? 0}m` : '—'}
+                </div>
+                <div className="text-xs font-bold text-white bg-violet-600 px-3 py-1.5 rounded-full">Log</div>
+              </div>
             </div>
 
             {homeData?.recentWorkouts && homeData.recentWorkouts.length ? (
@@ -480,6 +497,96 @@ export default function HomeView({
               <div className="text-xs text-zinc-500">No workouts logged in the last 7 days. Tap to log one.</div>
             )}
           </Card>
+
+          {/* Things to do today (DB-backed agenda + check-ins) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <h2 className="font-bold text-lg">Things to do today</h2>
+                <div className="text-xs text-zinc-500">Your agenda + check-ins (real data).</div>
+              </div>
+            </div>
+
+            {homeError ? (
+              <Card className="p-4">
+                <div className="text-xs text-red-400 font-semibold">Home data failed to load</div>
+                <div className="text-xs text-zinc-500 mt-1">{homeError}</div>
+                <button
+                  onClick={() => loadHome()}
+                  className="mt-3 text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-full"
+                >
+                  Retry
+                </button>
+              </Card>
+            ) : homeLoaded ? (
+              homeData?.agenda && homeData.agenda.length ? (
+                <div className="space-y-2">
+                  {homeData.agenda.map((item) => {
+                    const icon =
+                      item.type === 'Workout' ? (
+                        <Dumbbell size={18} />
+                      ) : item.type === 'Cardio' ? (
+                        <Activity size={18} />
+                      ) : item.type === 'Habit' ? (
+                        <CheckSquare size={18} />
+                      ) : item.type === 'Check-in' ? (
+                        <Camera size={18} />
+                      ) : (
+                        <Clock size={18} />
+                      );
+
+                    const jumpIn = () => {
+                      if (item.action === 'quicklog') {
+                        setShowQuickLog(true);
+                        return;
+                      }
+                      if (item.action === 'progress_photos') {
+                        setTab('progress', { mode: 'photos' });
+                        return;
+                      }
+                      setTab(item.action);
+                    };
+
+                    return (
+                      <Card key={item.id} className="p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-violet-400 shrink-0">
+                            {icon}
+                          </div>
+                          <div className="min-w-0">
+                            <div className={`font-bold text-sm truncate ${item.completed ? 'text-zinc-400 line-through' : ''}`}>{item.title}</div>
+                            <div className="text-xs text-zinc-500">
+                              {(item.time ? `${item.time} • ` : '') + item.type}
+                              {item.completed ? ' • done' : ''}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            jumpIn();
+                          }}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+                            item.completed ? 'bg-zinc-800 text-zinc-500' : 'text-white bg-violet-600 hover:bg-violet-500'
+                          }`}
+                        >
+                          {item.completed ? 'View' : 'Jump in'}
+                        </button>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card className="p-4">
+                  <div className="text-xs text-zinc-500">No agenda items yet. Add habits to see them here.</div>
+                </Card>
+              )
+            ) : (
+              <Card className="p-4">
+                <div className="text-xs text-zinc-500">Loading…</div>
+              </Card>
+            )}
+          </div>
 
           {/* Daily Check-in (real data write) */}
           <div className="space-y-3">
@@ -605,7 +712,7 @@ export default function HomeView({
               {orderedTiles
                 .filter((tile) => tile.visible)
                 .map((tile) => {
-                  const Icon = (tile as any).icon;
+                  const Icon = tile.icon;
 
                   let value = tile.value;
                   let trend = tile.trend;
@@ -637,7 +744,7 @@ export default function HomeView({
                   }
 
                   if (tile.id === 'photos') {
-                    value = `${homeData?.progress?.photos30d ?? 0}`;
+                    value = homeLoaded ? `${homeData?.progress?.photos30d ?? 0}` : '—';
                     trend = 'Photos (30d)';
                     onClick = () => setTab('progress', { mode: 'photos' });
                   }

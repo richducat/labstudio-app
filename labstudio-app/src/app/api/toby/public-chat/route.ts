@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { TOBY_SYSTEM_PROMPT } from '@/lib/toby-protocol';
+import { getTobyRetrievalContext } from '@/lib/toby-retrieval';
 
 export const runtime = 'nodejs';
 
@@ -76,10 +77,25 @@ export async function POST(req: Request) {
     },
     body: JSON.stringify({
       model,
-      input: [
-        { role: 'system', content: TOBY_SYSTEM_PROMPT },
-        { role: 'user', content: text.slice(0, 2000) },
-      ],
+      input: (() => {
+        const retrieval = getTobyRetrievalContext(text);
+        const messages: Array<{ role: 'system' | 'user'; content: string }> = [
+          { role: 'system', content: TOBY_SYSTEM_PROMPT },
+        ];
+        if (retrieval?.context) {
+          messages.push({
+            role: 'system',
+            content:
+              `${retrieval.context}\n\n` +
+              `Rules for using excerpts:\n` +
+              `- Only use if it actually matches the question.\n` +
+              `- Do NOT mention "excerpts" or the retrieval system.\n` +
+              `- If you use specific details from an excerpt, cite the source_file in parentheses, e.g. (source: <file>).\n`,
+          });
+        }
+        messages.push({ role: 'user', content: text.slice(0, 2000) });
+        return messages;
+      })(),
       max_output_tokens: 220,
     }),
   });

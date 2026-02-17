@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { TOBY_SYSTEM_PROMPT } from '@/lib/toby-protocol';
+import { getTobyRetrievalContext } from '@/lib/toby-retrieval';
 import {
   currentEtDayKey,
   getRateLimitCookieName,
@@ -71,7 +72,22 @@ export async function POST(req: Request) {
       .map((m) => ({ role: m.role, content: String(m.text || '').slice(0, 800) }))
       .filter((m) => m.content.trim().length);
 
-    const input = [{ role: 'system', content: TOBY_SYSTEM_PROMPT }, ...mappedHistory];
+    const retrieval = getTobyRetrievalContext(effectiveText);
+
+    const input = [{ role: 'system', content: TOBY_SYSTEM_PROMPT }];
+    if (retrieval?.context) {
+      input.push({
+        role: 'system',
+        content:
+          `${retrieval.context}\n\n` +
+          `Rules for using excerpts:\n` +
+          `- Only use if it actually matches the question.\n` +
+          `- Do NOT mention "excerpts" or the retrieval system.\n` +
+          `- If you use specific details from an excerpt, cite the source_file in parentheses, e.g. (source: <file>).\n`,
+      });
+    }
+    input.push(...mappedHistory);
+
     if (!mappedHistory.length || mappedHistory[mappedHistory.length - 1]?.role !== 'user') {
       input.push({ role: 'user', content: effectiveText.slice(0, 2000) });
     }
@@ -139,7 +155,11 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ reply, usage: { day: currentDay, count: nextCount, limit: DAILY_LIMIT } });
+    return NextResponse.json({
+      reply,
+      usage: { day: currentDay, count: nextCount, limit: DAILY_LIMIT },
+      retrieval: retrieval?.sources ? { sources: retrieval.sources } : undefined,
+    });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Server error' },

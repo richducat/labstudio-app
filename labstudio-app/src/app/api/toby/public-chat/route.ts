@@ -69,6 +69,8 @@ export async function POST(req: Request) {
 
   const model = process.env.TOBY_MODEL || 'gpt-4.1-mini';
 
+  const retrieval = getTobyRetrievalContext(text);
+
   const res = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
@@ -78,7 +80,6 @@ export async function POST(req: Request) {
     body: JSON.stringify({
       model,
       input: (() => {
-        const retrieval = getTobyRetrievalContext(text);
         const messages: Array<{ role: 'system' | 'user'; content: string }> = [
           { role: 'system', content: TOBY_SYSTEM_PROMPT },
         ];
@@ -118,5 +119,11 @@ export async function POST(req: Request) {
   }
   const reply = parts.join('\n').trim() || '(no response)';
 
-  return NextResponse.json({ reply }, { headers: corsHeaders(origin) });
+  return NextResponse.json(
+    {
+      reply,
+      retrieval: retrieval?.sources ? { sources: retrieval.sources } : undefined,
+    },
+    { headers: corsHeaders(origin) },
+  );
 }

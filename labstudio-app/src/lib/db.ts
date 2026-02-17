@@ -161,7 +161,51 @@ export async function ensureSchema() {
   `;
   await q`create index if not exists lab_coach_focus_user_created_at_idx on lab_coach_focus(user_id, created_at desc);`;
   await q`create index if not exists lab_coach_focus_user_pinned_idx on lab_coach_focus(user_id, pinned, pinned_at desc);`;
+
+  // Habits + daily check-ins
+  await q`
+    create table if not exists lab_habits (
+      id bigserial primary key,
+      user_id text not null references lab_users(id) on delete cascade,
+      created_at timestamptz not null default now(),
+      name text not null,
+      active boolean not null default true,
+      sort_order integer not null default 0
+    );
+  `;
+  await q`create index if not exists lab_habits_user_active_idx on lab_habits(user_id, active, sort_order, created_at desc);`;
+
+  await q`
+    create table if not exists lab_habit_checkins (
+      id bigserial primary key,
+      user_id text not null references lab_users(id) on delete cascade,
+      habit_id bigint not null references lab_habits(id) on delete cascade,
+      created_at timestamptz not null default now(),
+      day date not null,
+      checked boolean not null default true,
+      unique(user_id, habit_id, day)
+    );
+  `;
+  await q`create index if not exists lab_habit_checkins_user_day_idx on lab_habit_checkins(user_id, day desc);`;
+
+  // Daily agenda items (optional planned items; home dashboard can also derive “auto” items from other logs)
+  await q`
+    create table if not exists lab_agenda_items (
+      id bigserial primary key,
+      user_id text not null references lab_users(id) on delete cascade,
+      created_at timestamptz not null default now(),
+      day date not null,
+      time_label text,
+      title text not null,
+      type text not null,
+      action text not null,
+      sort_order integer not null default 0,
+      completed_at timestamptz
+    );
+  `;
+  await q`create index if not exists lab_agenda_items_user_day_idx on lab_agenda_items(user_id, day desc, sort_order, created_at desc);`;
 }
+
 
 export async function getOrCreateUser(userId: string): Promise<LabUser> {
   await ensureSchema();

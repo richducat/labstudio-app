@@ -111,7 +111,7 @@ export default function TheLabUltimate({
           </div>
           <div>
             <div className="font-bold tracking-wider leading-none">THE LAB</div>
-            <div className="text-[9px] text-zinc-500 tracking-[0.2em] font-bold">ULTIMATE</div>
+            <div className="text-[9px] text-zinc-500 tracking-[0.2em] font-bold">ULTIMATE v2.1-LIVE</div>
           </div>
         </div>
 

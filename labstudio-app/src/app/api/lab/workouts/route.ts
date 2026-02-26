@@ -39,9 +39,9 @@ export async function POST(req: Request) {
   const q = sql();
   const rows = (await q`
     insert into lab_workout_log (user_id, kind, duration_min, note)
-    values (${uid}, ${kind}, ${Number.isFinite(durationMin as any) ? durationMin : null}, ${note})
+    values (${uid}, ${kind}, ${typeof durationMin === 'number' && Number.isFinite(durationMin) ? durationMin : null}, ${note})
     returning id, created_at;
-  `) as any[];
+  `) as { id: number; created_at: Date }[];
 
   return NextResponse.json({ ok: true, saved: rows?.[0] ?? null });
 }

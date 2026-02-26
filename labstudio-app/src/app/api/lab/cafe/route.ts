@@ -88,7 +88,7 @@ export async function GET() {
   await q`alter table lab_cafe_items add column if not exists stripe_product_id text;`;
   await q`alter table lab_cafe_items add column if not exists stripe_price_id text;`;
 
-  const count = (await q`select count(*)::int as c from lab_cafe_items;`) as any[];
+  const count = (await q`select count(*)::int as c from lab_cafe_items;`) as { c: number }[];
   if (Number(count?.[0]?.c ?? 0) === 0) {
     await seedDefaultCafeItems();
   }
@@ -116,7 +116,7 @@ export async function GET() {
       from lab_cafe_items
       where active = true
       order by category asc, price_cents asc, name asc;
-    `) as any[];
+    `) as { slug: string; name: string; category: string; price_cents: number; product_url: string | null; image_url: string | null; stripe_product_id: string | null; stripe_price_id: string | null }[];
 
     for (const r of rowsToHydrate) {
       if (r?.stripe_price_id) continue;
@@ -148,7 +148,7 @@ export async function GET() {
     from lab_cafe_items
     where active = true
     order by category asc, price_cents asc, name asc;
-  `) as any[];
+  `) as { slug: string; name: string; category: string; price_cents: number; product_url: string | null; image_url: string | null; stripe_price_id: string | null }[];
 
   return NextResponse.json({ ok: true, items });
 }

@@ -70,7 +70,7 @@ export async function GET() {
     where h.user_id = ${uid}
       and h.active = true
     order by h.sort_order asc, h.created_at asc;
-  `) as any[];
+  `) as { id: string; name: string; sort_order: number; checked: boolean }[];
 
   const planned = (await q`
     select id, day, time_label, title, type, action, sort_order, completed_at
@@ -78,9 +78,9 @@ export async function GET() {
     where user_id = ${uid}
       and day = ${day}::date
     order by sort_order asc, created_at asc;
-  `) as any[];
+  `) as { id: string; day: Date; time_label: string | null; title: string; type: string; action: string; sort_order: number; completed_at: Date | null }[];
 
-  const items: any[] = [];
+  const items: { id: string; title: string; time: string | null; type: string; action: string; completed: boolean }[] = [];
 
   items.push({
     id: 'auto:daily-stats',

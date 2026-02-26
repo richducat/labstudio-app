@@ -2,98 +2,107 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { TOBY_SYSTEM_PROMPT } from '@/lib/toby-protocol';
 import { getTobyRetrievalContext } from '@/lib/toby-retrieval';
-import {
-  currentEtDayKey,
-  getRateLimitCookieName,
-  makeSignedDailyCounterCookie,
-  parseAndVerifyDailyCounter,
-} from '@/lib/rate-limit';
+import { neon } from '@neondatabase/serverless';
+import { ensureSchema } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
-const DAILY_LIMIT = 35;
+function sql() {
+  const url = process.env.DATABASE_URL || '';
+  if (!url) throw new Error('DATABASE_URL not configured');
+  return neon(url);
+}
+
+// Tool definitions for Toby Agent
+const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'get_user_context',
+      description: 'Get user profile, goals, last 7 days of workouts, and latest vital stats (weight, body fat, HR).',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'log_vital_stat',
+      description: 'Record a new vital stat (weight_lbs, body_fat_pct, or resting_hr).',
+      parameters: {
+        type: 'object',
+        properties: {
+          weight_lbs: { type: 'number' },
+          body_fat_pct: { type: 'number' },
+          resting_hr: { type: 'number' },
+          note: { type: 'string' },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_knowledge_base',
+      description: 'Search the Lab Studio knowledge base for training, biomechanics, and nutrition information.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string' },
+        },
+      },
+    },
+  },
+];
+
+type TobyToolCall = {
+  id: string;
+  type: string;
+  function: {
+    name: string;
+    arguments: string;
+  };
+};
+
+type TobyMessage = {
+  role: string;
+  content?: string | null;
+  name?: string;
+  tool_calls?: TobyToolCall[];
+  tool_call_id?: string;
+};
 
 export async function POST(req: Request) {
   try {
     const { message, history } = (await req.json().catch(() => ({}))) as {
       message?: string;
-      history?: Array<{ role: 'user' | 'assistant'; text: string }>;
+      history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
     };
     const text = String(message || '').trim();
 
-    const safeHistory = Array.isArray(history) ? history : [];
-    const lastUser = [...safeHistory].reverse().find((m) => m?.role === 'user')?.text;
-    const effectiveText = (lastUser ? String(lastUser) : text).trim();
-
-    if (!effectiveText) {
-      return NextResponse.json({ error: 'Missing message' }, { status: 400 });
-    }
-
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 });
-    }
+    if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 });
 
-    const secret = process.env.LABSTUDIO_SESSION_SECRET;
-
-    // Daily cap (no DB): signed cookie counter, resets daily (ET).
-    // If no secret is configured, we skip rate limiting instead of breaking chat.
     const jar = await cookies();
-    const rlName = getRateLimitCookieName();
-    const currentDay = currentEtDayKey();
-    const parsed = secret
-      ? parseAndVerifyDailyCounter(jar.get(rlName)?.value, secret)
-      : { day: currentDay, count: 0, ok: false };
-    const count = parsed.day === currentDay ? parsed.count : 0;
+    const uid = jar.get('labstudio_uid')?.value;
+    if (!uid) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
-    if (secret && count >= DAILY_LIMIT) {
-      return NextResponse.json(
-        {
-          error: `Daily limit reached (${DAILY_LIMIT}/day). Try again tomorrow.`,
-          limit: DAILY_LIMIT,
-          day: currentDay,
-        },
-        { status: 429 },
-      );
+    const model = process.env.TOBY_MODEL || 'gpt-4o'; // Use gpt-4o for tool calling reliability
+
+    // Build the message stack
+    const messages: TobyMessage[] = [{ role: 'system', content: TOBY_SYSTEM_PROMPT }];
+
+    // Add history
+    if (Array.isArray(history)) {
+      messages.push(...history.slice(-10));
     }
 
-    // Default to a cost-effective model; override via TOBY_MODEL env.
-    const model = process.env.TOBY_MODEL || 'gpt-4.1-mini';
-
-    const TRIAGE_RE = /(sharp|pinch|pain|hurt|tweak|pop|numb|tingl|shooting|joint|injur|leg press|squat|deadlift|bench|machine|right now)/i;
-    // Keep triage "sticky" across short back-and-forths.
-    // Example: user answers "left side" or "deep" next turn—still triage.
-    const triageInHistory = safeHistory.some((m) => TRIAGE_RE.test(String(m?.text || '')));
-    const menuInHistory = safeHistory.some((m) => m?.role === 'assistant' && /\bmenu\s*:/i.test(String(m?.text || '')));
-    const isTriage = TRIAGE_RE.test(effectiveText) || triageInHistory || menuInHistory;
-
-    const mappedHistory = safeHistory
-      .slice(-10)
-      .map((m) => ({ role: m.role, content: String(m.text || '').slice(0, 800) }))
-      .filter((m) => m.content.trim().length);
-
-    const retrieval = getTobyRetrievalContext(effectiveText);
-
-    const input = [{ role: 'system', content: TOBY_SYSTEM_PROMPT }];
-    if (retrieval?.context) {
-      input.push({
-        role: 'system',
-        content:
-          `${retrieval.context}\n\n` +
-          `Rules for using excerpts:\n` +
-          `- Only use if it actually matches the question.\n` +
-          `- Do NOT mention "excerpts" or the retrieval system.\n` +
-          `- If you use specific details from an excerpt, cite the source_file in parentheses, e.g. (source: <file>).\n`,
-      });
-    }
-    input.push(...mappedHistory);
-
-    if (!mappedHistory.length || mappedHistory[mappedHistory.length - 1]?.role !== 'user') {
-      input.push({ role: 'user', content: effectiveText.slice(0, 2000) });
+    // Add current user message if not already in history
+    if (!history?.length || history[history.length - 1].content !== text) {
+      messages.push({ role: 'user', content: text });
     }
 
-    // Use OpenAI Responses API (recommended modern endpoint).
-    const res = await fetch('https://api.openai.com/v1/responses', {
+    // OpenAI Chat Completion call with Tools
+    const firstRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -101,66 +110,78 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model,
-        input,
-        max_output_tokens: isTriage ? 320 : 220,
+        messages,
+        tools: TOOLS,
+        tool_choice: 'auto',
       }),
     });
 
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: json?.error?.message || 'OpenAI error', detail: json },
-        { status: 502 },
-      );
-    }
+    const firstJson = await firstRes.json();
+    if (!firstRes.ok) throw new Error(firstJson?.error?.message || 'OpenAI API error');
 
-    // Extract text from responses output.
-    const output = json?.output ?? [];
-    const parts: string[] = [];
-    for (const item of output) {
-      const content = item?.content || [];
-      for (const c of content) {
-        if (c?.type === 'output_text' && typeof c.text === 'string') parts.push(c.text);
+    const firstMsg = firstJson.choices[0].message as TobyMessage;
+
+    // Handle tool calls
+    if (firstMsg.tool_calls) {
+      messages.push(firstMsg);
+
+      for (const toolCall of firstMsg.tool_calls) {
+        const { name } = toolCall.function;
+        const args = JSON.parse(toolCall.function.arguments);
+        let result = '';
+
+        if (name === 'get_user_context') {
+          await ensureSchema();
+          const q = sql();
+          const [profile, stats, workouts] = await Promise.all([
+            q`select * from lab_user_profile where user_id = ${uid} limit 1`,
+            q`select * from lab_daily_stats where user_id = ${uid} order by created_at desc limit 1`,
+            q`select * from lab_workout_log where user_id = ${uid} and created_at > now() - interval '7 days' order by created_at desc`,
+          ]);
+          result = JSON.stringify({ profile: profile[0], latest_stats: stats[0], recent_workouts: workouts });
+        } else if (name === 'log_vital_stat') {
+          await ensureSchema();
+          const q = sql();
+          await q`
+            insert into lab_daily_stats (user_id, weight_lbs, body_fat_pct, resting_hr, note)
+            values (${uid}, ${args.weight_lbs}, ${args.body_fat_pct}, ${args.resting_hr}, ${args.note || 'Logged via Toby AI'})
+          `;
+          result = 'Stat logged successfully.';
+        } else if (name === 'search_knowledge_base') {
+          const retrieval = getTobyRetrievalContext(args.query);
+          result = retrieval?.context || 'No relevant knowledge found.';
+        }
+
+        messages.push({
+          tool_call_id: toolCall.id,
+          role: 'tool',
+          name: name,
+          content: result,
+        });
       }
-    }
-    let reply = parts.join('\n').trim() || '(no response)';
 
-    // Guardrail: keep the Stage 1 check-in contract for normal coaching,
-    // but do NOT force it during in-workout pain triage.
-    if (!isTriage) {
-      const contract = `Check in tomorrow with:\n- Joint pain: yes/no\n- Muscle soreness: 0–10\n- Energy: 0–10`;
-      const normalized = reply.toLowerCase();
-      if (!normalized.includes('check in tomorrow')) {
-        reply = `${reply}\n\n${contract}`.trim();
-      }
-    } else {
-      // If the model accidentally adds the daily tracking footer during triage, strip it.
-      // (We still want concise menus + stop criteria in triage.)
-      reply = reply
-        .replace(/\n\s*Next:[\s\S]*$/i, '')
-        .replace(/\n\s*Track:[\s\S]*$/i, '')
-        .replace(/\n\s*Check in tomorrow with:[\s\S]*$/i, '')
-        .trim();
-    }
-
-    // Increment counter only on successful OpenAI call.
-    const nextCount = count + 1;
-    if (secret) {
-      jar.set(rlName, makeSignedDailyCounterCookie({ day: currentDay, count: nextCount }, secret), {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: true,
-        path: '/',
-        maxAge: 60 * 60 * 24 * 2,
+      // Final completion after tool results
+      const secondRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+        }),
       });
+
+      const secondJson = await secondRes.json();
+      if (!secondRes.ok) throw new Error(secondJson?.error?.message || 'OpenAI API error (final)');
+
+      return NextResponse.json({ reply: secondJson.choices[0].message.content });
     }
 
-    return NextResponse.json({
-      reply,
-      usage: { day: currentDay, count: nextCount, limit: DAILY_LIMIT },
-      retrieval: retrieval?.sources ? { sources: retrieval.sources } : undefined,
-    });
+    return NextResponse.json({ reply: firstMsg.content });
   } catch (err: unknown) {
+    console.error('Toby AI Error:', err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Server error' },
       { status: 500 },

@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   await getOrCreateUser(uid);
 
   const body = (await req.json().catch(() => ({}))) as { lines?: unknown };
-  const linesRaw = Array.isArray((body as any)?.lines) ? ((body as any).lines as any[]) : [];
+  const linesRaw = Array.isArray(body?.lines) ? (body.lines as Record<string, unknown>[]) : [];
   const lines: CartLine[] = linesRaw
     .map((l) => ({ price_id: String(l?.price_id || '').trim(), quantity: Number(l?.quantity || 0) }))
     .filter((l) => l.price_id && Number.isFinite(l.quantity) && l.quantity > 0)
@@ -79,11 +79,11 @@ export async function POST(req: Request) {
         select slug, name, price_cents, image_url
         from lab_cafe_items
         where slug = any(${cafeSlugs});
-      `) as any[])
+      `) as { slug: string; name: string; price_cents: number; image_url: string | null }[])
     : [];
-  const cafeBySlug = new Map<string, any>(cafeItems.map((i) => [String(i.slug), i]));
+  const cafeBySlug = new Map<string, { slug: string; name: string; price_cents: number; image_url: string | null }>(cafeItems.map((i) => [String(i.slug), i]));
 
-  const line_items: any[] = [];
+  const line_items: Record<string, unknown>[] = [];
 
   // Stripe price-based line items
   for (const l of stripeLines) {

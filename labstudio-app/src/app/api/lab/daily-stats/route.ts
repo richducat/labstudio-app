@@ -44,13 +44,13 @@ export async function POST(req: Request) {
     insert into lab_daily_stats (user_id, weight_lbs, body_fat_pct, resting_hr, note)
     values (
       ${uid},
-      ${Number.isFinite(weight as any) ? weight : null},
-      ${Number.isFinite(bodyFat as any) ? bodyFat : null},
-      ${Number.isFinite(restingHr as any) ? restingHr : null},
+      ${typeof weight === 'number' && Number.isFinite(weight) ? weight : null},
+      ${typeof bodyFat === 'number' && Number.isFinite(bodyFat) ? bodyFat : null},
+      ${typeof restingHr === 'number' && Number.isFinite(restingHr) ? restingHr : null},
       ${note}
     )
     returning id, created_at;
-  `) as any[];
+  `) as { id: number; created_at: Date }[];
 
   return NextResponse.json({ ok: true, saved: rows?.[0] ?? null });
 }

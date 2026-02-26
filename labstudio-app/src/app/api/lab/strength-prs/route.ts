@@ -39,7 +39,7 @@ export async function GET() {
     where user_id = ${uid}
     order by created_at desc
     limit 20;
-  `) as any[];
+  `) as { id: number; created_at: Date; lift: string; value: number; unit: string; reps: number | null }[];
 
   return NextResponse.json({ ok: true, latest: rows?.[0] ?? null, history: rows });
 }
@@ -70,9 +70,9 @@ export async function POST(req: Request) {
   const q = sql();
   const rows = (await q`
     insert into lab_strength_prs (user_id, lift, value, unit, reps)
-    values (${uid}, ${lift}, ${valueNum}, ${unit}, ${Number.isFinite(repsNum as any) ? repsNum : null})
+    values (${uid}, ${lift}, ${valueNum}, ${unit}, ${typeof repsNum === 'number' && Number.isFinite(repsNum) ? repsNum : null})
     returning id, created_at;
-  `) as any[];
+  `) as { id: number; created_at: Date }[];
 
   return NextResponse.json({ ok: true, saved: rows?.[0] ?? null });
 }

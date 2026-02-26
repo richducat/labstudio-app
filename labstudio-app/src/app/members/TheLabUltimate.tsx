@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity, Calendar, MessageSquare, Brain, ShoppingBag, User } from 'lucide-react';
+import { Activity, Calendar, MessageSquare, Brain, ShoppingBag, User, Trophy } from 'lucide-react';
 
 import TobyCoachView from './TobyCoachView';
 import HomeView from './views/HomeView';
@@ -52,9 +52,8 @@ function NavBtn({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 p-2 w-14 rounded-xl transition-all ${
-        active ? 'text-white scale-105' : 'text-zinc-600 hover:text-zinc-400'
-      }`}
+      className={`flex flex-col items-center gap-1 p-2 w-14 rounded-xl transition-all ${active ? 'text-white scale-105' : 'text-zinc-600 hover:text-zinc-400'
+        }`}
     >
       <Icon size={22} strokeWidth={active ? 2.5 : 2} />
       <span className="text-[9px] font-bold tracking-wide uppercase">{label}</span>
@@ -148,22 +147,22 @@ export default function TheLabUltimate({
         {tab === 'coach' && <TobyCoachView />}
 
         {tab === 'book' && <BookView />}
-        {tab === 'games' && <GamesView />}
+        {tab === 'games' && <GamesView setTab={setTab} />}
         {tab === 'market' && <MarketView />}
         {tab === 'profile' && <ProfileView />}
 
-        {tab === 'workout' && <WorkoutView onSelect={() => {}} />}
+        {tab === 'workout' && <WorkoutView onSelect={() => { }} />}
         {tab === 'nutrition' && <NutritionView />}
         {tab === 'habits' && <HabitsView />}
-        {tab === 'messages' && <MessagesView />}
+        {tab === 'messages' && <MessagesView setTab={setTab} />}
         {tab === 'community' && <CommunityView />}
-        {tab === 'challenges' && <ChallengesView />}
+        {tab === 'challenges' && <ChallengesView setTab={setTab} />}
         {tab === 'wearables' && <WearablesView />}
         {tab === 'social' && <SocialView />}
         {tab === 'library' && <LibraryView />}
         {tab === 'progress' && (
           <ProgressView
-            mode={(tabMeta?.mode as any) === 'prs' ? 'prs' : 'photos'}
+            mode={(tabMeta?.mode as string) === 'prs' ? 'prs' : 'photos'}
             onBack={() => setTab('home')}
           />
         )}
@@ -179,17 +178,17 @@ export default function TheLabUltimate({
             <div className="absolute inset-0 bg-violet-600 blur-xl opacity-40 rounded-full group-hover:opacity-60 transition duration-500" />
             <button
               onClick={() => setTab('coach')}
-              className={`h-16 w-16 rounded-full flex items-center justify-center border-4 border-zinc-950 relative z-10 transition-all duration-300 ${
-                tab === 'coach'
-                  ? 'bg-white text-violet-600 scale-110 shadow-xl'
-                  : 'bg-violet-600 text-white group-hover:bg-violet-500 group-hover:scale-105'
-              }`}
+              className={`h-16 w-16 rounded-full flex items-center justify-center border-4 border-zinc-950 relative z-10 transition-all duration-300 ${tab === 'coach'
+                ? 'bg-white text-violet-600 scale-110 shadow-xl'
+                : 'bg-violet-600 text-white group-hover:bg-violet-500 group-hover:scale-105'
+                }`}
             >
               <MessageSquare size={26} fill="currentColor" />
             </button>
           </div>
 
           <NavBtn icon={Brain} label="Games" active={tab === 'games'} onClick={() => setTab('games')} />
+          <NavBtn icon={Trophy} label="Rank" active={tab === 'social'} onClick={() => setTab('social')} />
           <NavBtn icon={ShoppingBag} label="Shop" active={tab === 'market'} onClick={() => setTab('market')} />
           <NavBtn icon={User} label="Me" active={tab === 'profile'} onClick={() => setTab('profile')} />
         </div>

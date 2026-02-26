@@ -5,6 +5,7 @@ import {
   Activity,
   AlertCircle,
   BookOpen,
+  Brain,
   Calendar,
   Camera,
   CheckSquare,
@@ -384,6 +385,29 @@ export default function HomeView({
             )}
           </Card>
 
+          <Card
+            className="p-1 bg-gradient-to-br from-violet-600/30 to-zinc-900 border-none group cursor-pointer"
+            onClick={() => setTab('games')}
+          >
+            <div className="bg-zinc-950/60 backdrop-blur-md p-4 rounded-xl border border-violet-500/30">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 bg-violet-600/20 rounded-lg border border-violet-500/20 text-violet-400 group-hover:scale-110 transition-transform">
+                  <Brain size={20} />
+                </div>
+                <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                  XP AVAILABLE
+                </div>
+              </div>
+              <h4 className="text-sm font-black italic uppercase tracking-wider">NEURAL ARCADE</h4>
+              <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mt-1 mb-3 leading-relaxed">
+                Train your cognitive performance <br /> & earn secondary XP rewards.
+              </p>
+              <div className="flex items-center gap-2 text-[10px] font-black text-violet-400 uppercase tracking-widest group-hover:gap-3 transition-all">
+                Enter Interface <ChevronRight size={12} />
+              </div>
+            </div>
+          </Card>
+
           <div className="bg-zinc-900 border border-white/10 p-4 rounded-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition">
               <Trophy size={60} />
@@ -566,9 +590,8 @@ export default function HomeView({
                             e.stopPropagation();
                             jumpIn();
                           }}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-full ${
-                            item.completed ? 'bg-zinc-800 text-zinc-500' : 'text-white bg-violet-600 hover:bg-violet-500'
-                          }`}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-full ${item.completed ? 'bg-zinc-800 text-zinc-500' : 'text-white bg-violet-600 hover:bg-violet-500'
+                            }`}
                         >
                           {item.completed ? 'View' : 'Jump in'}
                         </button>
@@ -697,9 +720,8 @@ export default function HomeView({
                     </div>
                     <button
                       onClick={() => toggleTile(tile.id)}
-                      className={`px-2 py-1 rounded-full font-bold ${
-                        tile.visible ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
-                      }`}
+                      className={`px-2 py-1 rounded-full font-bold ${tile.visible ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                        }`}
                     >
                       {tile.visible ? 'Visible' : 'Hidden'}
                     </button>

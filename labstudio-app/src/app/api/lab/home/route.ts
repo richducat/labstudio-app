@@ -35,9 +35,9 @@ async function fetchIcalEvents() {
   if (!res.ok) return [];
 
   const icsText = await res.text();
-  const data = parseICS(icsText) as any;
+  const data = parseICS(icsText) as Record<string, { type?: string; summary?: string; start?: string | Date; end?: string | Date; location?: string; description?: string }>;
 
-  const events = Object.values(data || {}).filter((v: any) => v && v.type === 'VEVENT') as any[];
+  const events = Object.values(data || {}).filter((v) => v && v.type === 'VEVENT');
   return events
     .map((e) => ({
       summary: String(e.summary ?? ''),
@@ -84,7 +84,7 @@ export async function GET() {
     where user_id = ${uid}
     order by created_at desc
     limit 1;
-  `) as any[];
+  `) as { id: number; created_at: Date; weight_lbs: number | null; body_fat_pct: number | null; resting_hr: number | null; note: string | null }[];
 
   // Today's nutrition totals (America/New_York)
   const nutrition = (await q`
@@ -95,7 +95,7 @@ export async function GET() {
     from lab_nutrition_log
     where user_id = ${uid}
       and (created_at at time zone 'America/New_York')::date = (now() at time zone 'America/New_York')::date;
-  `) as any[];
+  `) as { protein_g: number; carbs_g: number; fat_g: number }[];
 
   const n = nutrition?.[0] ?? { protein_g: 0, carbs_g: 0, fat_g: 0 };
   const cals = Number(n.protein_g) * 4 + Number(n.carbs_g) * 4 + Number(n.fat_g) * 9;
@@ -108,7 +108,7 @@ export async function GET() {
     from lab_workout_log
     where user_id = ${uid}
       and created_at >= (now() - interval '7 days');
-  `) as any[];
+  `) as { completed: number; minutes: number }[];
 
   // Progress photos count (last 30d)
   const photos30d = (await q`
@@ -116,7 +116,7 @@ export async function GET() {
     from lab_progress_photos
     where user_id = ${uid}
       and created_at >= (now() - interval '30 days');
-  `) as any[];
+  `) as { count: number }[];
 
   // Nutrition 7d avg calories (America/New_York)
   const nutrition7d = (await q`
@@ -125,7 +125,7 @@ export async function GET() {
     from lab_nutrition_log
     where user_id = ${uid}
       and (created_at at time zone 'America/New_York')::date >= ((now() at time zone 'America/New_York')::date - 6);
-  `) as any[];
+  `) as { calories: number }[];
 
   // Latest PR
   const latestPr = (await q`
@@ -134,7 +134,7 @@ export async function GET() {
     where user_id = ${uid}
     order by created_at desc
     limit 1;
-  `) as any[];
+  `) as { id: number; created_at: Date; lift: string; value: number; unit: string; reps: number }[];
 
   // iCal-based session counts
   const icsEvents = await fetchIcalEvents();
@@ -163,7 +163,7 @@ export async function GET() {
       and created_at >= (now() - interval '7 days')
     order by created_at desc
     limit 10;
-  `) as any[];
+  `) as { id: number; created_at: Date; kind: string; duration_min: number; note: string | null }[];
 
   const calories7dTotal = Number(nutrition7d?.[0]?.calories ?? 0);
   const calories7dAvg = Math.round(calories7dTotal / 7);
@@ -200,7 +200,7 @@ export async function GET() {
     where h.user_id = ${uid}
       and h.active = true
     order by h.sort_order asc, h.created_at asc;
-  `) as any[];
+  `) as { id: string; name: string; sort_order: number; checked: boolean }[];
 
   const plannedAgenda = (await q`
     select id, time_label, title, type, action, sort_order, completed_at
@@ -208,7 +208,7 @@ export async function GET() {
     where user_id = ${uid}
       and day = ${day}::date
     order by sort_order asc, created_at asc;
-  `) as any[];
+  `) as { id: string; time_label: string | null; title: string; type: string; action: string; sort_order: number; completed_at: Date | null }[];
 
   const agenda: Array<{ id: string; title: string; time: string | null; type: string; action: string; completed: boolean }> = [];
 

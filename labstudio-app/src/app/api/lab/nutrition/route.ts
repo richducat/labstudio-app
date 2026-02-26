@@ -44,7 +44,7 @@ export async function GET() {
     from lab_nutrition_log
     where user_id = ${uid}
       and (created_at at time zone 'America/New_York')::date = (now() at time zone 'America/New_York')::date;
-  `) as any[];
+  `) as { protein_g: number; carbs_g: number; fat_g: number }[];
 
   const entries = (await q`
     select id, created_at, name, protein_g, carbs_g, fat_g, time_label
@@ -53,7 +53,7 @@ export async function GET() {
       and (created_at at time zone 'America/New_York')::date = (now() at time zone 'America/New_York')::date
     order by created_at desc
     limit 30;
-  `) as any[];
+  `) as { id: number; created_at: Date; name: string; protein_g: number; carbs_g: number; fat_g: number; time_label: string | null }[];
 
   const last7 = (await q`
     select
@@ -66,12 +66,12 @@ export async function GET() {
       and (created_at at time zone 'America/New_York')::date >= ((now() at time zone 'America/New_York')::date - 6)
     group by day
     order by day asc;
-  `) as any[];
+  `) as { day: Date; protein_g: number; carbs_g: number; fat_g: number }[];
 
   const t = totals?.[0] ?? { protein_g: 0, carbs_g: 0, fat_g: 0 };
   const todayCalories = Number(t.protein_g) * 4 + Number(t.carbs_g) * 4 + Number(t.fat_g) * 9;
 
-  const last7WithCalories = (last7 || []).map((d: any) => {
+  const last7WithCalories = (last7 || []).map((d: { day: Date; protein_g: number; carbs_g: number; fat_g: number }) => {
     const cals = Number(d.protein_g) * 4 + Number(d.carbs_g) * 4 + Number(d.fat_g) * 9;
     return { day: String(d.day), protein_g: Number(d.protein_g), carbs_g: Number(d.carbs_g), fat_g: Number(d.fat_g), calories: cals };
   });
@@ -137,7 +137,7 @@ export async function POST(req: Request) {
     insert into lab_nutrition_log (user_id, name, protein_g, carbs_g, fat_g, time_label)
     values (${uid}, ${name}, ${p}, ${c}, ${f}, ${time})
     returning id, created_at;
-  `) as any[];
+  `) as { id: number; created_at: Date }[];
 
   return NextResponse.json({ ok: true, saved: rows?.[0] ?? null });
 }

@@ -14,12 +14,29 @@ type UnifiedFood = {
   basis?: 'per_serving' | 'per_100g' | 'unknown';
 };
 
+type USDAFood = {
+  fdcId?: number | string;
+  description?: string;
+  brandName?: string;
+  foodNutrients?: { nutrientId: number; value: unknown }[];
+};
+
+type OFFFood = {
+  product_name?: string;
+  generic_name?: string;
+  brands?: string;
+  code?: string;
+  _id?: string;
+  id?: string;
+  nutriments?: Record<string, unknown>;
+};
+
 function n(v: unknown): number | null {
   const x = typeof v === 'string' ? Number(v) : typeof v === 'number' ? v : NaN;
   return Number.isFinite(x) ? x : null;
 }
 
-function pickNumberByNutrientId(foodNutrients: any[] | undefined, nutrientId: number) {
+function pickNumberByNutrientId(foodNutrients: { nutrientId: number; value: unknown }[] | undefined, nutrientId: number) {
   if (!Array.isArray(foodNutrients)) return null;
   const hit = foodNutrients.find((fn) => fn?.nutrientId === nutrientId);
   return n(hit?.value);
@@ -36,10 +53,10 @@ async function usdaSearch(q: string, limit: number): Promise<UnifiedFood[]> {
 
   const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   if (!res.ok) return [];
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json = (await res.json().catch(() => ({}))) as { foods?: USDAFood[] };
 
   const foods = Array.isArray(json?.foods) ? json.foods : [];
-  return foods.slice(0, limit).map((f: any) => {
+  return foods.slice(0, limit).map((f: USDAFood) => {
     const foodNutrients = Array.isArray(f?.foodNutrients) ? f.foodNutrients : [];
 
     // USDA nutrient IDs (common):
@@ -83,10 +100,10 @@ async function offSearch(q: string, limit: number): Promise<UnifiedFood[]> {
 
   const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   if (!res.ok) return [];
-  const json = (await res.json().catch(() => ({}))) as any;
+  const json = (await res.json().catch(() => ({}))) as { products?: OFFFood[] };
 
   const products = Array.isArray(json?.products) ? json.products : [];
-  return products.slice(0, limit).map((p: any) => {
+  return products.slice(0, limit).map((p: OFFFood) => {
     const name = String(p?.product_name || p?.generic_name || '').trim();
     const brand = String(p?.brands || '').split(',')[0]?.trim() || undefined;
 

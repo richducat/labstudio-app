@@ -9,6 +9,14 @@ export type LabUser = {
   onboarding_complete: boolean;
 };
 
+export type LabGameScore = {
+  id: string;
+  user_id: string;
+  game_id: string;
+  score: number;
+  created_at: string;
+};
+
 export type LabUserProfile = {
   user_id: string;
   first_name: string | null;
@@ -66,10 +74,13 @@ export async function ensureSchema() {
       schedule_days text[] not null default '{}',
       nutrition_rating integer,
       injuries_json jsonb not null default '[]'::jsonb,
+      wearables_json jsonb not null default '{}'::jsonb,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     );
   `;
+
+  await q`alter table lab_user_profile add column if not exists wearables_json jsonb not null default '{}'::jsonb;`;
 
   await q`create index if not exists lab_user_profile_email_idx on lab_user_profile(email);`;
 
@@ -204,6 +215,19 @@ export async function ensureSchema() {
     );
   `;
   await q`create index if not exists lab_agenda_items_user_day_idx on lab_agenda_items(user_id, day desc, sort_order, created_at desc);`;
+
+  // Game Scores
+  await q`
+    create table if not exists lab_game_scores (
+      id bigserial primary key,
+      user_id text not null references lab_users(id) on delete cascade,
+      game_id text not null,
+      score integer not null,
+      created_at timestamptz not null default now()
+    );
+  `;
+  await q`create index if not exists lab_game_scores_user_game_idx on lab_game_scores(user_id, game_id);`;
+  await q`create index if not exists lab_game_scores_high_scores_idx on lab_game_scores(game_id, score desc);`;
 }
 
 
@@ -239,6 +263,7 @@ type UpsertUserProfileInput = {
   schedule_days?: string[];
   nutrition_rating?: number | null;
   injuries_json?: unknown;
+  wearables_json?: unknown;
 };
 
 export async function upsertUserProfile(userId: string, input: UpsertUserProfileInput): Promise<LabUserProfile> {
@@ -260,6 +285,7 @@ export async function upsertUserProfile(userId: string, input: UpsertUserProfile
       schedule_days,
       nutrition_rating,
       injuries_json,
+      wearables_json,
       created_at,
       updated_at
     ) values (
@@ -273,6 +299,7 @@ export async function upsertUserProfile(userId: string, input: UpsertUserProfile
       ${scheduleDays},
       ${input.nutrition_rating ?? null},
       ${JSON.stringify(injuriesJson)}::jsonb,
+      ${JSON.stringify(input.wearables_json ?? {})}::jsonb,
       now(),
       now()
     )
@@ -286,6 +313,7 @@ export async function upsertUserProfile(userId: string, input: UpsertUserProfile
       schedule_days = excluded.schedule_days,
       nutrition_rating = excluded.nutrition_rating,
       injuries_json = excluded.injuries_json,
+      wearables_json = excluded.wearables_json,
       updated_at = now()
     returning *;
   `) as unknown as LabUserProfile[];

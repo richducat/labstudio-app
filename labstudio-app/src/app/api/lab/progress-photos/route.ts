@@ -37,7 +37,7 @@ export async function GET() {
     where user_id = ${uid}
     order by created_at desc
     limit 10;
-  `) as any[];
+  `) as { id: number; created_at: Date; note: string | null; image_data_url: string }[];
 
   return NextResponse.json({ ok: true, photos: rows });
 }
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     insert into lab_progress_photos (user_id, image_data_url, note)
     values (${uid}, ${imageDataUrl}, ${note})
     returning id, created_at;
-  `) as any[];
+  `) as { id: number; created_at: Date }[];
 
   return NextResponse.json({ ok: true, saved: rows?.[0] ?? null });
 }

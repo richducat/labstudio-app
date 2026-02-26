@@ -10,3 +10,4 @@
 memory/ringcentral-token.json
 memory/zoho-token.json
 .vercel
+.env*.local

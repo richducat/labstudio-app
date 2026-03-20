@@ -17,9 +17,9 @@ export default function PlaceholderView({
       </div>
 
       <Card className="p-4">
-        <div className="text-sm text-zinc-300">Nothing here yet.</div>
+        <div className="text-sm text-zinc-300">Nothing to show yet.</div>
         <div className="text-xs text-zinc-500 mt-2">
-          This screen is live, but it will only show real data once you create it.
+          This section will populate as you start using it.
         </div>
       </Card>
     </div>

@@ -22,11 +22,19 @@ const WORKOUT_TEMPLATE = {
 };
 
 const PROGRAMS = [
-  { id: 'regular', title: 'Regular Strength', desc: 'Track sets, rests, and personal bests.', icon: Dumbbell },
-  { id: 'circuit', title: 'Metcon Circuit', desc: 'Move station-to-station with guided timers.', icon: Zap },
-  { id: 'interval', title: 'Hands-Free Interval', desc: 'Voice cues + timers for focus.', icon: Timer },
-  { id: 'video', title: 'Coach Video', desc: 'Follow-along workout with form cues.', icon: Video },
+  { id: 'regular', title: 'Strength Session', desc: 'Track sets, rest periods, and personal bests.', icon: Dumbbell },
+  { id: 'circuit', title: 'Circuit Session', desc: 'Move station to station with guided timers.', icon: Zap },
+  { id: 'interval', title: 'Interval Timer', desc: 'Use simple timers to stay on pace.', icon: Timer },
+  { id: 'video', title: 'Guided Video', desc: 'Follow a workout with coaching cues.', icon: Video },
 ];
+
+function getApiErrorMessage(payload: unknown, fallback: string) {
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    const error = (payload as { error?: unknown }).error;
+    if (typeof error === 'string') return error;
+  }
+  return fallback;
+}
 
 function formatTime(s: number) {
   const m = Math.floor(s / 60);
@@ -164,33 +172,45 @@ export default function WorkoutView({ onSelect }: { onSelect: (id: string) => vo
 
   const saveWorkout = async () => {
     try {
-      await fetch('/api/lab/workouts', {
+      const res = await fetch('/api/lab/workouts', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(workoutLog),
       });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(getApiErrorMessage(json, 'Failed to save workout'));
+      }
       setWorkoutLog({ kind: 'workout', durationMin: '', note: '' });
       alert('Workout saved!');
-    } catch { alert('Failed to save workout'); }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to save workout');
+    }
   };
 
   const savePr = async () => {
     try {
-      await fetch('/api/lab/strength-prs', {
+      const res = await fetch('/api/lab/strength-prs', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(pr),
       });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(getApiErrorMessage(json, 'Failed to save PR'));
+      }
       setPr({ lift: '', value: '', unit: 'lb', reps: '' });
       alert('PR saved!');
-    } catch { alert('Failed to save PR'); }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to save PR');
+    }
   };
 
   return (
     <div className="space-y-4 pb-20">
       <div className="px-1">
         <h1 className="text-2xl font-black italic uppercase">Workout</h1>
-        <div className="text-xs text-zinc-500">Pick a mode to start.</div>
+        <div className="text-xs text-zinc-500">Choose how you want to train today.</div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -221,7 +241,7 @@ export default function WorkoutView({ onSelect }: { onSelect: (id: string) => vo
 
       {/* Quick Log */}
       <Card className="p-4 space-y-3">
-        <div className="font-bold">Quick Log Workout</div>
+        <div className="font-bold">Quick workout log</div>
         <div className="grid grid-cols-2 gap-2">
           <input
             value={workoutLog.kind}
@@ -251,7 +271,7 @@ export default function WorkoutView({ onSelect }: { onSelect: (id: string) => vo
 
       {/* PR Logger */}
       <Card className="p-4 space-y-3">
-        <div className="font-bold">Log a Strength PR</div>
+        <div className="font-bold">Log a strength PR</div>
         <div className="grid grid-cols-2 gap-2">
           <input value={pr.lift} onChange={(e) => setPr({ ...pr, lift: e.target.value })} className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm col-span-2" placeholder="Lift (e.g., Bench Press)" />
           <input value={pr.value} onChange={(e) => setPr({ ...pr, value: e.target.value })} className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm" placeholder="Value" />

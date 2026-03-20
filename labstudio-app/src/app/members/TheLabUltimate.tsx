@@ -19,24 +19,7 @@ import GamesView from './views/GamesView';
 import MarketView from './views/MarketView';
 import ProgressView from './views/ProgressView';
 import ProfileView from './views/ProfileView';
-
-type Tab =
-  | 'home'
-  | 'book'
-  | 'coach'
-  | 'games'
-  | 'market'
-  | 'profile'
-  | 'workout'
-  | 'nutrition'
-  | 'habits'
-  | 'messages'
-  | 'community'
-  | 'challenges'
-  | 'wearables'
-  | 'social'
-  | 'library'
-  | 'progress';
+import { type LabTab } from './tabs';
 
 function NavBtn({
   icon: Icon,
@@ -51,12 +34,13 @@ function NavBtn({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 p-2 w-14 rounded-xl transition-all ${active ? 'text-white scale-105' : 'text-zinc-600 hover:text-zinc-400'
+      className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 transition-all sm:flex-none sm:px-2 ${active ? 'text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300'
         }`}
     >
-      <Icon size={22} strokeWidth={active ? 2.5 : 2} />
-      <span className="text-[9px] font-bold tracking-wide uppercase">{label}</span>
+      <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+      <span className="max-w-full truncate text-[9px] font-bold tracking-wide uppercase sm:text-[10px]">{label}</span>
     </button>
   );
 }
@@ -74,7 +58,7 @@ export default function TheLabUltimate({
   } | null;
   needsOnboarding?: boolean;
 }) {
-  const [tab, setTabState] = useState<Tab>('home');
+  const [tab, setTabState] = useState<LabTab>('home');
   const [tabMeta, setTabMeta] = useState<Record<string, unknown> | null>(null);
   const xp = initialUser?.xp ?? 0;
   const level = initialUser?.level ?? 1;
@@ -84,13 +68,16 @@ export default function TheLabUltimate({
     'Athlete';
   const goal = initialProfile?.goal ?? null;
 
-  const setTab = (next: string, meta?: Record<string, unknown>) => {
-    setTabState(next as Tab);
+  const setTab = (next: LabTab, meta?: Record<string, unknown>) => {
+    setTabState(next);
     setTabMeta(meta ?? null);
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-violet-500/30 pb-24 relative overflow-hidden">
+    <div
+      className="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-zinc-950 font-sans text-white selection:bg-violet-500/30"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
       {/* Background glow */}
       <div className="fixed inset-0 pointer-events-none">
         <div
@@ -104,31 +91,31 @@ export default function TheLabUltimate({
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setTab('home')}>
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/5 bg-zinc-950/80 px-4 py-3 backdrop-blur-xl">
+        <div className="flex cursor-pointer items-center gap-3" onClick={() => setTab('home')}>
           <div className="w-9 h-9 bg-violet-600 rounded-xl flex items-center justify-center font-black italic shadow-[0_0_15px_rgba(124,58,237,0.4)]">
             L
           </div>
-          <div>
-            <div className="font-bold tracking-wider leading-none">THE LAB</div>
-            <div className="text-[9px] text-zinc-500 tracking-[0.2em] font-bold">ULTIMATE v2.1-LIVE</div>
+          <div className="min-w-0">
+            <div className="font-bold tracking-wider leading-none">LAB STUDIO</div>
+            <div className="text-[9px] text-zinc-500 tracking-[0.2em] font-bold">MEMBER APP</div>
           </div>
         </div>
 
-        <div className="text-xs text-zinc-400 font-mono">app.labstudio.fit</div>
+        <div className="hidden text-xs font-mono text-zinc-400 sm:block">app.labstudio.fit</div>
       </header>
 
       {/* Content */}
-      <main className="max-w-md lg:max-w-6xl mx-auto p-4 relative z-10">
+      <main className="relative z-10 mx-auto flex-1 w-full max-w-md p-4 pb-[calc(132px+env(safe-area-inset-bottom))] lg:max-w-6xl lg:pb-[calc(116px+env(safe-area-inset-bottom))]">
         {needsOnboarding ? (
-          <div className="mb-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 flex items-center justify-between gap-4">
+          <div className="mb-4 flex flex-col items-start gap-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-xs font-bold text-yellow-400 tracking-widest uppercase">Action needed</div>
               <div className="text-sm text-zinc-200">Finish onboarding so your dashboard, coaching, and plans are personalized.</div>
             </div>
             <a
               href="/onboarding"
-              className="shrink-0 text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+              className="w-full rounded-xl bg-yellow-400 px-3 py-2 text-center text-xs font-black text-zinc-950 hover:bg-yellow-300 sm:w-auto sm:shrink-0"
             >
               Finish onboarding
             </a>
@@ -169,25 +156,29 @@ export default function TheLabUltimate({
       </main>
 
       {/* Nav Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-xl border-t border-white/10 z-50 pb-safe pt-2 shadow-[0_-10px_40px_-10px_rgba(0,0,0,1)]">
-        <div className="max-w-md lg:max-w-6xl mx-auto flex justify-around items-center px-1">
+      <nav
+        className="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-xl border-t border-white/10 z-50 pt-2 shadow-[0_-10px_40px_-10px_rgba(0,0,0,1)]"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
+      >
+        <div className="mx-auto grid max-w-md grid-cols-7 items-end gap-1 px-2 lg:max-w-6xl">
           <NavBtn icon={Activity} label="Dash" active={tab === 'home'} onClick={() => setTab('home')} />
           <NavBtn icon={Calendar} label="Book" active={tab === 'book'} onClick={() => setTab('book')} />
+          <NavBtn icon={Brain} label="Games" active={tab === 'games'} onClick={() => setTab('games')} />
 
-          <div className="-mt-10 relative group">
+          <div className="group relative -mt-8 flex justify-center sm:-mt-10">
             <div className="absolute inset-0 bg-violet-600 blur-xl opacity-40 rounded-full group-hover:opacity-60 transition duration-500" />
             <button
+              type="button"
               onClick={() => setTab('coach')}
-              className={`h-16 w-16 rounded-full flex items-center justify-center border-4 border-zinc-950 relative z-10 transition-all duration-300 ${tab === 'coach'
-                ? 'bg-white text-violet-600 scale-110 shadow-xl'
-                : 'bg-violet-600 text-white group-hover:bg-violet-500 group-hover:scale-105'
+              className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-full border-4 border-zinc-950 transition-all duration-300 sm:h-16 sm:w-16 ${tab === 'coach'
+                ? 'scale-105 bg-white text-violet-600 shadow-xl sm:scale-110'
+                : 'bg-violet-600 text-white group-hover:scale-105 group-hover:bg-violet-500'
                 }`}
             >
-              <MessageSquare size={26} fill="currentColor" />
+              <MessageSquare size={22} fill="currentColor" className="sm:h-[26px] sm:w-[26px]" />
             </button>
           </div>
 
-          <NavBtn icon={Brain} label="Games" active={tab === 'games'} onClick={() => setTab('games')} />
           <NavBtn icon={Trophy} label="Rank" active={tab === 'social'} onClick={() => setTab('social')} />
           <NavBtn icon={ShoppingBag} label="Shop" active={tab === 'market'} onClick={() => setTab('market')} />
           <NavBtn icon={User} label="Me" active={tab === 'profile'} onClick={() => setTab('profile')} />

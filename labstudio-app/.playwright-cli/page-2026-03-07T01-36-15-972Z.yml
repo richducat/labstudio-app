@@ -1,0 +1,9 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - heading "Lab Studio — Members" [level=1] [ref=e3]
+    - paragraph [ref=e4]: Enter the access code to continue.
+    - generic [ref=e5]:
+      - textbox "Access code" [ref=e6]
+      - button "Continue" [ref=e7] [cursor=pointer]
+    - paragraph [ref=e8]: v0 access gate (no email). We’ll replace this with proper member signup/login.
+  - alert [ref=e9]

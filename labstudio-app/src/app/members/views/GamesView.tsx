@@ -2,22 +2,27 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Trophy, Zap, Brain, LayoutGrid, Play,
-  Settings, ChevronRight, Star, Gamepad2,
-  Lock, ArrowRight, Activity
+  Trophy, Zap, Brain, LayoutGrid,
+  Settings, Gamepad2, ArrowRight, Activity
 } from 'lucide-react';
 import Card from '../components/Card';
 import GearSort from '@/app/members/views/games/GearSort';
 import PatternMaster from '@/app/members/views/games/PatternMaster';
 import ReactionLab from '@/app/members/views/games/ReactionLab';
 import NeuroGrid from '@/app/members/views/games/NeuroGrid';
+import { type LabTab } from '../tabs';
+
+interface HighScoreRow {
+  game_id: string;
+  top_score: number | string;
+}
 
 const GAMES = [
   {
     id: 'gear-sort',
     title: 'GEAR SORT',
-    subtitle: 'Neural Organization',
-    desc: 'Sort chaotic energy cores into thermal tubes. Test your cognitive classification speed.',
+    subtitle: 'Sorting',
+    desc: 'Sort each color into its own tube as efficiently as you can.',
     icon: <Settings className="text-violet-400" size={32} />,
     color: 'from-violet-600/20 to-zinc-900',
     borderColor: 'border-violet-500/30',
@@ -28,7 +33,7 @@ const GAMES = [
     id: 'pattern-master',
     title: 'PATTERN MASTER',
     subtitle: 'Sequence Recall',
-    desc: 'Memorize and replicate high-frequency neural sequences. Enhance short-term memory.',
+    desc: 'Watch the sequence, then repeat it from memory.',
     icon: <Brain className="text-pink-400" size={32} />,
     color: 'from-pink-600/20 to-zinc-900',
     borderColor: 'border-pink-500/30',
@@ -38,8 +43,8 @@ const GAMES = [
   {
     id: 'reaction-lab',
     title: 'REACTION LAB',
-    subtitle: 'Reflex Stress Test',
-    desc: 'Pure physical performance. How many stimulus points can you neutralize in 30 seconds?',
+    subtitle: 'Reaction Speed',
+    desc: 'Tap as many targets as you can in 30 seconds.',
     icon: <Zap className="text-yellow-400" size={32} />,
     color: 'from-yellow-600/20 to-zinc-900',
     borderColor: 'border-yellow-500/30',
@@ -50,7 +55,7 @@ const GAMES = [
     id: 'neuro-grid',
     title: 'NEURO GRID',
     subtitle: 'Visual Processing',
-    desc: 'Locate structural anomalies in a shifting grid environment. Sharpens visual search.',
+    desc: 'Find the mismatch in each grid before time runs out.',
     icon: <LayoutGrid className="text-cyan-400" size={32} />,
     color: 'from-cyan-600/20 to-zinc-900',
     borderColor: 'border-cyan-500/30',
@@ -59,7 +64,7 @@ const GAMES = [
   }
 ];
 
-export default function GamesView({ setTab }: { setTab?: (tab: string) => void }) {
+export default function GamesView({ setTab }: { setTab?: (tab: LabTab) => void }) {
   const [activeGame, setActiveGame] = useState<string | null>(null);
   const [highScores, setHighScores] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -69,10 +74,10 @@ export default function GamesView({ setTab }: { setTab?: (tab: string) => void }
       try {
         const res = await fetch('/api/lab/games/score');
         const data = await res.json();
-        if (data.ok) {
+        if (data.ok && Array.isArray(data.highScores)) {
           const scores: Record<string, number> = {};
-          data.highScores.forEach((s: any) => {
-            scores[s.game_id] = s.top_score;
+          (data.highScores as HighScoreRow[]).forEach((s) => {
+            scores[s.game_id] = Number(s.top_score) || 0;
           });
           setHighScores(scores);
         }
@@ -92,14 +97,13 @@ export default function GamesView({ setTab }: { setTab?: (tab: string) => void }
 
   return (
     <div className="pb-32">
-      <div className="bg-violet-600 text-[10px] text-white p-1 text-center font-bold">ARCADE_INTERFACE_ACTIVE</div>
       <div className="text-center py-8 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-violet-600/10 blur-[100px] -z-10"></div>
         <h2 className="text-3xl font-black italic uppercase tracking-tighter flex items-center justify-center gap-3">
           <Gamepad2 className="text-violet-500" size={32} />
-          THE LAB ARCADE
+          Brain Training
         </h2>
-        <p className="text-zinc-500 text-xs uppercase tracking-[0.2em] mt-1 font-bold">Neural Performance Suite v2.0</p>
+        <p className="text-zinc-500 text-xs uppercase tracking-[0.2em] mt-1 font-bold">Focus, memory, reaction, and visual scanning</p>
       </div>
 
       <div className="grid gap-4 px-4">
@@ -123,7 +127,7 @@ export default function GamesView({ setTab }: { setTab?: (tab: string) => void }
                     ))}
                   </div>
                   <div className="text-[10px] font-bold text-emerald-400 mt-2 flex items-center gap-1">
-                    <Activity size={10} /> +{game.xpPerWin} XP REWARD
+                    <Activity size={10} /> +{game.xpPerWin} points
                   </div>
                 </div>
               </div>
@@ -141,7 +145,7 @@ export default function GamesView({ setTab }: { setTab?: (tab: string) => void }
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-violet-400 font-bold text-xs uppercase group-hover:gap-4 transition-all duration-300">
-                  Execute Neural Drive <ArrowRight size={14} />
+                  Play <ArrowRight size={14} />
                 </div>
               </div>
             </div>
@@ -153,8 +157,8 @@ export default function GamesView({ setTab }: { setTab?: (tab: string) => void }
       <div className="mt-8 px-4">
         <Card className="bg-zinc-900/40 border-dashed border-zinc-800 p-6 text-center">
           <Trophy className="mx-auto text-yellow-500 mb-3" size={32} />
-          <h4 className="text-sm font-bold uppercase italic">Global Neural Rankings</h4>
-          <p className="text-xs text-zinc-500 mt-1 mb-4">You are currently ranked #14 in the Lab Network.</p>
+          <h4 className="text-sm font-bold uppercase italic">Leaderboard</h4>
+          <p className="text-xs text-zinc-500 mt-1 mb-4">See how your best scores compare with other members.</p>
           <button
             onClick={() => setTab?.('social')}
             className="text-[10px] font-black uppercase tracking-widest px-4 py-2 border border-zinc-700 rounded-full hover:bg-white hover:text-black transition-colors"

@@ -150,7 +150,7 @@ export default function MarketView() {
               </button>
             </div>
 
-            <div className="mt-2 text-[11px] text-zinc-500">Note: cart can’t mix subscriptions + one-time items yet.</div>
+            <div className="mt-2 text-[11px] text-zinc-500">Subscriptions and one-time items are purchased separately.</div>
           </div>
         </div>
       ) : null}

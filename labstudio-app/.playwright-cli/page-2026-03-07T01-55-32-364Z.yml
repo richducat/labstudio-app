@@ -1,0 +1,221 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4] [cursor=pointer]:
+        - generic [ref=e5]: L
+        - generic [ref=e6]:
+          - generic [ref=e7]: THE LAB
+          - generic [ref=e8]: ULTIMATE v2.1-LIVE
+      - generic [ref=e9]: app.labstudio.fit
+    - main [ref=e10]:
+      - generic [ref=e326]:
+        - generic [ref=e327]:
+          - heading "UNLEASH POTENTIAL" [level=1] [ref=e329]:
+            - text: UNLEASH
+            - text: POTENTIAL
+          - generic [ref=e331] [cursor=pointer]:
+            - generic [ref=e332]:
+              - generic [ref=e333]: Next Mission
+              - generic [ref=e334]: No session scheduled yet.
+            - generic [ref=e335]: Book
+          - generic [ref=e336]:
+            - generic [ref=e337]:
+              - generic [ref=e338]:
+                - generic [ref=e339]: Coach plan
+                - generic [ref=e340]: Today’s Focus
+              - button "Generate" [ref=e341] [cursor=pointer]
+            - generic [ref=e342]: Generate a focus card and pin it to keep it stable across sessions.
+          - generic [ref=e344] [cursor=pointer]:
+            - generic [ref=e345]:
+              - img [ref=e347]
+              - generic [ref=e355]: XP AVAILABLE
+            - heading "NEURAL ARCADE" [level=4] [ref=e356]
+            - paragraph [ref=e357]:
+              - text: Train your cognitive performance
+              - text: "& earn secondary XP rewards."
+            - generic [ref=e358]:
+              - text: Enter Interface
+              - img [ref=e359]
+          - generic [ref=e361]:
+            - img [ref=e363]
+            - generic [ref=e369]:
+              - generic [ref=e370]:
+                - generic [ref=e371]: Current Rank
+                - generic [ref=e372]: LEVEL 1
+              - generic [ref=e374]: 2000 XP TO REWARD
+        - generic [ref=e376]:
+          - generic [ref=e377]:
+            - generic [ref=e378]:
+              - generic [ref=e379]:
+                - img [ref=e381]
+                - generic [ref=e384]:
+                  - generic [ref=e385]: Athlete
+                  - generic [ref=e386]: "GOAL: —"
+              - generic [ref=e387]:
+                - generic [ref=e388]: —
+                - generic [ref=e389]: —
+            - generic [ref=e390]:
+              - generic [ref=e391]:
+                - generic [ref=e392]: Nutrition Today
+                - generic [ref=e393]:
+                  - generic [ref=e394]: Cals
+                  - generic [ref=e395]: "0"
+                - generic [ref=e396]:
+                  - generic [ref=e397]: Protein
+                  - generic [ref=e398]: 0g
+              - generic [ref=e399]:
+                - generic [ref=e400]: Session Log
+                - generic [ref=e401]:
+                  - generic [ref=e402]: Booked (next 30d)
+                  - generic [ref=e403]: "0"
+                - generic [ref=e404]:
+                  - generic [ref=e405]: Completed (last 7d)
+                  - generic [ref=e406]: "0"
+                - generic [ref=e407]:
+                  - generic [ref=e408]: Missed (approx 30d)
+                  - generic [ref=e409]: "0"
+          - generic [ref=e410] [cursor=pointer]:
+            - generic [ref=e411]:
+              - generic [ref=e412]:
+                - generic [ref=e413]: Workouts
+                - generic [ref=e414]: Last 7 days
+              - generic [ref=e415]:
+                - generic [ref=e416]: 0 • 0m
+                - generic [ref=e417]: Log
+            - generic [ref=e418]: No workouts logged in the last 7 days. Tap to log one.
+          - generic [ref=e419]:
+            - generic [ref=e421]:
+              - heading "Things to do today" [level=2] [ref=e422]
+              - generic [ref=e423]: Your agenda + check-ins (real data).
+            - generic [ref=e424]:
+              - generic [ref=e425]:
+                - generic [ref=e426]:
+                  - img [ref=e428]
+                  - generic [ref=e431]:
+                    - generic [ref=e432]: Daily stats check-in
+                    - generic [ref=e433]: Check-in
+                - button "Jump in" [ref=e434] [cursor=pointer]
+              - generic [ref=e435]:
+                - generic [ref=e436]:
+                  - img [ref=e438]
+                  - generic [ref=e441]:
+                    - generic [ref=e442]: Progress photo
+                    - generic [ref=e443]: Check-in
+                - button "Jump in" [ref=e444] [cursor=pointer]
+              - generic [ref=e445]:
+                - generic [ref=e446]:
+                  - img [ref=e448]
+                  - generic [ref=e451]:
+                    - generic [ref=e452]: Log nutrition
+                    - generic [ref=e453]: Habit
+                - button "Jump in" [ref=e454] [cursor=pointer]
+          - generic [ref=e455]:
+            - generic [ref=e456]:
+              - generic [ref=e457]:
+                - heading "Daily Check-in" [level=2] [ref=e458]
+                - generic [ref=e459]: Log weight/body fat and notes.
+              - button "Quick Log" [ref=e460] [cursor=pointer]
+            - generic [ref=e462]: No check-in form open.
+          - generic [ref=e463]:
+            - generic [ref=e464]:
+              - generic [ref=e465]:
+                - heading "My Progress" [level=2] [ref=e466]
+                - generic [ref=e467]: Customize the tiles that matter to you.
+              - button "Edit Tiles" [ref=e468] [cursor=pointer]
+            - generic [ref=e469]:
+              - generic [ref=e470] [cursor=pointer]:
+                - generic [ref=e471]:
+                  - generic [ref=e472]: Body Weight
+                  - img [ref=e473]
+                - generic [ref=e477]: —
+                - generic [ref=e478]: Log in Daily Check-in
+              - generic [ref=e479] [cursor=pointer]:
+                - generic [ref=e480]:
+                  - generic [ref=e481]: Body Fat
+                  - img [ref=e482]
+                - generic [ref=e484]: —
+                - generic [ref=e485]: Log in Daily Check-in
+              - generic [ref=e486] [cursor=pointer]:
+                - generic [ref=e487]:
+                  - generic [ref=e488]: Resting HR
+                  - img [ref=e489]
+                - generic [ref=e491]: —
+                - generic [ref=e492]: Add in Daily Check-in
+              - generic [ref=e493] [cursor=pointer]:
+                - generic [ref=e494]:
+                  - generic [ref=e495]: Progress Photos
+                  - img [ref=e496]
+                - generic [ref=e499]: "0"
+                - generic [ref=e500]: Photos (30d)
+              - generic [ref=e501] [cursor=pointer]:
+                - generic [ref=e502]:
+                  - generic [ref=e503]: Nutrition Avg
+                  - img [ref=e504]
+                - generic [ref=e507]: 0 kcal
+                - generic [ref=e508]: 7-day avg
+              - generic [ref=e509] [cursor=pointer]:
+                - generic [ref=e510]:
+                  - generic [ref=e511]: Strength PRs
+                  - img [ref=e512]
+                - generic [ref=e515]: —
+                - generic [ref=e516]: Add a PR
+          - generic [ref=e517]:
+            - heading "Quick Actions" [level=2] [ref=e519]
+            - generic [ref=e520]:
+              - generic [ref=e522] [cursor=pointer]:
+                - generic [ref=e523]:
+                  - img [ref=e525]
+                  - generic [ref=e531]:
+                    - generic [ref=e532]: Start Workout
+                    - generic [ref=e533]: Regular, circuit, interval, or video
+                - img [ref=e535]
+              - generic [ref=e539]:
+                - generic [ref=e540] [cursor=pointer]:
+                  - img [ref=e541]
+                  - generic [ref=e544]: NUTRITION
+                - generic [ref=e545] [cursor=pointer]:
+                  - img [ref=e546]
+                  - generic [ref=e549]: HABITS
+                - generic [ref=e550] [cursor=pointer]:
+                  - img [ref=e551]
+                  - generic [ref=e553]: MESSAGES
+                - generic [ref=e554] [cursor=pointer]:
+                  - img [ref=e555]
+                  - generic [ref=e560]: COMMUNITY
+                - generic [ref=e561] [cursor=pointer]:
+                  - img [ref=e562]
+                  - generic [ref=e568]: CHALLENGES
+                - generic [ref=e569] [cursor=pointer]:
+                  - img [ref=e570]
+                  - generic [ref=e572]: WEARABLES
+                - generic [ref=e573] [cursor=pointer]:
+                  - img [ref=e574]
+                  - generic [ref=e579]: SQUAD
+                - generic [ref=e580] [cursor=pointer]:
+                  - img [ref=e581]
+                  - generic [ref=e583]: THE VAULT
+    - navigation [ref=e241]:
+      - generic [ref=e242]:
+        - button "Dash" [ref=e243] [cursor=pointer]:
+          - img [ref=e244]
+          - generic [ref=e246]: Dash
+        - button "Book" [ref=e247] [cursor=pointer]:
+          - img [ref=e248]
+          - generic [ref=e250]: Book
+        - button [ref=e253] [cursor=pointer]:
+          - img [ref=e254]
+        - button "Games" [ref=e256] [cursor=pointer]:
+          - img [ref=e257]
+          - generic [ref=e265]: Games
+        - button "Rank" [ref=e266] [cursor=pointer]:
+          - img [ref=e267]
+          - generic [ref=e273]: Rank
+        - button "Shop" [ref=e274] [cursor=pointer]:
+          - img [ref=e275]
+          - generic [ref=e278]: Shop
+        - button "Me" [ref=e279] [cursor=pointer]:
+          - img [ref=e280]
+          - generic [ref=e283]: Me
+  - button "Open Next.js Dev Tools" [ref=e289] [cursor=pointer]:
+    - img [ref=e290]
+  - alert [ref=e293]

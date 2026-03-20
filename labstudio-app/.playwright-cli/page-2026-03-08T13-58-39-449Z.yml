@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]: Lab Studio Members
+        - heading "Sign in with your email or phone number." [level=1] [ref=e7]
+        - paragraph [ref=e8]: We'll save your contact info to your member profile and use it to reopen the same account the next time you come back.
+        - generic [ref=e9]:
+          - generic [ref=e10]:
+            - generic [ref=e11]: Fast Entry
+            - paragraph [ref=e12]: Use either field. You don't need both unless you want them linked.
+          - generic [ref=e13]:
+            - generic [ref=e14]: Saved Profile
+            - paragraph [ref=e15]: Your contact info is stored in the app database and attached to your member record.
+          - generic [ref=e16]:
+            - generic [ref=e17]: Continue
+            - paragraph [ref=e18]: If your profile still needs intake details, you can finish those after sign-in.
+      - generic [ref=e19]:
+        - generic [ref=e20]: Member Login
+        - heading "Open your Lab account" [level=2] [ref=e21]
+        - paragraph [ref=e22]: Enter an email address, a phone number, or both.
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - generic [ref=e25]: Email
+            - textbox "Email" [ref=e26]:
+              - /placeholder: you@example.com
+          - generic [ref=e27]:
+            - generic [ref=e28]: Phone Number
+            - textbox "Phone Number" [ref=e29]:
+              - /placeholder: (555) 555-5555
+          - button "Enter The Lab" [ref=e30] [cursor=pointer]
+        - paragraph [ref=e31]: This sign-in flow identifies members by the contact info they enter. If you want ownership verification later, we can add email or SMS codes on top of this.
+  - button "Open Next.js Dev Tools" [ref=e37] [cursor=pointer]:
+    - img [ref=e38]
+  - alert [ref=e41]

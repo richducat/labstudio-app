@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { dbConfigured, ensureSchema, getOrCreateUser, getUserProfile } from '@/lib/db';
 import { neon } from '@neondatabase/serverless';
-import { parseICS } from 'ical';
+import * as ical from 'ical';
 
 export const runtime = 'nodejs';
 
@@ -35,7 +35,7 @@ async function fetchIcalEvents() {
   if (!res.ok) return [];
 
   const icsText = await res.text();
-  const data = parseICS(icsText) as Record<string, { type?: string; summary?: string; start?: string | Date; end?: string | Date; location?: string; description?: string }>;
+  const data = ical.parseICS(icsText) as Record<string, { type?: string; summary?: string; start?: string | Date; end?: string | Date; location?: string; description?: string }>;
 
   const events = Object.values(data || {}).filter((v) => v && v.type === 'VEVENT');
   return events
@@ -49,15 +49,8 @@ async function fetchIcalEvents() {
     .filter((e) => e.start && e.end);
 }
 
-async function getNextBooking() {
-  const now = new Date();
-  const events = await fetchIcalEvents();
-
-  const upcoming = events
-    .filter((e) => e.start && e.start.getTime() > now.getTime())
-    .sort((a, b) => a.start!.getTime() - b.start!.getTime());
-
-  return upcoming[0] ?? null;
+function textOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length ? value.trim() : null;
 }
 
 export async function GET() {
@@ -136,25 +129,70 @@ export async function GET() {
     limit 1;
   `) as { id: number; created_at: Date; lift: string; value: number; unit: string; reps: number }[];
 
-  // iCal-based session counts
+  // External iCal sessions + in-app bookings
   const icsEvents = await fetchIcalEvents();
   const now = new Date();
   const in30d = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const bookedUpcoming30d = icsEvents.filter((e) => e.start && e.start > now && e.start < in30d).length;
+  const appBookings = (await q`
+    select id, title, scheduled_at, duration_min, details_json
+    from lab_agenda_items
+    where user_id = ${uid}
+      and action = 'book'
+      and scheduled_at is not null
+      and scheduled_at > now()
+      and scheduled_at < (now() + interval '30 days')
+    order by scheduled_at asc;
+  `) as Array<{
+    id: string;
+    title: string;
+    scheduled_at: Date | null;
+    duration_min: number | null;
+    details_json: Record<string, unknown> | null;
+  }>;
+
+  const iCalUpcoming = icsEvents
+    .filter((e) => e.start && e.start > now && e.start < in30d)
+    .sort((a, b) => a.start!.getTime() - b.start!.getTime())
+    .map((event) => ({
+      ...event,
+      source: 'google_calendar' as const,
+      description: event.description ?? 'Imported from the shared Google Calendar feed.',
+    }));
   const bookedPast30d = icsEvents.filter((e) => e.start && e.start < now && e.start > last30d).length;
+
+  const plannedUpcoming = appBookings
+    .filter((booking) => booking.scheduled_at)
+    .map((booking) => {
+      const start = booking.scheduled_at as Date;
+      const durationMin = Number(booking.duration_min ?? 60) || 60;
+      const end = new Date(start.getTime() + durationMin * 60 * 1000);
+      const details = booking.details_json ?? {};
+      return {
+        summary: booking.title,
+        start,
+        end,
+        location: textOrNull(details.location),
+        description: textOrNull(details.description) ?? 'Saved from the in-app booking planner.',
+        source: 'app' as const,
+      };
+    });
+
+  const bookedUpcoming30d = iCalUpcoming.length + plannedUpcoming.length;
 
   const completed7d = Number(workouts7d?.[0]?.completed ?? 0);
   const workoutMinutes7d = Number(workouts7d?.[0]?.minutes ?? 0);
   const missedApprox30d = Math.max(bookedPast30d - completed7d, 0);
 
-  const upcomingBookings = icsEvents
-    .filter((e) => e.start && e.start > now && e.start < in30d)
+  const combinedUpcomingBookings = [...iCalUpcoming, ...plannedUpcoming]
     .sort((a, b) => a.start!.getTime() - b.start!.getTime())
-    .slice(0, 5);
-
-  const nextBooking = await getNextBooking();
+  const in14d = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const bookingCalendar = combinedUpcomingBookings
+    .filter((booking) => booking.start && booking.start < in14d)
+    .slice(0, 50);
+  const upcomingBookings = combinedUpcomingBookings.slice(0, 5);
+  const nextBooking = upcomingBookings[0] ?? null;
 
   const recentWorkouts = (await q`
     select id, created_at, kind, duration_min, note
@@ -267,6 +305,11 @@ export async function GET() {
       latestStats: stats?.[0] ?? null,
       nextBooking,
       upcomingBookings,
+      bookingCalendar,
+      calendarFeed: {
+        connected: Boolean(process.env.LABSTUDIO_BOOKINGS_ICAL_URL),
+        importedUpcomingCount: iCalUpcoming.length,
+      },
       recentWorkouts,
       agenda,
       sessionLog: {

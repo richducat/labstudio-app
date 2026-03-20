@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lab Studio Members App
 
-## Getting Started
+Production Next.js app for the Lab Studio members experience: onboarding, workouts, nutrition, progress tracking, shop checkout, and Toby AI coaching.
 
-First, run the development server:
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Launch Check
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run check:launch
+```
 
-## Learn More
+This runs lint plus a production build.
 
-To learn more about Next.js, take a look at the following resources:
+## Required Environment Variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Copy `.env.example` to `.env.local` and set, at minimum:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `NEXT_PUBLIC_SITE_URL`
+- `LABSTUDIO_ACCESS_CODE`
+- `LABSTUDIO_SESSION_SECRET`
+- `DATABASE_URL`
 
-## Deploy on Vercel
+If you use payments or AI features, also set:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `STRIPE_SECRET_KEY`
+- `OPENAI_API_KEY` or the Toby wrapper / Ollama variables
+- `USDA_FDC_API_KEY` for food search
+- `LABSTUDIO_BOOKINGS_ICAL_URL` if you want live agenda ingestion
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Production Notes
+
+- Sessions are signed with `LABSTUDIO_SESSION_SECRET` in production.
+- Stripe checkout redirects use `NEXT_PUBLIC_SITE_URL` or the deployed host; do not leave this unset for production.
+- Private member routes are protected by `src/proxy.ts`.
+- Metadata, `robots`, `sitemap`, and `manifest` are implemented under `src/app/`.
+
+## Toby AI Provider Config
+
+Toby can run against OpenAI, direct Ollama, or a wrapper API.
+
+- `TOBY_AI_PROVIDER=openai|ollama|wrapper|auto` (`auto` uses wrapper URL if set, otherwise Ollama/OpenAI routing)
+- `TOBY_MODEL=<model>` default model for OpenAI
+- `OLLAMA_BASE_URL=http://<host>:11434` base URL for your Ollama machine (or API gateway)
+- `OLLAMA_URL=http://<host>:11434` alias for `OLLAMA_BASE_URL`
+- `OLLAMA_MODEL=<model>` model override when provider is Ollama
+- `OLLAMA_API_KEY=<token>` optional bearer token when Ollama is behind auth
+- `OLLAMA_TOOLS_ENABLED=true` optional: allow tool-calling attempt on Ollama in `/api/toby/chat`
+- `TOBY_CHAT_WRAPPER_URL=http://host/api/toby/chat` Toby wrapper endpoint (if you provide only host, `/api/toby/chat` is appended automatically)
+- `TOBY_CHAT_WRAPPER_API_KEY=<token>` optional bearer token for wrapper auth
+- `TOBY_CHAT_WRAPPER_ACCESS_CODE=<code>` optional `x-labstudio-key` header forwarded to wrapper
+- `TOBY_CHAT_WRAPPER_CF_ACCESS_CLIENT_ID=<id>` optional Cloudflare Access service token client id
+- `TOBY_CHAT_WRAPPER_CF_ACCESS_CLIENT_SECRET=<secret>` optional Cloudflare Access service token client secret
+- `TOBY_CHAT_WRAPPER_TIMEOUT_MS=25000` optional wrapper timeout in milliseconds
+- `TOBY_WRAPPER_STRICT=true` optional: if `true`, wrapper errors are returned directly (no fallback). Default is fallback to OpenAI/Ollama.
+
+Example local wrapper setup:
+
+```bash
+TOBY_AI_PROVIDER=wrapper
+TOBY_CHAT_WRAPPER_URL=http://localhost:3002/api/toby/chat
+```
+
+For production, `localhost` is not reachable from serverless functions. Set `TOBY_CHAT_WRAPPER_URL` to a public URL.

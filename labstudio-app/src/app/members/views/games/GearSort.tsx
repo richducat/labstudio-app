@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    RefreshCw, RotateCcw, Plus, Trophy, ChevronRight, Zap,
-    Settings, Volume2, VolumeX, Menu, Play, Lock, Star,
-    X, ArrowLeft, Activity
+    RefreshCw, RotateCcw, Trophy, ChevronRight,
+    Volume2, VolumeX, Star, ArrowLeft
 } from 'lucide-react';
 
 // --- CONFIG ---
@@ -31,9 +30,21 @@ const LEVEL_CONFIGS = [
 const TUBE_CAPACITY = 4;
 
 // --- AUDIO ---
+type WindowWithWebkitAudioContext = Window & {
+    webkitAudioContext?: typeof AudioContext;
+};
+
+const getAudioContextCtor = () => {
+    if (typeof window === 'undefined') return null;
+    const win = window as WindowWithWebkitAudioContext;
+    return window.AudioContext ?? win.webkitAudioContext ?? null;
+};
+
 const playSound = (type: 'select' | 'drop' | 'win' | 'error', enabled: boolean) => {
-    if (!enabled || typeof window === 'undefined') return;
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!enabled) return;
+    const AudioContextCtor = getAudioContextCtor();
+    if (!AudioContextCtor) return;
+    const audioCtx = new AudioContextCtor();
     const now = audioCtx.currentTime;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -97,7 +108,7 @@ const generateLevel = (levelNumber: number) => {
     const config = LEVEL_CONFIGS[Math.min(levelNumber - 1, LEVEL_CONFIGS.length - 1)];
     const colorKeys = Object.keys(PIXEL_COLORS).slice(0, config.colors);
 
-    let tubes: string[][] = [];
+    const tubes: string[][] = [];
     colorKeys.forEach(color => {
         tubes.push(Array(TUBE_CAPACITY).fill(color));
     });
@@ -106,7 +117,7 @@ const generateLevel = (levelNumber: number) => {
     }
 
     const shuffleMoves = 100 + (levelNumber * 20);
-    let currentTubes = cloneState(tubes);
+    const currentTubes = cloneState(tubes);
 
     for (let i = 0; i < shuffleMoves; i++) {
         const nonEmpty = currentTubes.map((t, i) => t.length > 0 ? i : -1).filter(i => i !== -1);
@@ -207,7 +218,7 @@ export default function GearSort({ onExit }: GearSortProps) {
                 const xp = 50 + (level * 10);
                 setXpToAward(xp);
                 playSound('win', soundEnabled);
-                submitScore(level * 1000, xp);
+                submitScore(level * 1000);
             }
         } else {
             setSelectedTube(null);
@@ -215,7 +226,7 @@ export default function GearSort({ onExit }: GearSortProps) {
         }
     };
 
-    const submitScore = async (score: number, xp: number) => {
+    const submitScore = async (score: number) => {
         try {
             await fetch('/api/lab/games/score', {
                 method: 'POST',
@@ -244,7 +255,7 @@ export default function GearSort({ onExit }: GearSortProps) {
                 </button>
                 <div className="text-center">
                     <h2 className="text-lg font-black italic uppercase tracking-tighter">GEAR SORT</h2>
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Neural Circuit {level.toString().padStart(2, '0')}</p>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Level {level.toString().padStart(2, '0')}</p>
                 </div>
                 <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                     {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
@@ -286,7 +297,7 @@ export default function GearSort({ onExit }: GearSortProps) {
                     className="flex-1 py-4 bg-zinc-800 disabled:opacity-30 rounded-xl border border-white/5 flex flex-col items-center gap-1 hover:bg-zinc-700 transition-colors"
                 >
                     <RotateCcw size={20} />
-                    <span className="text-[10px] font-black uppercase tracking-tighter">UNDO DRIVE</span>
+                    <span className="text-[10px] font-black uppercase tracking-tighter">Undo Move</span>
                 </button>
                 <button
                     onClick={() => setLevel(level)}
@@ -294,7 +305,7 @@ export default function GearSort({ onExit }: GearSortProps) {
                     className="flex-1 py-4 bg-zinc-800 rounded-xl border border-white/5 flex flex-col items-center gap-1 hover:bg-zinc-700 transition-colors"
                 >
                     <RefreshCw size={20} />
-                    <span className="text-[10px] font-black uppercase tracking-tighter">RESET RESET</span>
+                    <span className="text-[10px] font-black uppercase tracking-tighter">Restart Level</span>
                 </button>
             </div>
 
@@ -307,12 +318,12 @@ export default function GearSort({ onExit }: GearSortProps) {
                             <Star className="absolute -top-2 -left-4 text-violet-400 animate-pulse" size={24} />
                             <Star className="absolute -bottom-2 -right-4 text-violet-400 animate-pulse" size={20} />
                         </div>
-                        <h3 className="text-2xl font-black italic uppercase italic tracking-wide mb-2">NEURAL SYNC COMPLETE</h3>
-                        <p className="text-zinc-500 text-xs mb-6 uppercase font-bold tracking-widest">Efficiency threshold met.</p>
+                        <h3 className="text-2xl font-black italic uppercase italic tracking-wide mb-2">Level Complete</h3>
+                        <p className="text-zinc-500 text-xs mb-6 uppercase font-bold tracking-widest">All colors are sorted.</p>
 
                         <div className="bg-zinc-950 p-4 rounded-xl border border-white/5 mb-8">
                             <div className="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">
-                                <span>XP GAINED</span>
+                                <span>Points Earned</span>
                                 <span className="text-emerald-400">+{xpToAward}</span>
                             </div>
                             <div className="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-widest">
@@ -329,7 +340,7 @@ export default function GearSort({ onExit }: GearSortProps) {
                             }}
                             className="w-full py-4 bg-violet-600 hover:bg-violet-500 text-white font-black italic uppercase rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(139,92,246,0.3)]"
                         >
-                            NEXT DOWNLOAD <ChevronRight size={20} />
+                            Next Level <ChevronRight size={20} />
                         </button>
                     </div>
                 </div>

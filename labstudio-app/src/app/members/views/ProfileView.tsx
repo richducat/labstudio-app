@@ -1,24 +1,26 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ElementType } from 'react';
 import {
-  ArrowLeft,
-  Dumbbell,
-  Edit3,
-  Flame,
-  Heart,
-  MessageSquare,
-  Share2,
-  TrendingUp,
-  Trophy,
-  User,
-  Zap,
-  Smartphone,
+  Activity,
+  CalendarDays,
+  Camera,
   CheckCircle,
-  Wifi,
-  Brain,
+  Clock3,
+  Dumbbell,
+  Flame,
+  HeartPulse,
+  Mail,
+  Phone,
+  Smartphone,
+  User,
 } from 'lucide-react';
 import Card from '../components/Card';
+
+type WearableRecord = {
+  connected?: boolean;
+  last_sync?: string;
+};
 
 type Profile = {
   first_name?: string | null;
@@ -26,282 +28,343 @@ type Profile = {
   email?: string | null;
   phone?: string | null;
   goal?: string | null;
-  handle?: string | null;
-  bio?: string | null;
-  weight_lbs?: number | null;
-  body_fat_pct?: number | null;
-  height_in?: number | null;
-  joined_at?: string | null;
-  wearables_json?: Record<string, { connected: boolean; last_sync?: string }>;
+  activity_level?: string | null;
+  schedule_days?: string[] | null;
+  nutrition_rating?: number | null;
+  injuries_json?: unknown;
+  wearables_json?: Record<string, WearableRecord>;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 type HomeData = {
+  nutrition?: { calories?: number; protein_g?: number; carbs_g?: number; fat_g?: number } | null;
   latestStats?: { weight_lbs?: string | number | null; body_fat_pct?: string | number | null; resting_hr?: number | null } | null;
+  nextBooking?: { summary?: string; start?: string; location?: string | null } | null;
+  recentWorkouts?: Array<{ id: number; created_at: string; kind: string | null; duration_min: number | null; note: string | null }>;
+  sessionLog?: { bookedUpcoming30d?: number; completed7d?: number; missedApprox30d?: number } | null;
   progress?: {
+    photos30d?: number;
+    calories7dAvg?: number;
     workouts7d?: { count: number; minutes: number } | null;
+    latestPr?: { lift: string; value: number; unit: string; reps: number | null } | null;
   } | null;
 };
 
+function formatDateLabel(value?: string | null) {
+  if (!value) return 'Not recorded';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not recorded';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateTimeLabel(value?: string | null) {
+  if (!value) return 'Not scheduled';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not scheduled';
+  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  })}`;
+}
+
+function normalizeInjuries(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((entry) => String(entry).trim()).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value.split(/\n|,/g).map((entry) => entry.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  helper,
+}: {
+  icon: ElementType;
+  label: string;
+  value: string;
+  helper?: string;
+}) {
+  return (
+    <Card className="p-4 bg-zinc-900/70 border-white/5">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">{label}</div>
+        <Icon size={14} className="text-violet-400" />
+      </div>
+      <div className="text-2xl font-black italic">{value}</div>
+      {helper ? <div className="mt-2 text-xs text-zinc-500">{helper}</div> : null}
+    </Card>
+  );
+}
+
 export default function ProfileView() {
-  const [subTab, setSubTab] = useState<'journey' | 'vitals' | 'badges'>('journey');
+  const [subTab, setSubTab] = useState<'overview' | 'metrics' | 'activity'>('overview');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [homeData, setHomeData] = useState<HomeData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/lab/profile')
-      .then((r) => r.json())
-      .then((j) => { if (j?.ok) setProfile(j.profile ?? null); })
-      .catch(() => { });
-
-    fetch('/api/lab/home')
-      .then((r) => r.json())
-      .then((j) => { if (j?.ok) setHomeData(j.home ?? null); })
-      .catch(() => { });
+    Promise.all([
+      fetch('/api/lab/profile').then(async (response) => ({
+        response,
+        data: (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string; profile?: Profile | null },
+      })),
+      fetch('/api/lab/home').then(async (response) => ({
+        response,
+        data: (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string; home?: HomeData | null },
+      })),
+    ])
+      .then(([profileResult, homeResult]) => {
+        if (!profileResult.response.ok || !profileResult.data.ok) {
+          throw new Error(profileResult.data.error || `Failed to load profile (${profileResult.response.status})`);
+        }
+        if (!homeResult.response.ok || !homeResult.data.ok) {
+          throw new Error(homeResult.data.error || `Failed to load home data (${homeResult.response.status})`);
+        }
+        setProfile(profileResult.data.profile ?? null);
+        setHomeData(homeResult.data.home ?? null);
+        setError(null);
+      })
+      .catch((loadError) => {
+        const message = loadError instanceof Error ? loadError.message : 'Failed to load profile';
+        setError(message);
+      });
   }, []);
 
   const name = useMemo(() => {
-    const n = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ');
-    return n || 'Athlete';
+    const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ');
+    return fullName || 'Athlete';
   }, [profile?.first_name, profile?.last_name]);
 
-  const handle = profile?.handle ? `@${profile.handle}` : `@${(profile?.first_name ?? 'athlete').toLowerCase()}_lab`;
-
-  const weight = homeData?.latestStats?.weight_lbs ?? profile?.weight_lbs ?? null;
-  const bf = homeData?.latestStats?.body_fat_pct ?? profile?.body_fat_pct ?? null;
-  const workouts7d = homeData?.progress?.workouts7d?.count ?? 0;
-
-  const joinedStr = profile?.joined_at
-    ? new Date(profile.joined_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    : 'Recently';
-
+  const injuries = useMemo(() => normalizeInjuries(profile?.injuries_json), [profile?.injuries_json]);
   const connectedDevices = useMemo(() => {
-    const w = profile?.wearables_json || {};
-    return Object.keys(w).filter(k => w[k]?.connected);
+    const wearables = profile?.wearables_json ?? {};
+    return Object.entries(wearables).filter(([, record]) => record?.connected);
   }, [profile?.wearables_json]);
 
+  const workouts7d = homeData?.progress?.workouts7d?.count ?? 0;
+  const workoutMinutes7d = homeData?.progress?.workouts7d?.minutes ?? 0;
+  const weight = homeData?.latestStats?.weight_lbs;
+  const bodyFat = homeData?.latestStats?.body_fat_pct;
+  const restingHr = homeData?.latestStats?.resting_hr;
+  const latestPr = homeData?.progress?.latestPr ?? null;
+
   return (
-    <div className="pb-20 relative">
-      <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-violet-900/40 to-zinc-950 z-0" />
-
-      <div className="relative z-10 flex justify-between items-center mb-4 px-2 pt-2">
-        <div className="p-2 bg-black/20 backdrop-blur rounded-full border border-white/5">
-          <ArrowLeft size={20} className="text-zinc-500" />
-        </div>
-        <div className="flex gap-2">
-          <button className="p-2 bg-black/20 backdrop-blur rounded-full border border-white/5 hover:bg-black/40">
-            <Share2 size={18} className="text-zinc-400" />
-          </button>
-          <button className="p-2 bg-black/20 backdrop-blur rounded-full border border-white/5 hover:bg-black/40">
-            <Edit3 size={18} className="text-zinc-400" />
-          </button>
-        </div>
-      </div>
-
-      <div className="relative z-10 flex flex-col items-center text-center mb-6">
-        <div className="w-24 h-24 rounded-full bg-zinc-800 border-4 border-zinc-950 relative mb-3 shadow-2xl">
-          <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center bg-zinc-800">
-            <User size={40} className="text-zinc-600" />
+    <div className="pb-20 space-y-6">
+      <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-violet-900/30 via-zinc-950 to-zinc-950 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="w-20 h-20 rounded-3xl bg-zinc-900 border border-white/5 flex items-center justify-center">
+            <User size={34} className="text-zinc-500" />
           </div>
-          <div className="absolute bottom-0 right-0 bg-zinc-950 p-1 rounded-full shadow-lg">
-            <div className="bg-violet-600 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border border-zinc-950 shadow-[0_0_10px_rgba(124,58,237,0.5)]">
-              LVL 1
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-2xl font-black italic uppercase leading-none sm:text-3xl">{name}</h2>
+              <CheckCircle size={16} className="text-blue-500" fill="currentColor" />
+            </div>
+            <div className="text-sm text-zinc-400 mt-2">{profile?.goal ?? 'Goal not set yet'}</div>
+            <div className="text-xs text-zinc-500 mt-3">
+              Member since {formatDateLabel(profile?.created_at)}. Last updated {formatDateLabel(profile?.updated_at)}.
             </div>
           </div>
         </div>
 
-        <h2 className="text-2xl font-black italic uppercase leading-none mb-1 flex items-center gap-2">
-          {name}
-          <CheckCircle size={16} className="text-blue-500" fill="currentColor" />
-        </h2>
-        <div className="text-zinc-500 text-sm font-medium mb-3">{handle}</div>
-
-        <div className="flex gap-8 text-sm mb-6 mt-2">
-          <div className="flex flex-col items-center">
-            <span className="font-black text-lg text-white leading-none">{workouts7d}</span>
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Sessions</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="font-black text-lg text-white leading-none">{weight != null ? `${weight}` : '—'}</span>
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Weight</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="font-black text-lg text-white leading-none">88</span>
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Bio Score</span>
-          </div>
-        </div>
-
-        {profile?.bio ? (
-          <p className="text-sm text-zinc-400 max-w-xs leading-relaxed mb-4">{profile.bio}</p>
-        ) : (
-          <p className="text-sm text-zinc-600 max-w-xs mb-4">Mastering the architecture of performance at The Lab Studio.</p>
-        )}
-
-        <div className="flex gap-3">
-          {connectedDevices.map(d => (
-            <div key={d} className="px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1.5 text-[9px] font-black text-emerald-400 uppercase tracking-tighter">
-              <Smartphone size={10} /> {d} SYNCED
-            </div>
-          ))}
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <StatCard icon={Dumbbell} label="Workouts 7D" value={String(workouts7d)} helper={`${workoutMinutes7d} total minutes`} />
+          <StatCard icon={Activity} label="Weight" value={weight != null ? `${weight} lb` : 'No log'} helper="Most recent check-in" />
+          <StatCard icon={HeartPulse} label="Body Fat" value={bodyFat != null ? `${bodyFat}%` : 'No log'} helper="Most recent check-in" />
+          <StatCard icon={Clock3} label="Resting HR" value={restingHr != null ? `${restingHr} bpm` : 'No log'} helper="Most recent check-in" />
         </div>
       </div>
 
-      <div className="flex border-b border-white/10 mb-6 relative z-10 mx-[-16px] px-4">
-        {(['journey', 'vitals', 'badges'] as const).map((t) => (
+      {error ? (
+        <Card className="p-4 bg-rose-500/10 border-rose-500/20 text-sm text-rose-200">
+          {error}
+        </Card>
+      ) : null}
+
+      <div className="flex border-b border-white/10">
+        {(['overview', 'metrics', 'activity'] as const).map((tab) => (
           <button
-            key={t}
-            onClick={() => setSubTab(t)}
-            className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all ${subTab === t ? 'border-violet-500 text-white' : 'border-transparent text-zinc-600 hover:text-zinc-400'
+            key={tab}
+            onClick={() => setSubTab(tab)}
+            className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider border-b-2 transition-all ${subTab === tab ? 'border-violet-500 text-white' : 'border-transparent text-zinc-600 hover:text-zinc-400'
               }`}
           >
-            {t}
+            {tab}
           </button>
         ))}
       </div>
 
-      {subTab === 'journey' && (
-        <div className="space-y-4 animate-in fade-in duration-500">
-          <Card className="p-4 bg-zinc-900 border-white/5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition">
-              <Dumbbell size={60} />
-            </div>
-            <div className="flex gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-violet-600/20 flex items-center justify-center text-violet-400 border border-violet-500/20 shrink-0">
-                <Dumbbell size={18} />
+      {subTab === 'overview' ? (
+        <div className="space-y-4">
+          <Card className="p-4 bg-zinc-900/70 border-white/5">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Profile Setup</div>
+            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+              <div>
+                <div className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">Activity Level</div>
+                <div className="font-bold">{profile?.activity_level ?? 'Not set'}</div>
               </div>
               <div>
-                <div className="font-bold text-sm">Primal Strength Session</div>
-                <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">2 HOURS AGO • THE LAB STUDIO</div>
+                <div className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">Nutrition Rating</div>
+                <div className="font-bold">{profile?.nutrition_rating != null ? `${profile.nutrition_rating}/10` : 'Not set'}</div>
               </div>
-            </div>
-            <div className="bg-black/40 rounded-xl p-4 text-sm text-zinc-300 mb-4 border border-white/5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">VOLUME</div>
-                  <div className="font-black text-white italic">12,400 LBS</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">INTENSITY</div>
-                  <div className="font-black text-white italic text-emerald-400">HIGH</div>
+              <div className="sm:col-span-2">
+                <div className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">Preferred Days</div>
+                <div className="font-bold">
+                  {profile?.schedule_days?.length ? profile.schedule_days.join(', ') : 'No preferred training days saved'}
                 </div>
               </div>
             </div>
-            <div className="flex gap-6 text-zinc-500 text-xs font-bold px-1">
-              <button className="flex items-center gap-1.5 hover:text-white transition"><Heart size={16} /> 12</button>
-              <button className="flex items-center gap-1.5 hover:text-white transition"><MessageSquare size={16} /> 4</button>
+          </Card>
+
+          <Card className="p-4 bg-zinc-900/70 border-white/5">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Contact</div>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-2 text-zinc-300">
+                <Mail size={14} className="text-zinc-500" />
+                <span>{profile?.email ?? 'No email on file'}</span>
+              </div>
+              <div className="flex items-center gap-2 text-zinc-300">
+                <Phone size={14} className="text-zinc-500" />
+                <span>{profile?.phone ?? 'No phone on file'}</span>
+              </div>
             </div>
           </Card>
 
-          <Card className="p-4 bg-zinc-900 border-white/5 opacity-80">
-            <div className="flex gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center text-yellow-500 border border-yellow-500/20 shrink-0">
-                <Trophy size={18} />
-              </div>
-              <div>
-                <div className="font-bold text-sm">Joined the Inner Circle</div>
-                <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-0.5">MEMBER SINCE {joinedStr.toUpperCase()}</div>
-              </div>
-            </div>
-            <p className="text-sm text-zinc-500 italic">&ldquo;The only bad workout is the one that didn&apos;t happen.&rdquo;</p>
-          </Card>
-        </div>
-      )}
-
-      {subTab === 'vitals' && (
-        <div className="space-y-4 animate-in fade-in duration-500">
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="p-4 bg-zinc-900 border-white/5 group hover:border-violet-500/30 transition shadow-lg">
-              <div className="flex justify-between items-start mb-2">
-                <div className="text-zinc-500 text-[10px] uppercase tracking-widest font-black leading-none">Weight</div>
-                {connectedDevices.includes('apple') && <Smartphone size={10} className="text-rose-500" />}
-              </div>
-              <div className="text-3xl font-black italic">{weight != null ? weight : '—'} <span className="text-xs text-zinc-500 font-black not-italic ml-[-4px]">LB</span></div>
-              <div className="flex items-center gap-1 mt-2">
-                <TrendingUp size={10} className="text-rose-500" />
-                <span className="text-[9px] font-black text-rose-500 uppercase">+2.4% THIS WK</span>
-              </div>
-            </Card>
-            <Card className="p-4 bg-zinc-900 border-white/5 group hover:border-violet-500/30 transition shadow-lg">
-              <div className="flex justify-between items-start mb-2">
-                <div className="text-zinc-500 text-[10px] uppercase tracking-widest font-black leading-none">Body Fat</div>
-                {connectedDevices.includes('oura') && <Wifi size={10} className="text-white" />}
-              </div>
-              <div className="text-3xl font-black italic text-emerald-400">{bf != null ? `${bf}%` : '—'}</div>
-              <div className="flex items-center gap-1 mt-2">
-                <TrendingUp size={10} className="text-emerald-500 rotate-180" />
-                <span className="text-[9px] font-black text-emerald-500 uppercase">-1.1% THIS MO</span>
-              </div>
-            </Card>
-          </div>
-
-          <Card className="p-5 bg-zinc-900 border-white/5 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4">
-              <Zap size={20} className="text-violet-500 opacity-20" />
-            </div>
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Performance Index</div>
-                <div className="text-lg font-black italic">Recovery & Load Capacity</div>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-black italic text-violet-400">88/100</div>
-              </div>
-            </div>
-            <div className="h-24 flex items-end gap-2.5 px-1">
-              {[60, 45, 80, 70, 95, 85, 88].map((h, i) => (
-                <div key={i} className="flex-1 bg-zinc-800 rounded-t-lg relative group overflow-hidden">
-                  <div
-                    className={`absolute inset-x-0 bottom-0 rounded-t-lg transition-all duration-1000 ${i === 6 ? 'bg-violet-600 shadow-[0_0_15px_rgba(124,58,237,0.5)]' : 'bg-zinc-700/50 group-hover:bg-zinc-600'}`}
-                    style={{ height: `${h}%` }}
-                  />
-                  {i === 6 && <div className="absolute top-[-15px] left-1/2 -translate-x-1/2 text-[8px] font-black text-violet-400">TODAY</div>}
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-zinc-900 border-white/10 space-y-3">
-            <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest border-b border-white/5 pb-2">Verified Connections</div>
-            {connectedDevices.length > 0 ? (
+          <Card className="p-4 bg-zinc-900/70 border-white/5">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Wearables</div>
+            {connectedDevices.length ? (
               <div className="space-y-3">
-                {connectedDevices.map(d => (
-                  <div key={d} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                {connectedDevices.map(([key, record]) => (
+                  <div key={key} className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 text-sm text-zinc-300">
                       <Smartphone size={14} className="text-zinc-500" />
-                      <span className="text-xs font-bold uppercase">{d} Health Sync</span>
+                      <span>{key}</span>
                     </div>
-                    <div className="text-[10px] font-mono text-emerald-400">ACTIVE</div>
+                    <div className="text-[10px] uppercase tracking-widest text-emerald-400">
+                      {record.last_sync ? `Last sync ${formatDateLabel(record.last_sync)}` : 'Connected'}
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-xs text-zinc-600 italic">No devices synced. Head to the Wearables tab to connect.</div>
+              <div className="text-sm text-zinc-500">No connected devices yet.</div>
+            )}
+          </Card>
+
+          <Card className="p-4 bg-zinc-900/70 border-white/5">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Injuries / Constraints</div>
+            {injuries.length ? (
+              <div className="flex flex-wrap gap-2">
+                {injuries.map((injury) => (
+                  <span key={injury} className="px-3 py-1 rounded-full bg-zinc-800 border border-white/5 text-xs text-zinc-300">
+                    {injury}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-zinc-500">No injuries or constraints recorded.</div>
             )}
           </Card>
         </div>
-      )}
+      ) : null}
 
-      {subTab === 'badges' && (
-        <div className="grid grid-cols-3 gap-3 animate-in fade-in duration-500">
-          {[
-            { id: 1, name: 'Founder', icon: Trophy, color: 'text-yellow-500', active: true },
-            { id: 2, name: '7D Streak', icon: Flame, color: 'text-orange-500', active: true },
-            { id: 3, name: '1k Club', icon: Dumbbell, color: 'text-zinc-600', active: false },
-            { id: 4, name: 'Power Lifter', icon: Zap, color: 'text-violet-500', active: true },
-            { id: 5, name: 'Clean Diet', icon: Heart, color: 'text-zinc-600', active: false },
-            { id: 6, name: 'Bio Hacker', icon: Brain, color: 'text-cyan-400', active: true },
-          ].map((b) => (
-            <div key={b.id} className={`aspect-square bg-zinc-900 rounded-2xl border border-white/5 flex flex-col items-center justify-center p-3 text-center transition-all ${!b.active && 'opacity-30 grayscale'}`}>
-              <b.icon size={28} className={`${b.color} mb-3`} />
-              <div className="text-[10px] font-black uppercase tracking-tighter leading-tight">{b.name}</div>
-            </div>
-          ))}
-          <div className="col-span-3 rounded-2xl border border-white/5 bg-zinc-900/40 p-5 text-center mt-2">
-            <div className="text-xs text-zinc-500 max-w-[200px] mx-auto leading-relaxed">
-              Complete elite challenges at The Lab to unlock performance badges.
-            </div>
+      {subTab === 'metrics' ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <StatCard icon={Flame} label="Calories Today" value={homeData?.nutrition?.calories != null ? String(Math.round(homeData.nutrition.calories)) : '0'} helper="From your nutrition log" />
+            <StatCard icon={Activity} label="Protein Today" value={homeData?.nutrition?.protein_g != null ? `${Math.round(homeData.nutrition.protein_g)}g` : '0g'} helper="From your nutrition log" />
+            <StatCard icon={Camera} label="Photos 30D" value={String(homeData?.progress?.photos30d ?? 0)} helper="Progress photo check-ins" />
+            <StatCard icon={Flame} label="Calories Avg 7D" value={String(homeData?.progress?.calories7dAvg ?? 0)} helper="Average daily intake" />
           </div>
+
+          <Card className="p-4 bg-zinc-900/70 border-white/5">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Latest PR</div>
+            {latestPr ? (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-xl font-black italic uppercase">{latestPr.lift}</div>
+                  <div className="text-sm text-zinc-500">Logged from the strength tracker.</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-black italic text-violet-400">
+                    {latestPr.value} {latestPr.unit}
+                  </div>
+                  <div className="text-xs text-zinc-500">{latestPr.reps ? `${latestPr.reps} reps` : 'Single effort'}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-zinc-500">No PR logged yet.</div>
+            )}
+          </Card>
+
+          <Card className="p-4 bg-zinc-900/70 border-white/5">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Next Booking</div>
+            {homeData?.nextBooking?.start ? (
+              <div className="space-y-2">
+                <div className="font-bold text-lg">{homeData.nextBooking.summary ?? 'Upcoming session'}</div>
+                <div className="flex items-center gap-2 text-sm text-zinc-400">
+                  <CalendarDays size={14} className="text-violet-400" />
+                  <span>{formatDateTimeLabel(homeData.nextBooking.start)}</span>
+                </div>
+                {homeData.nextBooking.location ? (
+                  <div className="text-xs text-zinc-500">{homeData.nextBooking.location}</div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="text-sm text-zinc-500">No upcoming session saved yet.</div>
+            )}
+          </Card>
         </div>
-      )}
+      ) : null}
+
+      {subTab === 'activity' ? (
+        <div className="space-y-4">
+          <Card className="p-4 bg-zinc-900/70 border-white/5">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Session Log</div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Booked 30D</div>
+                <div className="text-xl font-black italic">{homeData?.sessionLog?.bookedUpcoming30d ?? 0}</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Completed 7D</div>
+                <div className="text-xl font-black italic">{homeData?.sessionLog?.completed7d ?? 0}</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Missed 30D</div>
+                <div className="text-xl font-black italic">{homeData?.sessionLog?.missedApprox30d ?? 0}</div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-zinc-900/70 border-white/5">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Recent Workouts</div>
+            {homeData?.recentWorkouts?.length ? (
+              <div className="space-y-3">
+                {homeData.recentWorkouts.map((workout) => (
+                  <div key={workout.id} className="flex items-start justify-between gap-4 border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
+                    <div>
+                      <div className="font-bold">{workout.kind ?? 'Workout'}</div>
+                      <div className="text-xs text-zinc-500 mt-1">{formatDateTimeLabel(workout.created_at)}</div>
+                      {workout.note ? <div className="text-xs text-zinc-400 mt-2">{workout.note}</div> : null}
+                    </div>
+                    <div className="text-xs uppercase tracking-widest text-violet-400 shrink-0">
+                      {workout.duration_min ? `${workout.duration_min} min` : 'Logged'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-zinc-500">No workouts have been logged in the last 7 days.</div>
+            )}
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }

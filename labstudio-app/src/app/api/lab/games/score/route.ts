@@ -23,9 +23,12 @@ export async function POST(req: Request) {
     }
 
     try {
-        const { gameId, score } = await req.json();
+        const body = (await req.json().catch(() => ({}))) as { gameId?: unknown; score?: unknown };
+        const gameId = String(body.gameId || '').trim();
+        const rawScore = typeof body.score === 'number' ? body.score : NaN;
+        const score = Number.isFinite(rawScore) ? Math.floor(rawScore) : NaN;
 
-        if (!gameId || typeof score !== 'number') {
+        if (!gameId || !Number.isFinite(score) || score < 0) {
             return NextResponse.json({ ok: false, error: 'Invalid gameId or score' }, { status: 400 });
         }
 
@@ -40,18 +43,21 @@ export async function POST(req: Request) {
       values (${uid}, ${gameId}, ${score});
     `;
 
-        // 2. Award XP (1 XP per 10 points, min 1 if score > 0)
-        const xpReward = Math.max(1, Math.floor(score / 10));
-        await q`
+        // Award XP only for positive scores.
+        const xpReward = score > 0 ? Math.max(1, Math.floor(score / 10)) : 0;
+        if (xpReward > 0) {
+            await q`
       update lab_users
       set xp = xp + ${xpReward}
       where id = ${uid};
     `;
+        }
 
         return NextResponse.json({ ok: true, xpAwarded: xpReward });
-    } catch (err: any) {
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown score submission error';
         console.error('Score submission error:', err);
-        return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+        return NextResponse.json({ ok: false, error: message }, { status: 500 });
     }
 }
 
@@ -62,6 +68,7 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const gameId = searchParams.get('gameId');
+    const scope = searchParams.get('scope');
 
     const q = sql();
 
@@ -73,6 +80,25 @@ export async function GET(req: Request) {
       join lab_users u on gs.user_id = u.id
       where gs.game_id = ${gameId}
       order by gs.score desc
+      limit 10;
+    `;
+        return NextResponse.json({ ok: true, leaderboards });
+    } else if (scope === 'global') {
+        const leaderboards = await q`
+      with best_scores as (
+        select user_id, game_id, max(score)::int as best_score
+        from lab_game_scores
+        where score > 0
+        group by user_id, game_id
+      )
+      select
+        u.display_name,
+        sum(best_scores.best_score)::int as score,
+        count(*)::int as games_played
+      from best_scores
+      join lab_users u on best_scores.user_id = u.id
+      group by best_scores.user_id, u.display_name
+      order by score desc, games_played desc, u.display_name asc nulls last
       limit 10;
     `;
         return NextResponse.json({ ok: true, leaderboards });

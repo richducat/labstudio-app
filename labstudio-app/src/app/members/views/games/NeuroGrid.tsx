@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    Trophy, LayoutGrid, ArrowLeft, Volume2, VolumeX,
-    ChevronRight, Star, AlertCircle, Play,
-    Search, Eye, Scan
+    Trophy, ArrowLeft, Volume2, VolumeX,
+    ChevronRight, Star, Play,
+    Search, Scan
 } from 'lucide-react';
 
 const GRID_LEVELS = [
@@ -18,9 +18,21 @@ const GRID_LEVELS = [
     { size: 10, symbol: 'W', anomaly: 'V' },
 ];
 
+type WindowWithWebkitAudioContext = Window & {
+    webkitAudioContext?: typeof AudioContext;
+};
+
+const getAudioContextCtor = () => {
+    if (typeof window === 'undefined') return null;
+    const win = window as WindowWithWebkitAudioContext;
+    return window.AudioContext ?? win.webkitAudioContext ?? null;
+};
+
 const playPingSound = (enabled: boolean, success: boolean) => {
-    if (!enabled || typeof window === 'undefined') return;
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!enabled) return;
+    const AudioContextCtor = getAudioContextCtor();
+    if (!AudioContextCtor) return;
+    const audioCtx = new AudioContextCtor();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
@@ -135,15 +147,15 @@ export default function NeuroGrid({ onExit }: NeuroGridProps) {
                 {gameState === 'idle' && (
                     <div className="text-center p-8 bg-zinc-900/50 border-2 border-white/5 rounded-3xl backdrop-blur-md">
                         <Scan className="text-cyan-400 mx-auto mb-6 animate-pulse" size={64} />
-                        <h3 className="text-2xl font-black uppercase mb-2 italic">PATTERN RECOGNITION</h3>
+                        <h3 className="text-2xl font-black uppercase mb-2 italic">Pattern Recognition</h3>
                         <p className="text-zinc-500 text-xs mb-8 uppercase font-bold tracking-widest max-w-[280px]">
-                            Identify the structural anomaly in the neural grid. Precision over speed. Failure results in temporal decompression.
+                            Find the one character that does not match the rest of the grid.
                         </p>
                         <button
                             onClick={startGame}
                             className="w-full py-4 bg-cyan-600 text-white font-black italic uppercase rounded-xl shadow-[0_4px_30px_rgba(8,145,178,0.3)] hover:scale-105 transition-all"
                         >
-                            EXECUTE SEARCH <Play size={20} className="inline ml-2" fill="currentColor" />
+                            Start Game <Play size={20} className="inline ml-2" fill="currentColor" />
                         </button>
                     </div>
                 )}
@@ -184,25 +196,25 @@ export default function NeuroGrid({ onExit }: NeuroGridProps) {
                     <div className="text-center p-8 bg-zinc-900 border-4 border-cyan-500 rounded-3xl shadow-[0_0_50px_rgba(6,182,212,0.3)] w-full max-w-sm">
                         <Trophy className={`mx-auto mb-6 ${gameState === 'complete' ? 'text-yellow-400 animate-bounce' : 'text-rose-500'}`} size={64} />
                         <h3 className="text-2xl font-black italic uppercase tracking-wide mb-2">
-                            {gameState === 'complete' ? 'NEURAL SYNC ACHIEVED' : 'SYNC FAILURE'}
+                            {gameState === 'complete' ? 'Challenge Complete' : "Time's Up"}
                         </h3>
                         <p className="text-zinc-500 text-xs mb-6 uppercase font-bold tracking-widest">
-                            {gameState === 'complete' ? 'All anomalies neutralized.' : 'Temporal limit exceeded.'}
+                            {gameState === 'complete' ? 'You cleared every level.' : 'Try again and see how far you can get.'}
                         </p>
 
                         <div className="bg-zinc-950 p-4 rounded-xl border border-white/5 mb-8 text-left">
                             <div className="flex justify-between text-[10px] font-black uppercase text-zinc-400 mb-2">
-                                <span>NEURAL LOAD LEVEL</span>
+                                <span>Level Reached</span>
                                 <span>{level + 1}</span>
                             </div>
                             <div className="flex justify-between text-xs font-black uppercase text-white mb-4">
-                                <span>FINAL READOUT (SCORE)</span>
+                                <span>Final Score</span>
                                 <span className="text-cyan-400">{(level * 1000 + timeLeft * 100).toLocaleString()}</span>
                             </div>
                             <div className="h-px bg-white/5 mb-4"></div>
                             <div className="flex justify-between text-[10px] font-black uppercase text-emerald-400">
-                                <span>XP AWARDED</span>
-                                <span>+{gameState === 'complete' ? 60 : level * 5} XP</span>
+                                <span>Points Earned</span>
+                                <span>+{gameState === 'complete' ? 60 : level * 5}</span>
                             </div>
                         </div>
 
@@ -211,13 +223,13 @@ export default function NeuroGrid({ onExit }: NeuroGridProps) {
                                 onClick={startGame}
                                 className="w-full py-4 bg-white text-black font-black italic uppercase rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-all"
                             >
-                                RE-INITIALIZE <ChevronRight size={20} />
+                                Play Again <ChevronRight size={20} />
                             </button>
                             <button
                                 onClick={onExit}
                                 className="w-full py-4 bg-zinc-800 text-white font-black italic uppercase rounded-xl flex items-center justify-center gap-2"
                             >
-                                ARCADE BASE
+                                Back to Games
                             </button>
                         </div>
                     </div>

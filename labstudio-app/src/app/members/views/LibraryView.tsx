@@ -33,8 +33,8 @@ export default function LibraryView() {
     <div className="pb-32">
       <div className="text-center py-8 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-emerald-600/10 blur-[100px] -z-10"></div>
-        <h2 className="text-3xl font-black italic uppercase tracking-tighter">THE VAULT</h2>
-        <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-bold">Neural & Physical Knowledge Base</p>
+        <h2 className="text-3xl font-black italic uppercase tracking-tighter">Library</h2>
+        <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-bold">Training, nutrition, and recovery resources</p>
       </div>
 
       <div className="px-1 space-y-6">
@@ -42,7 +42,7 @@ export default function LibraryView() {
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
           <input
-            placeholder="SEARCH ARCHIVES..."
+            placeholder="Search library"
             className="w-full bg-zinc-900 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all"
           />
         </div>
@@ -102,9 +102,9 @@ export default function LibraryView() {
         {/* Coming Soon Callout */}
         <div className="mt-8 p-6 bg-emerald-950/20 border border-emerald-500/20 rounded-2xl text-center">
           <Star className="text-emerald-400 mx-auto mb-3 animate-pulse" size={24} />
-          <h4 className="text-xs font-black uppercase italic text-emerald-400 mb-1">PRO ARCHIVE ACCESS</h4>
+          <h4 className="text-xs font-black uppercase italic text-emerald-400 mb-1">Fresh resources</h4>
           <p className="text-[10px] text-emerald-400/60 uppercase font-bold tracking-widest leading-relaxed">
-            New training modules and macro guides <br /> are decrypted every Sunday.
+            New training modules and nutrition guides <br /> are added regularly.
           </p>
         </div>
       </div>

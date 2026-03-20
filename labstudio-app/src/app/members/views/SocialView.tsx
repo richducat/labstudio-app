@@ -1,24 +1,24 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Gift, Trophy, Activity, Brain, Zap, LayoutGrid } from 'lucide-react';
+import { Gift, Trophy } from 'lucide-react';
 import Card from '../components/Card';
 
 const CHALLENGES = [
-  { id: 1, title: 'The 300', desc: '300 Reps total volume in one session.', reward: 'Badge + 500 XP', active: true },
-  { id: 2, title: 'Ice King', desc: 'Accumulate 20 mins in cold plunge.', reward: 'Free Shake', active: false },
+  { id: 1, title: '300 Club', desc: 'Reach 300 total reps in a single workout.', reward: 'Badge + 500 points', active: true },
+  { id: 2, title: 'Cold Recovery', desc: 'Log 20 total minutes of cold plunge recovery.', reward: 'Free shake', active: false },
 ];
 
 export default function SocialView() {
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<Array<{ display_name?: string | null; score?: number | string | null }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchLeaderboard() {
       try {
-        const res = await fetch('/api/lab/games/score?gameId=gear-sort');
+        const res = await fetch('/api/lab/games/score?scope=global');
         const data = await res.json();
-        if (data.ok) {
+        if (data.ok && Array.isArray(data.leaderboards)) {
           setLeaderboard(data.leaderboards);
         }
       } catch (err) {
@@ -32,15 +32,14 @@ export default function SocialView() {
 
   return (
     <div className="pb-32 space-y-6">
-      <div className="bg-emerald-600 text-[10px] text-white p-1 text-center font-bold">SOCIAL_INTERFACE_ACTIVE</div>
       <div className="text-center py-6">
-        <h2 className="text-2xl font-black italic uppercase tracking-tighter">SQUAD OVERWATCH</h2>
-        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.2em]">Global Performance Rankings</p>
+        <h2 className="text-2xl font-black italic uppercase tracking-tighter">Leaderboard</h2>
+        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.2em]">Compare your best game scores</p>
       </div>
 
       {/* Active Challenges */}
       <div className="px-1">
-        <h3 className="font-black text-[10px] text-zinc-500 mb-3 uppercase tracking-widest ml-2">Active Operations</h3>
+        <h3 className="font-black text-[10px] text-zinc-500 mb-3 uppercase tracking-widest ml-2">Featured Challenges</h3>
         <div className="space-y-3">
           {CHALLENGES.map((c) => (
             <Card key={c.id} className={`p-4 ${c.active ? 'border-violet-500/50 bg-violet-900/10' : 'opacity-70 grayscale'}`}>
@@ -63,16 +62,19 @@ export default function SocialView() {
       {/* Leaderboard */}
       <div className="px-1">
         <div className="flex items-center justify-between mb-3 px-2">
-          <h3 className="font-black text-[10px] text-zinc-500 uppercase tracking-widest">Arcade Rankings</h3>
+          <h3 className="font-black text-[10px] text-zinc-500 uppercase tracking-widest">Game Rankings</h3>
           <div className="flex gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
             <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Live</span>
           </div>
         </div>
+        <div className="px-2 pb-2 text-[10px] text-zinc-500 uppercase font-bold tracking-widest">
+          Combined best scores across your games
+        </div>
 
         <div className="space-y-2">
           {loading ? (
-            <div className="text-center py-8 text-xs text-zinc-600 font-bold uppercase tracking-widest">Decrypting rankings...</div>
+            <div className="text-center py-8 text-xs text-zinc-600 font-bold uppercase tracking-widest">Loading rankings...</div>
           ) : leaderboard.length > 0 ? (
             leaderboard.map((u, i) => (
               <div
@@ -85,7 +87,7 @@ export default function SocialView() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-sm uppercase tracking-wide truncate">{u.display_name || 'Anonymous'}</div>
-                  <div className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.1em]">Verified Archive</div>
+                  <div className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.1em]">Member</div>
                 </div>
                 <div className="text-right">
                   <div className="font-mono font-black text-violet-400 text-sm">{(u.score || 0).toLocaleString()}</div>
@@ -100,17 +102,6 @@ export default function SocialView() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Visual Stats Callout */}
-      <div className="px-1">
-        <Card className="p-6 bg-gradient-to-br from-zinc-900 to-black border-white/5 flex flex-col items-center text-center">
-          <Activity className="text-emerald-500 mb-3" size={32} />
-          <h4 className="text-xs font-black uppercase italic tracking-widest mb-1">Squad Efficiency: 94%</h4>
-          <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest leading-relaxed">
-            We are outperforming the regional <br /> baseline by 12% this week.
-          </p>
-        </Card>
       </div>
     </div>
   );

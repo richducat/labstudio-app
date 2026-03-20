@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import Card from '../components/Card';
 
@@ -60,12 +61,15 @@ export default function ProgressView({ mode, onBack }: { mode: Mode; onBack: () 
         <>
           <div className="text-xs text-zinc-500">Latest 10 photos saved from Daily Check-in.</div>
           {photos && photos.length ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {photos.map((p) => (
                 <Card key={p.id} className="p-2 space-y-2">
-                  <img
+                  <Image
                     src={p.image_data_url}
                     alt={p.note || 'Progress photo'}
+                    width={640}
+                    height={640}
+                    unoptimized
                     className="w-full h-44 object-cover rounded-xl border border-white/5"
                   />
                   <div className="text-[10px] text-zinc-500 font-mono">{new Date(p.created_at).toLocaleDateString()}</div>

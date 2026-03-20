@@ -3,6 +3,7 @@ import { cookies, headers } from 'next/headers';
 import { dbConfigured, ensureSchema, getOrCreateUser } from '@/lib/db';
 import { getStripe } from '@/lib/stripe';
 import { neon } from '@neondatabase/serverless';
+import { getAppBaseUrl } from '@/lib/site';
 
 export const runtime = 'nodejs';
 
@@ -115,7 +116,13 @@ export async function POST(req: Request) {
   }
 
   const h = await headers();
-  const origin = h.get('origin') || 'http://localhost:3000';
+  const origin = getAppBaseUrl(h);
+  if (!origin) {
+    return NextResponse.json(
+      { ok: false, error: 'App base URL not configured. Set NEXT_PUBLIC_SITE_URL for checkout redirects.' },
+      { status: 500 }
+    );
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode,

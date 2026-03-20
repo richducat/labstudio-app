@@ -1,0 +1,3 @@
+[GET] https://app.labstudio.fit/api/lab/home => [200] 
+[GET] https://app.labstudio.fit/api/lab/coach-focus => [200] 
+[POST] https://booking-agent-d12740.zapier.app/api/proxy/interfaces/api/interfaces/v0/chatbots/cm8vrs5qia8tf0y76327xbai9/init => [200] 

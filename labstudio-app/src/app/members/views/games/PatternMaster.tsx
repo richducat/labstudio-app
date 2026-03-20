@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-    Trophy, Brain, ArrowLeft, Volume2, VolumeX,
-    ChevronRight, Star, AlertCircle, Play
+    Brain, ArrowLeft, Volume2, VolumeX,
+    ChevronRight, AlertCircle, Play
 } from 'lucide-react';
 
 const NODES = [
@@ -13,9 +13,31 @@ const NODES = [
     { id: 3, color: 'bg-amber-400', activeColor: 'bg-amber-200', shadow: 'shadow-amber-400/50', freq: 523.25 }, // C5
 ];
 
+type WindowWithWebkitAudioContext = Window & {
+    webkitAudioContext?: typeof AudioContext;
+};
+
+const getAudioContextCtor = () => {
+    if (typeof window === 'undefined') return null;
+    const win = window as WindowWithWebkitAudioContext;
+    return window.AudioContext ?? win.webkitAudioContext ?? null;
+};
+
+const getRandomIndex = (size: number) => {
+    if (size <= 0) return 0;
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+        const values = new Uint32Array(1);
+        crypto.getRandomValues(values);
+        return values[0] % size;
+    }
+    return 0;
+};
+
 const playNodeSound = (freq: number, enabled: boolean) => {
-    if (!enabled || typeof window === 'undefined') return;
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!enabled) return;
+    const AudioContextCtor = getAudioContextCtor();
+    if (!AudioContextCtor) return;
+    const audioCtx = new AudioContextCtor();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
 
@@ -40,7 +62,6 @@ export default function PatternMaster({ onExit }: PatternMasterProps) {
     const [activeNode, setActiveNode] = useState<number | null>(null);
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'waiting' | 'gameOver'>('idle');
     const [soundEnabled, setSoundEnabled] = useState(true);
-    const [highScore, setHighScore] = useState(0);
 
     const playSequence = useCallback(async (seq: number[]) => {
         setGameState('playing');
@@ -56,7 +77,7 @@ export default function PatternMaster({ onExit }: PatternMasterProps) {
     }, [soundEnabled]);
 
     const startNewGame = () => {
-        const firstNode = Math.floor(Math.random() * 4);
+        const firstNode = getRandomIndex(NODES.length);
         const newSeq = [firstNode];
         setSequence(newSeq);
         setGameState('playing');
@@ -83,7 +104,7 @@ export default function PatternMaster({ onExit }: PatternMasterProps) {
         // Check if finished sequence
         if (newUserSeq.length === sequence.length) {
             setGameState('playing');
-            const nextSeq = [...sequence, Math.floor(Math.random() * 4)];
+            const nextSeq = [...sequence, getRandomIndex(NODES.length)];
             setSequence(nextSeq);
             setTimeout(() => playSequence(nextSeq), 1000);
         }
@@ -110,7 +131,7 @@ export default function PatternMaster({ onExit }: PatternMasterProps) {
                 </button>
                 <div className="text-center">
                     <h2 className="text-lg font-black italic uppercase tracking-tighter">PATTERN MASTER</h2>
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Neural Sequence Sync</p>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Sequence Recall</p>
                 </div>
                 <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                     {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
@@ -148,20 +169,20 @@ export default function PatternMaster({ onExit }: PatternMasterProps) {
                         onClick={startNewGame}
                         className="w-full py-6 bg-violet-600 hover:bg-violet-500 text-white font-black italic uppercase rounded-2xl flex items-center justify-center gap-2 transition-all shadow-[0_8px_30px_rgba(139,92,246,0.3)] animate-bounce"
                     >
-                        INITIATE SEQUENCE <Play size={20} fill="currentColor" />
+                        Start Game <Play size={20} fill="currentColor" />
                     </button>
                 )}
 
                 {gameState === 'waiting' && (
                     <div className="flex flex-col items-center animate-bounce">
-                        <p className="text-emerald-500 font-black italic uppercase text-lg tracking-tighter">YOUR DRIVE</p>
-                        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Replicate the neural link</p>
+                        <p className="text-emerald-500 font-black italic uppercase text-lg tracking-tighter">Your Turn</p>
+                        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Repeat the sequence</p>
                     </div>
                 )}
 
                 {gameState === 'playing' && (
                     <div className="flex flex-col items-center">
-                        <p className="text-violet-400 font-black italic uppercase text-lg tracking-tighter">OS DOWNLOAD...</p>
+                        <p className="text-violet-400 font-black italic uppercase text-lg tracking-tighter">Watch Closely</p>
                         <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Observe the sequence</p>
                     </div>
                 )}
@@ -172,7 +193,7 @@ export default function PatternMaster({ onExit }: PatternMasterProps) {
                         <p className="text-2xl font-black">{sequence.length}</p>
                     </div>
                     <div className="text-center">
-                        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">High Round</p>
+                        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Best Round</p>
                         <p className="text-2xl font-black text-violet-400">{Math.max(sequence.length, 1)}</p>
                     </div>
                 </div>
@@ -185,16 +206,16 @@ export default function PatternMaster({ onExit }: PatternMasterProps) {
                         <div className="mb-6 flex justify-center">
                             <AlertCircle size={64} className="text-rose-500" />
                         </div>
-                        <h3 className="text-2xl font-black italic uppercase tracking-wide mb-2">SYNC INTERRUPTED</h3>
-                        <p className="text-zinc-500 text-xs mb-6 uppercase font-bold tracking-widest">Neural connection severed at round {sequence.length - 1}.</p>
+                        <h3 className="text-2xl font-black italic uppercase tracking-wide mb-2">Round Complete</h3>
+                        <p className="text-zinc-500 text-xs mb-6 uppercase font-bold tracking-widest">You reached round {sequence.length - 1}.</p>
 
                         <div className="bg-zinc-950 p-4 rounded-xl border border-white/5 mb-8">
                             <div className="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">
-                                <span>NEURAL XP</span>
+                                <span>Points Earned</span>
                                 <span className="text-emerald-400">+{(sequence.length - 1) * 10}</span>
                             </div>
                             <div className="flex justify-between items-center text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                                <span>EFFICIENCY</span>
+                                <span>Accuracy</span>
                                 <span className="text-rose-400">{Math.round(((sequence.length - 1) / 15) * 100)}%</span>
                             </div>
                         </div>
@@ -204,13 +225,13 @@ export default function PatternMaster({ onExit }: PatternMasterProps) {
                                 onClick={startNewGame}
                                 className="w-full py-4 bg-white text-black font-black italic uppercase rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95"
                             >
-                                RETRY LINK <ChevronRight size={20} />
+                                Play Again <ChevronRight size={20} />
                             </button>
                             <button
                                 onClick={onExit}
                                 className="w-full py-4 bg-zinc-800 text-white font-black italic uppercase rounded-xl flex items-center justify-center gap-2 transition-all hover:bg-zinc-700"
                             >
-                                RETURN TO ARCADE
+                                Back to Games
                             </button>
                         </div>
                     </div>

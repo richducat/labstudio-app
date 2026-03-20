@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e32]
+  - main [ref=e33]:
+    - generic [ref=e35]:
+      - generic [ref=e36]:
+        - generic [ref=e37]: Lab Studio Members
+        - heading "Sign in with your email or phone number." [level=1] [ref=e38]
+        - paragraph [ref=e39]: We'll save your contact info to your member profile and use it to reopen the same account the next time you come back.
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - generic [ref=e42]: Fast Entry
+            - paragraph [ref=e43]: Use either field. You don't need both unless you want them linked.
+          - generic [ref=e44]:
+            - generic [ref=e45]: Saved Profile
+            - paragraph [ref=e46]: Your contact info is stored in the app database and attached to your member record.
+          - generic [ref=e47]:
+            - generic [ref=e48]: Continue
+            - paragraph [ref=e49]: If your profile still needs intake details, you can finish those after sign-in.
+      - generic [ref=e50]:
+        - generic [ref=e51]: Member Login
+        - heading "Open your Lab account" [level=2] [ref=e52]
+        - paragraph [ref=e53]: Enter an email address, a phone number, or both.
+        - generic [ref=e54]: Session secret is not configured.
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57]: Email
+            - textbox "Email" [ref=e58]:
+              - /placeholder: you@example.com
+          - generic [ref=e59]:
+            - generic [ref=e60]: Phone Number
+            - textbox "Phone Number" [ref=e61]:
+              - /placeholder: (555) 555-5555
+          - button "Enter The Lab" [ref=e62] [cursor=pointer]
+        - paragraph [ref=e63]: This sign-in flow identifies members by the contact info they enter. If you want ownership verification later, we can add email or SMS codes on top of this.

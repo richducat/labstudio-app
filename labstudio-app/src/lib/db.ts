@@ -28,9 +28,77 @@ export type LabUserProfile = {
   schedule_days: string[];
   nutrition_rating: number | null;
   injuries_json: unknown;
+  wearables_json: unknown;
   created_at: string;
   updated_at: string;
 };
+
+export type LabUserByContact = {
+  user: LabUser;
+  profile: LabUserProfile;
+  created: boolean;
+};
+
+function normalizeEmail(value: unknown) {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized || null;
+}
+
+function normalizePhone(value: unknown) {
+  if (typeof value !== 'string') return null;
+  const digitsOnly = value.replace(/\D/g, '');
+  if (!digitsOnly) return null;
+  if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+    return `+${digitsOnly}`;
+  }
+  if (digitsOnly.length === 10) {
+    return `+1${digitsOnly}`;
+  }
+  if (digitsOnly.length >= 8 && digitsOnly.length <= 15) {
+    return `+${digitsOnly}`;
+  }
+  return null;
+}
+
+function normalizedPhoneDigits(value: string | null | undefined) {
+  return normalizePhone(value)?.replace(/\D/g, '') ?? '';
+}
+
+function titleCaseWord(word: string) {
+  return word ? `${word[0]?.toUpperCase() || ''}${word.slice(1)}` : '';
+}
+
+function buildDisplayName(profile: Pick<LabUserProfile, 'first_name' | 'last_name' | 'email' | 'phone'>) {
+  const fullName = [profile.first_name, profile.last_name]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean)
+    .join(' ');
+  if (fullName) return fullName;
+
+  const email = normalizeEmail(profile.email);
+  if (email) {
+    const localPart = email.split('@')[0] || '';
+    const cleaned = localPart
+      .split(/[._-]+/g)
+      .map((part) => titleCaseWord(part.trim()))
+      .filter(Boolean)
+      .join(' ');
+    if (cleaned) return cleaned;
+    return email;
+  }
+
+  const phone = normalizePhone(profile.phone);
+  if (phone) {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 11 && digits.startsWith('1')) {
+      return `Member ${digits.slice(-4)}`;
+    }
+    return `Member ${digits.slice(-4) || digits}`;
+  }
+
+  return null;
+}
 
 function dbUrl() {
   return process.env.DATABASE_URL || '';
@@ -83,6 +151,11 @@ export async function ensureSchema() {
   await q`alter table lab_user_profile add column if not exists wearables_json jsonb not null default '{}'::jsonb;`;
 
   await q`create index if not exists lab_user_profile_email_idx on lab_user_profile(email);`;
+  await q`create index if not exists lab_user_profile_email_normalized_idx on lab_user_profile(lower(email));`;
+  await q`
+    create index if not exists lab_user_profile_phone_normalized_idx
+    on lab_user_profile((regexp_replace(phone, '[^0-9]', '', 'g')));
+  `;
 
   await q`
     create table if not exists lab_daily_stats (
@@ -207,13 +280,19 @@ export async function ensureSchema() {
       created_at timestamptz not null default now(),
       day date not null,
       time_label text,
+      scheduled_at timestamptz,
+      duration_min integer,
       title text not null,
       type text not null,
       action text not null,
       sort_order integer not null default 0,
+      details_json jsonb not null default '{}'::jsonb,
       completed_at timestamptz
     );
   `;
+  await q`alter table lab_agenda_items add column if not exists scheduled_at timestamptz;`;
+  await q`alter table lab_agenda_items add column if not exists duration_min integer;`;
+  await q`alter table lab_agenda_items add column if not exists details_json jsonb not null default '{}'::jsonb;`;
   await q`create index if not exists lab_agenda_items_user_day_idx on lab_agenda_items(user_id, day desc, sort_order, created_at desc);`;
 
   // Game Scores
@@ -272,6 +351,8 @@ export async function upsertUserProfile(userId: string, input: UpsertUserProfile
 
   const scheduleDays = Array.isArray(input.schedule_days) ? input.schedule_days : [];
   const injuriesJson = input.injuries_json ?? [];
+  const normalizedEmail = normalizeEmail(input.email);
+  const normalizedPhone = typeof input.phone === 'string' ? input.phone.trim() || null : input.phone ?? null;
 
   const rows = (await q`
     insert into lab_user_profile (
@@ -292,8 +373,8 @@ export async function upsertUserProfile(userId: string, input: UpsertUserProfile
       ${userId},
       ${input.first_name ?? null},
       ${input.last_name ?? null},
-      ${input.email ?? null},
-      ${input.phone ?? null},
+      ${normalizedEmail},
+      ${normalizedPhone},
       ${input.goal ?? null},
       ${input.activity_level ?? null},
       ${scheduleDays},
@@ -319,6 +400,109 @@ export async function upsertUserProfile(userId: string, input: UpsertUserProfile
   `) as unknown as LabUserProfile[];
 
   return rows[0];
+}
+
+export async function findOrCreateUserByContact(input: {
+  email?: string | null;
+  phone?: string | null;
+  currentUserId?: string | null;
+}): Promise<LabUserByContact> {
+  await ensureSchema();
+  const q = sql();
+
+  const email = normalizeEmail(input.email);
+  const phone = normalizePhone(input.phone);
+  const phoneDigits = normalizedPhoneDigits(phone);
+  const currentUserId = typeof input.currentUserId === 'string' ? input.currentUserId.trim() : '';
+
+  if (!email && !phone) {
+    throw new Error('Enter an email or phone number.');
+  }
+
+  const emailMatches = email
+    ? ((await q`
+        select distinct user_id
+        from lab_user_profile
+        where lower(email) = ${email}
+        limit 2;
+      `) as { user_id: string }[])
+    : [];
+
+  const phoneMatches =
+    phoneDigits
+      ? ((await q`
+          select distinct user_id
+          from lab_user_profile
+          where regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g') = ${phoneDigits}
+          limit 2;
+        `) as { user_id: string }[])
+      : [];
+
+  if (emailMatches.length > 1) {
+    throw new Error('That email is linked to multiple accounts. Contact support to clean it up.');
+  }
+
+  if (phoneMatches.length > 1) {
+    throw new Error('That phone number is linked to multiple accounts. Contact support to clean it up.');
+  }
+
+  const emailUserId = emailMatches[0]?.user_id ?? null;
+  const phoneUserId = phoneMatches[0]?.user_id ?? null;
+
+  if (emailUserId && phoneUserId && emailUserId !== phoneUserId) {
+    throw new Error('That email and phone number belong to different accounts.');
+  }
+
+  let resolvedUserId = emailUserId || phoneUserId || null;
+  let created = false;
+
+  if (!resolvedUserId && currentUserId) {
+    await getOrCreateUser(currentUserId);
+    const currentProfile = await getUserProfile(currentUserId);
+    const currentEmail = normalizeEmail(currentProfile?.email);
+    const currentPhone = normalizePhone(currentProfile?.phone);
+    const canReuseCurrentUser =
+      (!currentEmail || !email || currentEmail === email) &&
+      (!currentPhone || !phone || currentPhone === phone);
+
+    if (canReuseCurrentUser) {
+      resolvedUserId = currentUserId;
+    }
+  }
+
+  if (!resolvedUserId) {
+    resolvedUserId = crypto.randomUUID();
+    created = true;
+  }
+
+  const user = await getOrCreateUser(resolvedUserId);
+  const existingProfile = await getUserProfile(resolvedUserId);
+  const profile = await upsertUserProfile(resolvedUserId, {
+    first_name: existingProfile?.first_name ?? null,
+    last_name: existingProfile?.last_name ?? null,
+    email: email ?? existingProfile?.email ?? null,
+    phone: phone ?? existingProfile?.phone ?? null,
+    goal: existingProfile?.goal ?? null,
+    activity_level: existingProfile?.activity_level ?? null,
+    schedule_days: existingProfile?.schedule_days ?? [],
+    nutrition_rating: existingProfile?.nutrition_rating ?? null,
+    injuries_json: existingProfile?.injuries_json ?? [],
+    wearables_json: existingProfile?.wearables_json ?? {},
+  });
+
+  const nextDisplayName = user.display_name?.trim() || buildDisplayName(profile);
+  if (nextDisplayName !== user.display_name) {
+    await updateUserDisplayName(resolvedUserId, nextDisplayName);
+  }
+
+  return {
+    created,
+    profile,
+    user: {
+      ...user,
+      display_name: nextDisplayName,
+    },
+  };
 }
 
 export async function markOnboardingComplete(userId: string): Promise<void> {

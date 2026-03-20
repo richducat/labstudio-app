@@ -1,0 +1,6 @@
+[POST] http://localhost:3103/login => [303] See Other
+[POST] http://localhost:3103/login => [303] See Other
+[GET] http://localhost:3103/api/lab/home
+[GET] http://localhost:3103/api/lab/coach-focus
+[GET] http://localhost:3103/api/lab/home
+[GET] http://localhost:3103/api/lab/coach-focus

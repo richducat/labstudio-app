@@ -1,0 +1,11 @@
+### Result
+- [Screenshot of viewport](../../cosmicchat/.playwright-cli/page-2026-03-08T13-57-06-876Z.png)
+### Ran Playwright code
+```js
+// Screenshot viewport and save it as ../../cosmicchat/.playwright-cli/page-2026-03-08T13-57-06-876Z.png
+await page.screenshot({
+path: '../../cosmicchat/.playwright-cli/page-2026-03-08T13-57-06-876Z.png',
+  scale: 'css',
+  type: 'png'
+});
+```

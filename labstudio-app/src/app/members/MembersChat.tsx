@@ -117,7 +117,7 @@ export default function MembersChat() {
       </div>
 
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-        v1: OpenAI-backed chat. No long-term memory yet.
+        Ask Toby questions about training, recovery, nutrition, and consistency.
       </div>
     </div>
   );

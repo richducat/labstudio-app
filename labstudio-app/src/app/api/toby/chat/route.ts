@@ -4,6 +4,8 @@ import { TOBY_SYSTEM_PROMPT } from '@/lib/toby-protocol';
 import { getTobyRetrievalContext } from '@/lib/toby-retrieval';
 import { neon } from '@neondatabase/serverless';
 import { ensureSchema } from '@/lib/db';
+import { getTobyLlmConfig, getUpstreamErrorMessage } from '@/lib/toby-llm';
+import { callTobyWrapper, getTobyWrapperMode } from '@/lib/toby-wrapper';
 
 export const runtime = 'nodejs';
 
@@ -65,11 +67,55 @@ type TobyToolCall = {
 
 type TobyMessage = {
   role: string;
-  content?: string | null;
+  content?: string | null | Array<{ type?: string; text?: string }>;
   name?: string;
   tool_calls?: TobyToolCall[];
   tool_call_id?: string;
 };
+
+type TobyChatCompletionJson = {
+  choices?: Array<{
+    message?: TobyMessage;
+  }>;
+  error?: {
+    message?: string;
+  };
+};
+
+function parseToolArguments(raw: string) {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function messageContentToText(content: TobyMessage['content']) {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+
+  return content
+    .map((part) => (typeof part?.text === 'string' ? part.text : ''))
+    .join('\n')
+    .trim();
+}
+
+async function chatCompletion(
+  url: string,
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  const json = (await res.json().catch(() => ({}))) as TobyChatCompletionJson;
+  return { res, json };
+}
 
 export async function POST(req: Request) {
   try {
@@ -77,19 +123,74 @@ export async function POST(req: Request) {
       message?: string;
       history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
     };
-    const text = String(message || '').trim();
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 });
+    const text = String(message || '').trim();
+    if (!text) return NextResponse.json({ error: 'Missing message' }, { status: 400 });
 
     const jar = await cookies();
     const uid = jar.get('labstudio_uid')?.value;
     if (!uid) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
-    const model = process.env.TOBY_MODEL || 'gpt-4o'; // Use gpt-4o for tool calling reliability
+    const retrieval = getTobyRetrievalContext(text);
+    const wrapperMode = getTobyWrapperMode();
+    const strictWrapper = (process.env.TOBY_WRAPPER_STRICT || 'false').toLowerCase() === 'true';
+
+    if (wrapperMode.enabled) {
+      if ('error' in wrapperMode) {
+        if (strictWrapper) {
+          return NextResponse.json({ error: wrapperMode.error }, { status: 500 });
+        }
+      } else {
+        const wrapperResult = await callTobyWrapper({
+          url: wrapperMode.url,
+          apiKey: wrapperMode.apiKey,
+          timeoutMs: wrapperMode.timeoutMs,
+          message: text,
+          history: Array.isArray(history) ? history.slice(-10) : undefined,
+          accessCode:
+            process.env.TOBY_CHAT_WRAPPER_ACCESS_CODE?.trim() ||
+            process.env.LABSTUDIO_ACCESS_CODE?.trim(),
+        });
+
+        if (wrapperResult.ok) {
+          return NextResponse.json({
+            reply: wrapperResult.reply,
+            retrieval: retrieval?.sources ? { sources: retrieval.sources } : undefined,
+            provider: 'wrapper',
+          });
+        }
+
+        if (strictWrapper) {
+          return NextResponse.json(
+            { error: wrapperResult.error, detail: wrapperResult.detail },
+            { status: wrapperResult.status },
+          );
+        }
+
+        console.warn('Toby wrapper failed; falling back to configured LLM provider', {
+          status: wrapperResult.status,
+          error: wrapperResult.error,
+        });
+      }
+    }
+
+    const llmConfig = getTobyLlmConfig('gpt-4o');
+    if (!llmConfig.ok) return NextResponse.json({ error: llmConfig.error }, { status: 500 });
+    const llm = llmConfig.value;
 
     // Build the message stack
     const messages: TobyMessage[] = [{ role: 'system', content: TOBY_SYSTEM_PROMPT }];
+    if (retrieval?.context) {
+      messages.push({
+        role: 'system',
+        content:
+          `${retrieval.context}\n\n` +
+          `Rules for using excerpts:\n` +
+          `- Only use if it actually matches the question.\n` +
+          `- Do NOT mention "excerpts" or the retrieval system.\n` +
+          `- If you use specific details from an excerpt, cite the source_file in parentheses, e.g. (source: <file>).\n`,
+      });
+    }
 
     // Add history
     if (Array.isArray(history)) {
@@ -101,33 +202,44 @@ export async function POST(req: Request) {
       messages.push({ role: 'user', content: text });
     }
 
-    // OpenAI Chat Completion call with Tools
-    const firstRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
+    const ollamaToolsEnabled =
+      (process.env.OLLAMA_TOOLS_ENABLED || 'false').toLowerCase() === 'true';
+    const useTools = llm.provider === 'openai' || ollamaToolsEnabled;
+
+    const firstPayload: Record<string, unknown> = {
+      model: llm.model,
+      messages,
+    };
+
+    if (useTools) {
+      firstPayload.tools = TOOLS;
+      firstPayload.tool_choice = 'auto';
+    }
+
+    let firstResult = await chatCompletion(llm.chatCompletionsUrl, llm.headers, firstPayload);
+
+    // Ollama-compatible servers often reject tool fields; retry once without tools.
+    if (!firstResult.res.ok && useTools && llm.provider === 'ollama') {
+      firstResult = await chatCompletion(llm.chatCompletionsUrl, llm.headers, {
+        model: llm.model,
         messages,
-        tools: TOOLS,
-        tool_choice: 'auto',
-      }),
-    });
+      });
+    }
 
-    const firstJson = await firstRes.json();
-    if (!firstRes.ok) throw new Error(firstJson?.error?.message || 'OpenAI API error');
+    if (!firstResult.res.ok) {
+      throw new Error(getUpstreamErrorMessage(firstResult.json, `${llm.provider} API error`));
+    }
 
-    const firstMsg = firstJson.choices[0].message as TobyMessage;
+    const firstMsg = firstResult.json.choices?.[0]?.message;
+    if (!firstMsg) throw new Error(`Invalid ${llm.provider} response`);
 
     // Handle tool calls
-    if (firstMsg.tool_calls) {
+    if (firstMsg.tool_calls?.length) {
       messages.push(firstMsg);
 
       for (const toolCall of firstMsg.tool_calls) {
         const { name } = toolCall.function;
-        const args = JSON.parse(toolCall.function.arguments);
+        const args = parseToolArguments(toolCall.function.arguments);
         let result = '';
 
         if (name === 'get_user_context') {
@@ -144,42 +256,46 @@ export async function POST(req: Request) {
           const q = sql();
           await q`
             insert into lab_daily_stats (user_id, weight_lbs, body_fat_pct, resting_hr, note)
-            values (${uid}, ${args.weight_lbs}, ${args.body_fat_pct}, ${args.resting_hr}, ${args.note || 'Logged via Toby AI'})
+            values (
+              ${uid},
+              ${typeof args.weight_lbs === 'number' ? args.weight_lbs : null},
+              ${typeof args.body_fat_pct === 'number' ? args.body_fat_pct : null},
+              ${typeof args.resting_hr === 'number' ? args.resting_hr : null},
+              ${typeof args.note === 'string' ? args.note : 'Logged via Toby AI'}
+            )
           `;
           result = 'Stat logged successfully.';
         } else if (name === 'search_knowledge_base') {
-          const retrieval = getTobyRetrievalContext(args.query);
-          result = retrieval?.context || 'No relevant knowledge found.';
+          const query = typeof args.query === 'string' ? args.query : text;
+          const toolRetrieval = getTobyRetrievalContext(query);
+          result = toolRetrieval?.context || 'No relevant knowledge found.';
+        } else {
+          result = `Unsupported tool: ${name}`;
         }
 
         messages.push({
           tool_call_id: toolCall.id,
           role: 'tool',
-          name: name,
+          name,
           content: result,
         });
       }
 
       // Final completion after tool results
-      const secondRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-        }),
+      const secondResult = await chatCompletion(llm.chatCompletionsUrl, llm.headers, {
+        model: llm.model,
+        messages,
       });
 
-      const secondJson = await secondRes.json();
-      if (!secondRes.ok) throw new Error(secondJson?.error?.message || 'OpenAI API error (final)');
+      if (!secondResult.res.ok) {
+        throw new Error(getUpstreamErrorMessage(secondResult.json, `${llm.provider} API error (final)`));
+      }
 
-      return NextResponse.json({ reply: secondJson.choices[0].message.content });
+      const finalContent = secondResult.json.choices?.[0]?.message?.content;
+      return NextResponse.json({ reply: messageContentToText(finalContent) || '(no response)' });
     }
 
-    return NextResponse.json({ reply: firstMsg.content });
+    return NextResponse.json({ reply: messageContentToText(firstMsg.content) || '(no response)' });
   } catch (err: unknown) {
     console.error('Toby AI Error:', err);
     return NextResponse.json(

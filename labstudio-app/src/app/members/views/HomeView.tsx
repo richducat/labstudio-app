@@ -24,6 +24,7 @@ import {
 import Card from '../components/Card';
 import { PROGRESS_TILES } from '../data/home';
 import { logEvent, readStorage, writeStorage } from '@/lib/storage';
+import { isLabTab, type LabTab } from '../tabs';
 
 export default function HomeView({
   xp,
@@ -39,7 +40,7 @@ export default function HomeView({
     name: string;
     goal: string | null;
   };
-  setTab: (tab: string, meta?: Record<string, unknown>) => void;
+  setTab: (tab: LabTab, meta?: Record<string, unknown>) => void;
 }) {
   const nextLevel = (level + 1) * 1000;
   const progress = Math.min((xp / nextLevel) * 100, 100);
@@ -211,14 +212,20 @@ export default function HomeView({
     history: Array<{ id: number; text: string; pinned: boolean }>;
   } | null>(null);
   const [coachBusy, setCoachBusy] = useState(false);
+  const [coachError, setCoachError] = useState<string | null>(null);
 
   const loadCoach = async () => {
     try {
       const r = await fetch('/api/lab/coach-focus');
-      const j = await r.json();
-      if (j?.ok) setCoach({ pinned: j.pinned ?? null, history: j.history ?? [] });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) {
+        setCoachError(String(j?.error || `Failed to load coach focus (${r.status})`));
+        return;
+      }
+      setCoach({ pinned: j.pinned ?? null, history: j.history ?? [] });
+      setCoachError(null);
     } catch {
-      // ignore
+      setCoachError('Failed to load coach focus. Please try again.');
     }
   };
 
@@ -228,14 +235,19 @@ export default function HomeView({
 
   const generateCoach = async () => {
     setCoachBusy(true);
+    setCoachError(null);
     try {
       const r = await fetch('/api/lab/coach-focus', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action: 'generate' }),
       });
-      const j = await r.json();
-      if (j?.ok) setCoach({ pinned: j.pinned ?? null, history: j.history ?? [] });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) {
+        setCoachError(String(j?.error || `Failed to generate coach focus (${r.status})`));
+        return;
+      }
+      setCoach({ pinned: j.pinned ?? null, history: j.history ?? [] });
     } finally {
       setCoachBusy(false);
     }
@@ -243,26 +255,31 @@ export default function HomeView({
 
   const pinCoach = async (id: number) => {
     setCoachBusy(true);
+    setCoachError(null);
     try {
       const r = await fetch('/api/lab/coach-focus', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action: 'pin', id }),
       });
-      const j = await r.json();
-      if (j?.ok) setCoach({ pinned: j.pinned ?? null, history: j.history ?? [] });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.ok) {
+        setCoachError(String(j?.error || `Failed to pin coach focus (${r.status})`));
+        return;
+      }
+      setCoach({ pinned: j.pinned ?? null, history: j.history ?? [] });
     } finally {
       setCoachBusy(false);
     }
   };
 
   return (
-    <div className="pb-20 lg:pb-10">
+    <div className="pb-24 lg:pb-10">
       <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6">
         {/* LEFT COLUMN */}
         <div className="space-y-4">
           <div className="relative pt-2">
-            <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-[0.85] mb-2">
+            <h1 className="mb-2 text-3xl font-black italic uppercase leading-[0.85] tracking-tighter sm:text-4xl">
               UNLEASH
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 via-fuchsia-400 to-white">
@@ -278,7 +295,7 @@ export default function HomeView({
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2 text-violet-400 font-bold text-xs uppercase tracking-widest">
-                  <Calendar size={12} /> Next Mission
+                  <Calendar size={12} /> Next Session
                 </div>
                 <div className="bg-zinc-900 border border-white/10 px-2 py-1 rounded text-[10px] font-mono text-zinc-400">
                   {new Date(homeData.nextBooking.start).toLocaleDateString()}
@@ -320,7 +337,7 @@ export default function HomeView({
             <Card className="bg-zinc-900/60 backdrop-blur-md p-4" onClick={() => setTab('book')}>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Next Mission</div>
+                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Next Session</div>
                   <div className="text-sm text-zinc-300 mt-1">No session scheduled yet.</div>
                 </div>
                 <div className="text-xs font-bold text-white bg-violet-600 px-3 py-1.5 rounded-full">Book</div>
@@ -345,7 +362,7 @@ export default function HomeView({
           )}
 
           <Card className="bg-zinc-900/80 p-4 border-zinc-800">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Coach plan</div>
                 <div className="text-lg font-black italic">Today’s Focus</div>
@@ -381,8 +398,14 @@ export default function HomeView({
                 </div>
               </>
             ) : (
-              <div className="mt-3 text-xs text-zinc-500">Generate a focus card and pin it to keep it stable across sessions.</div>
+              <div className="mt-3 text-xs text-zinc-500">Generate a coaching focus and pin it for the day.</div>
             )}
+
+            {coachError ? (
+              <div className="mt-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                {coachError}
+              </div>
+            ) : null}
           </Card>
 
           <Card
@@ -395,15 +418,15 @@ export default function HomeView({
                   <Brain size={20} />
                 </div>
                 <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-                  XP AVAILABLE
+                  Points Available
                 </div>
               </div>
-              <h4 className="text-sm font-black italic uppercase tracking-wider">NEURAL ARCADE</h4>
+              <h4 className="text-sm font-black italic uppercase tracking-wider">Brain Training</h4>
               <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mt-1 mb-3 leading-relaxed">
-                Train your cognitive performance <br /> & earn secondary XP rewards.
+                Play short focus, memory, <br /> and reaction games.
               </p>
               <div className="flex items-center gap-2 text-[10px] font-black text-violet-400 uppercase tracking-widest group-hover:gap-3 transition-all">
-                Enter Interface <ChevronRight size={12} />
+                Open Games <ChevronRight size={12} />
               </div>
             </div>
           </Card>
@@ -412,13 +435,13 @@ export default function HomeView({
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition">
               <Trophy size={60} />
             </div>
-            <div className="flex justify-between items-end mb-2 relative z-10">
+            <div className="relative z-10 mb-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <div className="text-xs text-zinc-500 font-bold tracking-widest uppercase">Current Rank</div>
-                <div className="text-2xl font-black italic">LEVEL {level}</div>
+                <div className="text-xs text-zinc-500 font-bold tracking-widest uppercase">Current Level</div>
+                <div className="text-2xl font-black italic">Level {level}</div>
               </div>
               <div className="text-right">
-                <div className="text-xs text-violet-400 font-bold tracking-widest uppercase">{nextLevel - xp} XP TO REWARD</div>
+                <div className="text-xs text-violet-400 font-bold tracking-widest uppercase">{nextLevel - xp} points to next level</div>
               </div>
             </div>
             <div className="h-2 bg-zinc-800 rounded-full overflow-hidden relative z-10">
@@ -459,7 +482,7 @@ export default function HomeView({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 divide-x divide-white/5">
+            <div className="grid grid-cols-1 divide-y divide-white/5 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
               <div className="p-4 space-y-3">
                 <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Nutrition Today</div>
                 <div className="flex justify-between items-center">
@@ -527,7 +550,7 @@ export default function HomeView({
             <div className="flex items-center justify-between px-1">
               <div>
                 <h2 className="font-bold text-lg">Things to do today</h2>
-                <div className="text-xs text-zinc-500">Your agenda + check-ins (real data).</div>
+                <div className="text-xs text-zinc-500">Your agenda and daily check-ins.</div>
               </div>
             </div>
 
@@ -568,7 +591,11 @@ export default function HomeView({
                         setTab('progress', { mode: 'photos' });
                         return;
                       }
-                      setTab(item.action);
+                      if (isLabTab(item.action)) {
+                        setTab(item.action);
+                        return;
+                      }
+                      setTab('home');
                     };
 
                     return (
@@ -622,7 +649,7 @@ export default function HomeView({
                 onClick={() => setShowQuickLog((prev) => !prev)}
                 className="text-xs font-bold text-violet-400 hover:text-violet-200"
               >
-                {showQuickLog ? 'Close' : 'Quick Log'}
+                {showQuickLog ? 'Close' : 'Open Check-in'}
               </button>
             </div>
 
@@ -631,7 +658,7 @@ export default function HomeView({
                 <div className="flex items-center gap-2 text-xs font-bold text-zinc-400 uppercase tracking-widest">
                   <Camera size={14} /> Daily Check-in
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <input
                     value={statsLog.weight}
                     onChange={(event) => setStatsLog({ ...statsLog, weight: event.target.value })}
@@ -647,7 +674,7 @@ export default function HomeView({
                   <input
                     value={statsLog.restingHr}
                     onChange={(event) => setStatsLog({ ...statsLog, restingHr: event.target.value })}
-                    className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm col-span-2"
+                    className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm sm:col-span-2"
                     placeholder="Resting HR (optional)"
                   />
                 </div>
@@ -655,7 +682,7 @@ export default function HomeView({
                   value={statsLog.note}
                   onChange={(event) => setStatsLog({ ...statsLog, note: event.target.value })}
                   className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm h-20 resize-none"
-                  placeholder="Progress photo notes, mood, soreness..."
+                  placeholder="Notes about progress, mood, or soreness"
                 />
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Progress Photo (optional)</div>
@@ -685,7 +712,7 @@ export default function HomeView({
               </Card>
             ) : (
               <Card className="p-4">
-                <div className="text-sm text-zinc-300">No check-in form open.</div>
+                <div className="text-sm text-zinc-300">Open today&apos;s check-in to log stats and photos.</div>
               </Card>
             )}
           </div>
@@ -730,7 +757,7 @@ export default function HomeView({
               </Card>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {orderedTiles
                 .filter((tile) => tile.visible)
                 .map((tile) => {

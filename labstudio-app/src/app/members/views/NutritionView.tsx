@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Card from '../components/Card';
 
 type NutritionState = {
@@ -43,7 +43,7 @@ export default function NutritionView() {
   const [selected, setSelected] = useState<FoodSuggestion | null>(null);
   const [autoMacros, setAutoMacros] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const r = await fetch('/api/lab/nutrition');
@@ -54,7 +54,7 @@ export default function NutritionView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Safety: abort any in-flight food search if this component unmounts.
   useEffect(() => {
@@ -65,8 +65,7 @@ export default function NutritionView() {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
   const recalcFromSelection = (nextAmountG: number) => {
     if (!selected || !autoMacros) return;
@@ -200,14 +199,14 @@ export default function NutritionView() {
     <div className="space-y-4 pb-20">
       <div className="px-1">
         <h1 className="text-2xl font-black italic uppercase">Nutrition</h1>
-        <div className="text-xs text-zinc-500 mt-1">Today macros + 7-day averages (real DB-backed).</div>
+        <div className="text-xs text-zinc-500 mt-1">Track today&apos;s macros and your 7-day averages.</div>
       </div>
 
       <Card className="p-4">
         {loading ? (
           <div className="text-sm text-zinc-400">Loading…</div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Today</div>
               <div className="text-2xl font-black">{Math.round(data?.today?.calories ?? 0)} kcal</div>
@@ -255,7 +254,7 @@ export default function NutritionView() {
           <div className="relative">
             <input
               className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm w-full"
-              placeholder="Type to search (brand first)…"
+              placeholder="Search foods or brands…"
               value={form.name}
               onFocus={() => setSuggestOpen(true)}
               onBlur={() => {
@@ -300,7 +299,7 @@ export default function NutritionView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <div className="space-y-1">
             <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Protein (g)</div>
             <input
@@ -343,7 +342,7 @@ export default function NutritionView() {
         </div>
 
         {amountLabel === 'grams' ? (
-          <div className="grid grid-cols-2 gap-2 items-end">
+          <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2">
             <div className="space-y-1">
               <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Amount (g)</div>
               <input
@@ -359,7 +358,7 @@ export default function NutritionView() {
               />
             </div>
             <div className="text-[10px] text-zinc-500">
-              {selected?.source === 'off' ? 'OpenFoodFacts is per 100g.' : 'Per 100g item.'}
+              {selected?.source === 'off' ? 'Nutrition is listed per 100g.' : 'Nutrition is listed per 100g.'}
               {autoMacros ? '' : ' (macros unlocked)'}
               {autoMacros ? (
                 <button
@@ -377,7 +376,7 @@ export default function NutritionView() {
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs text-zinc-500">
             ≈ <span className="font-mono">{Math.round(caloriesPreview)}</span> kcal
             {status === 'saving' ? ' · Saving…' : status === 'saved' ? ' · Saved.' : status === 'error' ? ' · Failed.' : ''}
@@ -385,14 +384,14 @@ export default function NutritionView() {
           <button
             onClick={save}
             disabled={!form.name.trim() || status === 'saving'}
-            className="text-xs font-bold text-white bg-emerald-500 px-3 py-1.5 rounded-full disabled:opacity-50"
+            className="self-start rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50 sm:self-auto"
           >
             Save
           </button>
         </div>
 
         <div className="text-[10px] text-zinc-600">
-          Tips: Select a food to auto-fill macros. For OpenFoodFacts items, use Amount (g) to scale from per-100g nutrition.
+          Tip: Select a food to auto-fill macros. Use the amount in grams to scale foods listed per 100g.
         </div>
       </Card>
 

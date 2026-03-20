@@ -73,7 +73,7 @@ export default function HabitsView() {
       <div>
         <div className="text-xs text-zinc-500 font-bold tracking-widest uppercase">Habits</div>
         <div className="text-lg font-black italic">Today {day ? `(${day})` : ''}</div>
-        <div className="text-xs text-zinc-500">Real, DB-backed habit check-ins.</div>
+        <div className="text-xs text-zinc-500">Track the habits you want to stay consistent with.</div>
       </div>
 
       <Card className="p-4 space-y-2">

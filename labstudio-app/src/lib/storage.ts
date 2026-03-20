@@ -21,7 +21,6 @@ export function logEvent(name: string, payload: Record<string, unknown> = {}) {
   // Placeholder telemetry hook (mirrors original). Keep it client-only.
   if (typeof window === 'undefined') return;
   if (process.env.NODE_ENV !== 'production') {
-    // eslint-disable-next-line no-console
     console.info('[Lab Event]', { ts: new Date().toISOString(), name, payload });
   }
 }

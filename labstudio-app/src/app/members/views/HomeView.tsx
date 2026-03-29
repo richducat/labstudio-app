@@ -98,6 +98,8 @@ export default function HomeView({
   const [statsLog, setStatsLog] = useState({ weight: '', bodyFat: '', restingHr: '', note: '' });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoNote, setPhotoNote] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
     // When DB data arrives, prefill the quick log with the latest recorded values.
@@ -192,10 +194,16 @@ export default function HomeView({
   };
 
   const saveCheckin = async () => {
+    setIsSaving(true);
     await Promise.all([logDailyStats(), saveProgressPhoto()]);
-    setPhotoFile(null);
-    setPhotoNote('');
-    setShowQuickLog(false);
+    setIsSaving(false);
+    setJustSaved(true);
+    setTimeout(() => {
+      setJustSaved(false);
+      setPhotoFile(null);
+      setPhotoNote('');
+      setShowQuickLog(false);
+    }, 1500);
     // refresh home data
     await loadHome();
   };
@@ -642,8 +650,11 @@ export default function HomeView({
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
               <div>
-                <h2 className="font-bold text-lg">Daily Check-in</h2>
-                <div className="text-xs text-zinc-500">Log weight/body fat and notes.</div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-lg">Daily Check-in</h2>
+                  <span className="bg-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-rose-500/30">🔥 3 Day Streak</span>
+                </div>
+                <div className="text-xs text-zinc-500 mt-1">Log weight/body fat and notes.</div>
               </div>
               <button
                 onClick={() => setShowQuickLog((prev) => !prev)}
@@ -704,9 +715,12 @@ export default function HomeView({
                   <span>Saved to your account.</span>
                   <button
                     onClick={saveCheckin}
-                    className="text-xs font-bold text-white bg-emerald-500 px-3 py-1.5 rounded-full"
+                    disabled={isSaving || justSaved}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-300 ${
+                      justSaved ? 'bg-emerald-500 text-white scale-110 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'text-white bg-emerald-600 hover:bg-emerald-500'
+                    }`}
                   >
-                    Save
+                    {isSaving ? 'Saving...' : justSaved ? 'Saved! ✓' : 'Save'}
                   </button>
                 </div>
               </Card>

@@ -32,6 +32,12 @@ export default function SocialView() {
 
   return (
     <div className="pb-32 space-y-6">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes slideUpFade {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}} />
       <div className="text-center py-6">
         <h2 className="text-2xl font-black italic uppercase tracking-tighter">Leaderboard</h2>
         <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.2em]">Compare your best game scores</p>
@@ -76,13 +82,29 @@ export default function SocialView() {
           {loading ? (
             <div className="text-center py-8 text-xs text-zinc-600 font-bold uppercase tracking-widest">Loading rankings...</div>
           ) : leaderboard.length > 0 ? (
-            leaderboard.map((u, i) => (
+            leaderboard.map((u, i) => {
+              const isFirst = i === 0;
+              return (
               <div
                 key={i}
-                className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-900/50 border border-white/5 hover:bg-zinc-900 transition-colors"
+                className={`flex items-center gap-4 p-4 rounded-2xl transition-colors ${
+                  isFirst 
+                    ? 'bg-gradient-to-r from-yellow-500/20 to-zinc-900/50 border border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.15)] ring-1 ring-yellow-500/20' 
+                    : 'bg-zinc-900/50 border border-white/5 hover:bg-zinc-900'
+                }`}
+                style={{ 
+                  animationFillMode: 'both', 
+                  animationDuration: '0.5s', 
+                  animationDelay: `${i * 100}ms`, 
+                  animationName: 'slideUpFade' 
+                }}
               >
-                <div className="font-black italic text-lg w-6 text-center text-zinc-700">#{i + 1}</div>
-                <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center text-xs font-black text-white shadow-[0_0_15px_rgba(124,58,237,0.3)]">
+                <div className={`font-black italic text-lg w-6 text-center ${isFirst ? 'text-yellow-500' : 'text-zinc-700'}`}>#{i + 1}</div>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black text-white ${
+                  isFirst 
+                    ? 'bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)] text-yellow-950' 
+                    : 'bg-violet-600 shadow-[0_0_15px_rgba(124,58,237,0.3)]'
+                }`}>
                   {u.display_name?.substring(0, 2).toUpperCase() || '??'}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -94,7 +116,8 @@ export default function SocialView() {
                   <div className="text-[9px] text-zinc-600 font-bold uppercase">Points</div>
                 </div>
               </div>
-            ))
+            );
+            })
           ) : (
             <div className="text-center py-12 px-8 bg-zinc-900/40 rounded-3xl border border-dashed border-zinc-800">
               <Trophy className="mx-auto text-zinc-800 mb-2" size={32} />

@@ -197,8 +197,8 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
                       <span>Progress</span>
                       <span>{challenge.progress} / {challenge.target}</span>
                     </div>
-                    <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-violet-500 rounded-full" style={{ width: `${percent}%` }} />
+                    <div className={`h-1.5 bg-zinc-800 rounded-full ${complete ? 'ring-1 ring-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'shadow-inner'}`}>
+                      <div className={`h-full rounded-full transition-all duration-1000 ease-out ${complete ? 'bg-emerald-500' : 'bg-violet-500 shadow-[0_0_10px_rgba(124,58,237,0.5)]'}`} style={{ width: `${percent}%` }} />
                     </div>
                     <div className="text-[10px] text-zinc-500">{challenge.helper}</div>
                     <button

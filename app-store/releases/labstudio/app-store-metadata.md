@@ -7,7 +7,7 @@
 - Bundle ID: fit.labstudio.app
 - SKU: fit.labstudio.app
 - Version: 1.0
-- Build: 2026052902
+- Build: 2026052903
 - Primary category: Health & Fitness
 - Secondary category: Lifestyle
 - App Store Connect Apple ID: 6763787815
@@ -69,7 +69,7 @@ Login uses email or phone only; no password or email verification is required. U
 ## Internal Launch Notes
 
 - App Store Connect version state: Waiting for Review
-- Attached build ID or build number: 2026052902 after upload/processing
+- Attached build ID or build number: 2026052903 after upload/processing
 - Native screenshot sources:
   - app-store/releases/labstudio/screenshots/native/iphone-17-pro-login.png
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-login.png

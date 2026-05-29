@@ -53,7 +53,7 @@ struct CoachView: View {
                     Text("Toby is online")
                         .font(.title3.weight(.black))
                         .foregroundStyle(.white)
-                    Text("Messages are sent to the same production Toby endpoint used by the member app.")
+                    Text("Training, nutrition, booking, and recovery guidance in one place.")
                         .font(.caption)
                         .foregroundStyle(LabTheme.muted)
                 }

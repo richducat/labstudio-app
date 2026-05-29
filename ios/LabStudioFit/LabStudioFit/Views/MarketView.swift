@@ -74,7 +74,7 @@ struct MarketView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Memberships & Passes", icon: "figure.strengthtraining.traditional")
             if state.shopProducts.isEmpty {
-                EmptyLabState(title: "No products available", detail: "The live Stripe catalog did not return any active products.", icon: "bag")
+                EmptyLabState(title: "No products available", detail: "Pull to refresh or check back soon.", icon: "bag")
             } else {
                 ForEach(state.shopProducts) { item in
                     itemCard(
@@ -94,7 +94,7 @@ struct MarketView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Studio Cafe", icon: "takeoutbag.and.cup.and.straw.fill")
             if state.cafeItems.isEmpty {
-                EmptyLabState(title: "Cafe unavailable", detail: "Cafe items are loaded from the production Lab Studio API.", icon: "cup.and.saucer.fill")
+                EmptyLabState(title: "Cafe unavailable", detail: "Pull to refresh or check back soon.", icon: "cup.and.saucer.fill")
             } else {
                 ForEach(state.cafeItems) { item in
                     itemCard(

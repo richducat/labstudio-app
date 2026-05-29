@@ -53,6 +53,15 @@ private struct CafeResponse: Decodable {
     let items: [LabCafeItem]
 }
 
+private struct PublicCatalogResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let location: String?
+    let services: [LabBookableService]?
+    let timeGroups: [LabTimeGroup]?
+    let products: [LabShopProduct]?
+}
+
 private struct NutritionResponse: Decodable {
     let ok: Bool
     let error: String?
@@ -273,7 +282,8 @@ final class LabAppState {
         defer { isLoading = false }
 
         do {
-            let response: LoginResponse = try await api.post("/api/lab/auth/login", json: [
+            let response: LoginResponse = try await api.post("/api/lab/shop", json: [
+                "action": "login",
                 "email": email,
                 "phone": phone,
             ])
@@ -294,7 +304,7 @@ final class LabAppState {
     }
 
     func logout() async {
-        _ = try? await api.post("/api/lab/auth/logout", json: [:]) as GenericResponse
+        _ = try? await api.post("/api/lab/shop", json: ["action": "logout"]) as GenericResponse
         api.clearCookies()
         user = nil
         profile = nil
@@ -338,13 +348,12 @@ final class LabAppState {
 
     func loadPublicCatalogs() async {
         do {
-            let servicesResponse: ServicesResponse = try await api.get("/api/lab/services")
-            let shopResponse: ShopResponse = try await api.get("/api/lab/shop")
+            let publicResponse: PublicCatalogResponse = try await api.get("/api/lab/shop")
             let cafeResponse: CafeResponse = try await api.get("/api/lab/cafe")
-            services = servicesResponse.services
-            timeGroups = servicesResponse.timeGroups
-            location = servicesResponse.location ?? location
-            shopProducts = shopResponse.products
+            services = publicResponse.services ?? []
+            timeGroups = publicResponse.timeGroups ?? []
+            location = publicResponse.location ?? location
+            shopProducts = publicResponse.products ?? []
             cafeItems = cafeResponse.items
         } catch {
             errorMessage = error.localizedDescription
@@ -486,7 +495,7 @@ final class LabAppState {
             id: "cafe:\(cafeItem.slug)",
             name: cafeItem.name,
             priceCents: cafeItem.priceCents,
-            priceId: cafeItem.stripePriceId ?? "cafe:\(cafeItem.slug)",
+            priceId: cafeItem.stripePriceId,
             checkoutURL: cafeItem.productUrl.flatMap(URL.init(string:))
         )
     }

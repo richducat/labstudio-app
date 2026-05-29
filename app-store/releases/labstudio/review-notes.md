@@ -6,7 +6,7 @@ Use this file as the exact reviewer-facing source for the build being submitted.
 
 - App: Lab Studio
 - Version: 1.0
-- Build: 2026052902
+- Build: 2026052903
 - Bundle ID: fit.labstudio.app
 
 ## Summary for App Review

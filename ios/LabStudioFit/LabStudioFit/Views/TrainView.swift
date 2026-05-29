@@ -40,7 +40,7 @@ struct TrainView: View {
                 Text("Book sessions against the live Lab Studio calendar.")
                     .font(.title2.weight(.black))
                     .foregroundStyle(.white)
-                Text("Imported Google Calendar events and sessions booked here are checked by the production API before saving.")
+                Text("Pick the service, choose a time, and keep your week organized.")
                     .font(.subheadline)
                     .foregroundStyle(LabTheme.muted)
             }
@@ -51,7 +51,7 @@ struct TrainView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Private Services", icon: "sparkles")
             if state.services.isEmpty {
-                EmptyLabState(title: "Loading services", detail: "Service options are served from the Lab Studio API.", icon: "arrow.clockwise")
+                EmptyLabState(title: "Loading services", detail: "Pull to refresh if this takes longer than a moment.", icon: "arrow.clockwise")
             } else {
                 ForEach(state.services) { service in
                     Button {
@@ -137,7 +137,7 @@ struct TrainView: View {
             SectionHeader(title: "Calendar Blocks", icon: "calendar.badge.clock")
             let events = state.bookingCalendar
             if events.isEmpty {
-                EmptyLabState(title: "No upcoming blocks", detail: "The API will still check availability when you book.", icon: "calendar")
+                EmptyLabState(title: "No upcoming blocks", detail: "Booked sessions and calendar holds will appear here.", icon: "calendar")
             } else {
                 ForEach(events.prefix(4)) { event in
                     PremiumCard {

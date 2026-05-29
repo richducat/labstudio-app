@@ -82,7 +82,7 @@
   },
   "version": {
     "marketingVersion": "1.0",
-    "buildNumber": "2026052902",
+    "buildNumber": "2026052903",
     "releaseType": "MANUAL",
     "phasedRelease": false,
     "promotionalText": "Members-only training, nutrition, booking, progress tracking, and Toby coaching for Lab Studio.",
@@ -105,7 +105,7 @@
     "demoUsername": "reviewer+labstudio@labstudio.fit",
     "demoPassword": "No password is required. Enter the demo email on the login screen and leave phone optional.",
     "notes": [
-      "Build 2026052902 is version 1.0 for bundle ID fit.labstudio.app.",
+      "Build 2026052903 is version 1.0 for bundle ID fit.labstudio.app.",
       "Login uses email or phone only; no password or email verification is required for review.",
       "Use reviewer+labstudio@labstudio.fit on the login screen, complete onboarding if prompted, then review the native Home, Train, Market, Coach, and Profile tabs.",
       "Any Stripe checkout flows are for in-person gym services, facility memberships, or physical products provided by Lab Studio, not digital content."

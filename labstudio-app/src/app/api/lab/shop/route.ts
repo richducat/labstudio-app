@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { dbConfigured, ensureSchema, getOrCreateUser } from '@/lib/db';
+import { handleNativeLogin, handleNativeLogout, type NativeLoginBody } from '@/lib/lab-native-auth';
+import { LAB_LOCATION, LAB_SERVICES, LAB_TIME_GROUPS } from '@/lib/lab-services';
 import { getStripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
@@ -149,6 +151,17 @@ async function listStripeProducts() {
   return catalog;
 }
 
+function shopResponse(products: ShopProduct[]) {
+  return NextResponse.json({
+    ok: true,
+    products,
+    entitlements: [],
+    location: LAB_LOCATION,
+    services: LAB_SERVICES,
+    timeGroups: LAB_TIME_GROUPS,
+  });
+}
+
 export async function GET() {
   // IMPORTANT: Shop browse should not require auth cookies.
   // We only use cookies when present (future: entitlements, user-specific pricing).
@@ -168,11 +181,25 @@ export async function GET() {
   if (process.env.STRIPE_SECRET_KEY) {
     try {
       const products = await listStripeProducts();
-      return NextResponse.json({ ok: true, products, entitlements: [] });
+      return shopResponse(products);
     } catch {
       // Fall back to the curated catalog below.
     }
   }
 
-  return NextResponse.json({ ok: true, products: buildCatalogProducts([]), entitlements: [] });
+  return shopResponse(buildCatalogProducts([]));
+}
+
+export async function POST(req: Request) {
+  const body = (await req.json().catch(() => ({}))) as NativeLoginBody & { action?: string };
+
+  if (body.action === 'login') {
+    return handleNativeLogin(body);
+  }
+
+  if (body.action === 'logout') {
+    return handleNativeLogout();
+  }
+
+  return NextResponse.json({ ok: false, error: 'Unsupported shop action.' }, { status: 400 });
 }

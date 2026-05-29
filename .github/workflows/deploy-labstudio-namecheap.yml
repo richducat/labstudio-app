@@ -18,10 +18,6 @@ jobs:
       NAMECHEAP_FTP_PORT: ${{ secrets.NAMECHEAP_FTP_PORT }}
       NAMECHEAP_FTP_USER: ${{ secrets.NAMECHEAP_FTP_USER }}
       NAMECHEAP_FTP_PASS: ${{ secrets.NAMECHEAP_FTP_PASS }}
-      NAMECHEAP_SSH_HOST: ${{ secrets.NAMECHEAP_SSH_HOST }}
-      NAMECHEAP_SSH_PORT: ${{ secrets.NAMECHEAP_SSH_PORT }}
-      NAMECHEAP_CPANEL_USER: ${{ secrets.NAMECHEAP_CPANEL_USER }}
-      NAMECHEAP_REMOTE_ABS_ROOT: ${{ secrets.NAMECHEAP_REMOTE_ABS_ROOT }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       LABSTUDIO_ACCESS_CODE: ${{ secrets.LABSTUDIO_ACCESS_CODE }}
       LABSTUDIO_BOOKINGS_ICAL_URL: ${{ secrets.LABSTUDIO_BOOKINGS_ICAL_URL }}
@@ -178,52 +174,90 @@ jobs:
           bye
           LFTP
 
-      - name: Restart Passenger app over SSH
-        shell: bash
-        run: |
-          set -euo pipefail
-          key_path="$(mktemp)"
-          trap 'rm -f "$key_path"' EXIT
-          printf '%s\n' "${{ secrets.NAMECHEAP_SSH_KEY }}" > "$key_path"
-          chmod 600 "$key_path"
-          ssh -i "$key_path" \
-            -p "$NAMECHEAP_SSH_PORT" \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            "$NAMECHEAP_CPANEL_USER@$NAMECHEAP_SSH_HOST" \
-            "set -e;
-             mkdir -p '$NAMECHEAP_REMOTE_ABS_ROOT/tmp';
-             date -u +%FT%TZ > '$NAMECHEAP_REMOTE_ABS_ROOT/tmp/restart.txt';
-             if command -v cloudlinux-selector >/dev/null 2>&1; then
-               cloudlinux-selector restart --json --interpreter nodejs --user '$NAMECHEAP_CPANEL_USER' --app-root app.labstudio.fit ||
-               cloudlinux-selector restart --json --interpreter nodejs --domain app.labstudio.fit --app-root app.labstudio.fit ||
-               true;
-             fi"
-
       - name: Verify live API
         run: |
-          curl --fail --show-error --location "https://app.labstudio.fit/privacy?deploy=${GITHUB_RUN_ID}" >/dev/null
-          curl --fail --show-error --location "https://app.labstudio.fit/support?deploy=${GITHUB_RUN_ID}" >/dev/null
+          curl --fail --show-error --max-time 20 --location "https://app.labstudio.fit/privacy?deploy=${GITHUB_RUN_ID}" >/dev/null
+          curl --fail --show-error --max-time 20 --location "https://app.labstudio.fit/support?deploy=${GITHUB_RUN_ID}" >/dev/null
           node <<'NODE'
-          const url = `https://app.labstudio.fit/api/lab/services?deploy=${process.env.GITHUB_RUN_ID}`;
+          const base = 'https://app.labstudio.fit';
+          const url = `${base}/api/lab/shop?deploy=${process.env.GITHUB_RUN_ID}`;
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-          for (let attempt = 1; attempt <= 30; attempt += 1) {
-            const response = await fetch(url, { cache: 'no-store' });
-            const text = await response.text();
+          async function fetchText(target, options = {}) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20000);
+            try {
+              const response = await fetch(target, { ...options, signal: controller.signal, cache: 'no-store' });
+              return { response, text: await response.text() };
+            } finally {
+              clearTimeout(timer);
+            }
+          }
+
+          async function parseJson(target, options = {}) {
+            const { response, text } = await fetchText(target, options);
             let parsed = null;
             try {
               parsed = JSON.parse(text);
             } catch {}
+            return { response, parsed, text };
+          }
 
-            if (response.ok && parsed?.ok && Array.isArray(parsed.services)) {
-              console.log(`services ${parsed.services.length}`);
-              process.exit(0);
+          for (let attempt = 1; attempt <= 12; attempt += 1) {
+            const { response, parsed } = await parseJson(url);
+
+            if (
+              response.ok &&
+              parsed?.ok &&
+              Array.isArray(parsed.products) &&
+              Array.isArray(parsed.services) &&
+              parsed.services.length > 0
+            ) {
+              console.log(`shop ${parsed.products.length}; services ${parsed.services.length}`);
+              break;
             }
 
-            console.log(`Waiting for Passenger restart, attempt ${attempt}/30, status ${response.status}`);
+            if (attempt === 12) {
+              throw new Error(`Live /api/lab/shop did not expose native catalog payload. status=${response.status}`);
+            }
+
+            console.log(`Waiting for native catalog route, attempt ${attempt}/12, status ${response.status}`);
             await sleep(10000);
           }
 
-          throw new Error('Live /api/lab/services did not expose public services after restart window.');
+          const login = await parseJson(`${base}/api/lab/shop`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', accept: 'application/json' },
+            body: JSON.stringify({
+              action: 'login',
+              email: `native-ci+${process.env.GITHUB_RUN_ID}@labstudio.fit`,
+            }),
+          });
+
+          if (!login.response.ok || !login.parsed?.ok) {
+            throw new Error(`Native compatibility login failed. status=${login.response.status} body=${login.text.slice(0, 160)}`);
+          }
+
+          const setCookies = typeof login.response.headers.getSetCookie === 'function'
+            ? login.response.headers.getSetCookie()
+            : [login.response.headers.get('set-cookie')].filter(Boolean);
+          const cookieHeader = setCookies
+            .flatMap((value) => String(value).split(/,(?=\s*labstudio_)/))
+            .map((value) => value.match(/labstudio_(?:uid|session)=[^;]+/)?.[0])
+            .filter(Boolean)
+            .join('; ');
+
+          if (!cookieHeader.includes('labstudio_uid=') || !cookieHeader.includes('labstudio_session=')) {
+            throw new Error('Native compatibility login did not return both auth cookies.');
+          }
+
+          const user = await parseJson(`${base}/api/lab/user?deploy=${process.env.GITHUB_RUN_ID}`, {
+            headers: { accept: 'application/json', cookie: cookieHeader },
+          });
+
+          if (!user.response.ok || !user.parsed?.ok || !user.parsed?.user?.id) {
+            throw new Error(`Authenticated user check failed. status=${user.response.status} body=${user.text.slice(0, 160)}`);
+          }
+
+          console.log(`native login ok ${user.parsed.user.id}`);
           NODE

@@ -18,7 +18,11 @@ jobs:
       NAMECHEAP_FTP_PORT: ${{ secrets.NAMECHEAP_FTP_PORT }}
       NAMECHEAP_FTP_USER: ${{ secrets.NAMECHEAP_FTP_USER }}
       NAMECHEAP_FTP_PASS: ${{ secrets.NAMECHEAP_FTP_PASS }}
+      NAMECHEAP_CPANEL_USER: ${{ secrets.NAMECHEAP_CPANEL_USER }}
       NAMECHEAP_REMOTE_ABS_ROOT: ${{ secrets.NAMECHEAP_REMOTE_ABS_ROOT }}
+      NAMECHEAP_SSH_HOST: ${{ secrets.NAMECHEAP_SSH_HOST }}
+      NAMECHEAP_SSH_KEY: ${{ secrets.NAMECHEAP_SSH_KEY }}
+      NAMECHEAP_SSH_PORT: ${{ secrets.NAMECHEAP_SSH_PORT }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       LABSTUDIO_ACCESS_CODE: ${{ secrets.LABSTUDIO_ACCESS_CODE }}
       LABSTUDIO_BOOKINGS_ICAL_URL: ${{ secrets.LABSTUDIO_BOOKINGS_ICAL_URL }}
@@ -97,8 +101,13 @@ jobs:
           const files = new Set([
             'DEPLOY_INFO.json',
             'app.js',
-            '.env.production.local',
+            '.next/app-path-routes-manifest.json',
             '.next/BUILD_ID',
+            '.next/build-manifest.json',
+            '.next/package.json',
+            '.next/prerender-manifest.json',
+            '.next/required-server-files.json',
+            '.next/routes-manifest.json',
             '.next/server/app-paths-manifest.json',
             '.next/server/functions-config-manifest.json',
             '.next/server/middleware-build-manifest.js',
@@ -128,6 +137,10 @@ jobs:
           for (const dir of [
             '.next/server/app/api/lab',
             '.next/server/app/api/toby',
+            '.next/server/app/account-deletion',
+            '.next/server/app/privacy',
+            '.next/server/app/support',
+            '.next/server/app/terms',
             '.next/server/chunks',
             '.next/server/chunks/ssr',
             'data',
@@ -159,78 +172,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          expected_marker="$(node -p 'require("./output/namecheap-targeted/DEPLOY_INFO.json").packagedAt')"
+          remote_root="${NAMECHEAP_REMOTE_ABS_ROOT:-/home/${NAMECHEAP_CPANEL_USER}/app.labstudio.fit}"
+          ssh_port="${NAMECHEAP_SSH_PORT:-22}"
+          key_path="$RUNNER_TEMP/namecheap_sftp_key"
 
-          candidates=(
-            "app.labstudio.fit"
-            "/app.labstudio.fit"
-            "public_html/app.labstudio.fit"
-            "/public_html/app.labstudio.fit"
-          )
-          if [[ -n "${NAMECHEAP_REMOTE_ABS_ROOT:-}" ]]; then
-            candidates+=("$NAMECHEAP_REMOTE_ABS_ROOT")
-          fi
-
-          live_root=""
-          for remote_root in "${candidates[@]}"; do
-            [[ -n "$remote_root" ]] || continue
-            echo "Probing Namecheap upload target with ${#remote_root} characters"
-            if ! lftp -u "$NAMECHEAP_FTP_USER","$NAMECHEAP_FTP_PASS" -p "$NAMECHEAP_FTP_PORT" "$NAMECHEAP_FTP_HOST" <<LFTP
-          set cmd:fail-exit yes
-          set net:timeout 60
-          set net:max-retries 3
-          set net:reconnect-interval-base 5
-          set ftp:ssl-force true
-          set ftp:ssl-protect-data true
-          set ftp:passive-mode true
-          set ssl:verify-certificate no
-          set xfer:clobber true
-          set cmd:fail-exit no
-          mkdir "$remote_root/tmp"
-          set cmd:fail-exit yes
-          put -O "$remote_root" output/namecheap-targeted/DEPLOY_INFO.json
-          put -O "$remote_root/tmp" output/namecheap-targeted/tmp/restart.txt
-          bye
-          LFTP
-            then
-              continue
-            fi
-
-            live_marker="$(
-              curl --silent --show-error --max-time 20 --location "https://app.labstudio.fit/DEPLOY_INFO.json?probe=${GITHUB_RUN_ID}" |
-                node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{try{console.log(JSON.parse(s).packagedAt||'')}catch{console.log('')}})"
-            )"
-
-            if [[ "$live_marker" == "$expected_marker" ]]; then
-              live_root="$remote_root"
-              break
-            fi
-          done
-
-          if [[ -z "$live_root" ]]; then
-            echo "No Namecheap upload target updated the live DEPLOY_INFO marker." >&2
+          if [[ -z "${NAMECHEAP_CPANEL_USER:-}" || -z "${NAMECHEAP_SSH_HOST:-}" || -z "${NAMECHEAP_SSH_KEY:-}" ]]; then
+            echo "Missing Namecheap SFTP secrets." >&2
             exit 1
           fi
 
-          echo "Live Namecheap root selected with ${#live_root} characters"
-          lftp -u "$NAMECHEAP_FTP_USER","$NAMECHEAP_FTP_PASS" -p "$NAMECHEAP_FTP_PORT" "$NAMECHEAP_FTP_HOST" <<LFTP
+          printf '%s\n' "$NAMECHEAP_SSH_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          printf 'restart=%s\n' "$(date -u +%FT%TZ)" > output/namecheap-targeted/tmp/restart.txt
+
+          lftp -u "$NAMECHEAP_CPANEL_USER", "sftp://$NAMECHEAP_SSH_HOST:$ssh_port" <<LFTP
           set cmd:fail-exit yes
+          set sftp:connect-program "ssh -a -x -i $key_path -o BatchMode=yes -o StrictHostKeyChecking=no"
           set net:timeout 60
           set net:max-retries 5
           set net:reconnect-interval-base 5
-          set ftp:ssl-force true
-          set ftp:ssl-protect-data true
-          set ftp:passive-mode true
-          set ssl:verify-certificate no
           set xfer:clobber true
           set mirror:overwrite true
           lcd output/namecheap-targeted
-          set cmd:fail-exit no
-          mkdir "$live_root/tmp"
-          set cmd:fail-exit yes
-          mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$live_root"
-          put -O "$live_root/tmp" tmp/restart.txt
-          cat "$live_root/DEPLOY_INFO.json"
+          mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$remote_root"
+          put -O "$remote_root/tmp" tmp/restart.txt
+          cat "$remote_root/DEPLOY_INFO.json"
           bye
           LFTP
 

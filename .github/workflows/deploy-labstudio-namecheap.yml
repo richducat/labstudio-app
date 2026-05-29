@@ -18,6 +18,10 @@ jobs:
       NAMECHEAP_FTP_PORT: ${{ secrets.NAMECHEAP_FTP_PORT }}
       NAMECHEAP_FTP_USER: ${{ secrets.NAMECHEAP_FTP_USER }}
       NAMECHEAP_FTP_PASS: ${{ secrets.NAMECHEAP_FTP_PASS }}
+      NAMECHEAP_SSH_HOST: ${{ secrets.NAMECHEAP_SSH_HOST }}
+      NAMECHEAP_SSH_PORT: ${{ secrets.NAMECHEAP_SSH_PORT }}
+      NAMECHEAP_CPANEL_USER: ${{ secrets.NAMECHEAP_CPANEL_USER }}
+      NAMECHEAP_REMOTE_ABS_ROOT: ${{ secrets.NAMECHEAP_REMOTE_ABS_ROOT }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       LABSTUDIO_ACCESS_CODE: ${{ secrets.LABSTUDIO_ACCESS_CODE }}
       LABSTUDIO_BOOKINGS_ICAL_URL: ${{ secrets.LABSTUDIO_BOOKINGS_ICAL_URL }}
@@ -173,6 +177,28 @@ jobs:
           put -O /app.labstudio.fit/tmp tmp/restart.txt
           bye
           LFTP
+
+      - name: Restart Passenger app over SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          key_path="$(mktemp)"
+          trap 'rm -f "$key_path"' EXIT
+          printf '%s\n' "${{ secrets.NAMECHEAP_SSH_KEY }}" > "$key_path"
+          chmod 600 "$key_path"
+          ssh -i "$key_path" \
+            -p "$NAMECHEAP_SSH_PORT" \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            "$NAMECHEAP_CPANEL_USER@$NAMECHEAP_SSH_HOST" \
+            "set -e;
+             mkdir -p '$NAMECHEAP_REMOTE_ABS_ROOT/tmp';
+             date -u +%FT%TZ > '$NAMECHEAP_REMOTE_ABS_ROOT/tmp/restart.txt';
+             if command -v cloudlinux-selector >/dev/null 2>&1; then
+               cloudlinux-selector restart --json --interpreter nodejs --user '$NAMECHEAP_CPANEL_USER' --app-root app.labstudio.fit ||
+               cloudlinux-selector restart --json --interpreter nodejs --domain app.labstudio.fit --app-root app.labstudio.fit ||
+               true;
+             fi"
 
       - name: Verify live API
         run: |

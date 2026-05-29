@@ -83,6 +83,72 @@ jobs:
       - name: Package Namecheap bundle
         run: npm run package:namecheap
 
+      - name: Stage changed runtime files
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const src = path.resolve('output/namecheap-deploy');
+          const stage = path.resolve('output/namecheap-targeted');
+          fs.rmSync(stage, { recursive: true, force: true });
+          fs.mkdirSync(stage, { recursive: true });
+
+          const files = new Set([
+            'DEPLOY_INFO.json',
+            'app.js',
+            '.env.production.local',
+            '.next/BUILD_ID',
+            '.next/server/app-paths-manifest.json',
+            '.next/server/functions-config-manifest.json',
+            '.next/server/middleware-build-manifest.js',
+            '.next/server/middleware-manifest.json',
+            '.next/server/middleware.js',
+            '.next/server/next-font-manifest.js',
+            '.next/server/next-font-manifest.json',
+            '.next/server/pages-manifest.json',
+            '.next/server/server-reference-manifest.js',
+            '.next/server/server-reference-manifest.json',
+          ]);
+
+          function addTree(relativeDir) {
+            const absoluteDir = path.join(src, relativeDir);
+            if (!fs.existsSync(absoluteDir)) return;
+            for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
+              const relativePath = path.join(relativeDir, entry.name);
+              const absolutePath = path.join(src, relativePath);
+              if (entry.isDirectory()) {
+                addTree(relativePath);
+              } else if (entry.isFile()) {
+                files.add(relativePath);
+              }
+            }
+          }
+
+          for (const dir of [
+            '.next/server/app/api/lab',
+            '.next/server/app/api/toby',
+            '.next/server/chunks',
+            '.next/server/chunks/ssr',
+            'data',
+            'tmp',
+          ]) {
+            addTree(dir);
+          }
+
+          let copied = 0;
+          for (const relativePath of files) {
+            const from = path.join(src, relativePath);
+            if (!fs.existsSync(from)) continue;
+            const to = path.join(stage, relativePath);
+            fs.mkdirSync(path.dirname(to), { recursive: true });
+            fs.copyFileSync(from, to);
+            copied += 1;
+          }
+
+          console.log(`Staged ${copied} files for targeted upload.`);
+          NODE
+          du -sh output/namecheap-targeted
+
       - name: Install lftp
         run: |
           sudo apt-get update
@@ -102,8 +168,8 @@ jobs:
           set ftp:passive-mode true
           set ssl:verify-certificate no
           set xfer:clobber true
-          lcd output/namecheap-deploy
-          mirror -R --parallel=2 --continue --only-newer --delete --no-perms --no-umask . /app.labstudio.fit
+          lcd output/namecheap-targeted
+          mirror -R --parallel=1 --continue --only-newer --no-perms --no-umask . /app.labstudio.fit
           bye
           LFTP
 

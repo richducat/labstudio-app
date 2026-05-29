@@ -18,6 +18,7 @@ jobs:
       NAMECHEAP_FTP_PORT: ${{ secrets.NAMECHEAP_FTP_PORT }}
       NAMECHEAP_FTP_USER: ${{ secrets.NAMECHEAP_FTP_USER }}
       NAMECHEAP_FTP_PASS: ${{ secrets.NAMECHEAP_FTP_PASS }}
+      NAMECHEAP_REMOTE_ABS_ROOT: ${{ secrets.NAMECHEAP_REMOTE_ABS_ROOT }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       LABSTUDIO_ACCESS_CODE: ${{ secrets.LABSTUDIO_ACCESS_CODE }}
       LABSTUDIO_BOOKINGS_ICAL_URL: ${{ secrets.LABSTUDIO_BOOKINGS_ICAL_URL }}
@@ -158,7 +159,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          lftp -u "$NAMECHEAP_FTP_USER","$NAMECHEAP_FTP_PASS" -p "$NAMECHEAP_FTP_PORT" "$NAMECHEAP_FTP_HOST" <<'LFTP'
+          candidates=()
+          if [[ -n "${NAMECHEAP_REMOTE_ABS_ROOT:-}" ]]; then
+            candidates+=("$NAMECHEAP_REMOTE_ABS_ROOT")
+          fi
+          candidates+=("/app.labstudio.fit" "app.labstudio.fit")
+
+          uploaded=0
+          for remote_root in "${candidates[@]}"; do
+            [[ -n "$remote_root" ]] || continue
+            echo "Trying Namecheap upload target with ${#remote_root} characters"
+            if lftp -u "$NAMECHEAP_FTP_USER","$NAMECHEAP_FTP_PASS" -p "$NAMECHEAP_FTP_PORT" "$NAMECHEAP_FTP_HOST" <<LFTP
           set cmd:fail-exit yes
           set net:timeout 60
           set net:max-retries 5
@@ -168,11 +179,24 @@ jobs:
           set ftp:passive-mode true
           set ssl:verify-certificate no
           set xfer:clobber true
+          set mirror:overwrite true
           lcd output/namecheap-targeted
-          mirror -R --parallel=1 --continue --only-newer --no-perms --no-umask . /app.labstudio.fit
-          put -O /app.labstudio.fit/tmp tmp/restart.txt
+          mkdir -p "$remote_root/tmp"
+          mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$remote_root"
+          put -O "$remote_root/tmp" tmp/restart.txt
+          cat "$remote_root/DEPLOY_INFO.json"
           bye
           LFTP
+            then
+              uploaded=1
+              break
+            fi
+          done
+
+          if [[ "$uploaded" != "1" ]]; then
+            echo "No Namecheap upload target accepted the bundle." >&2
+            exit 1
+          fi
 
       - name: Verify live API
         run: |

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:launch": "node scripts/check-launch-readiness.mjs && npm run lint && npm run build",
+    "package:namecheap": "node scripts/package-namecheap-deploy.mjs",
     "cap:add:ios": "npx cap add ios",
     "cap:sync": "npx cap sync",
     "cap:open:ios": "npx cap open ios"

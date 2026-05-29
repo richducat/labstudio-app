@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
 
+const projectRoot = process.cwd();
+
 const nextConfig: NextConfig = {
+  output: 'standalone',
+  outputFileTracingRoot: projectRoot,
   poweredByHeader: false,
+  images: {
+    unoptimized: true,
+  },
+  turbopack: {
+    root: projectRoot,
+  },
   async headers() {
     return [
       {

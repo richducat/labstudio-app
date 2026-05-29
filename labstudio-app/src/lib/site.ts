@@ -2,11 +2,7 @@ export function getSiteUrl() {
   const raw =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.SITE_URL?.trim() ||
-    process.env.APP_BASE_URL?.trim() ||
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()}`
-      : '') ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.trim()}` : '');
+    process.env.APP_BASE_URL?.trim();
 
   if (!raw) return null;
 

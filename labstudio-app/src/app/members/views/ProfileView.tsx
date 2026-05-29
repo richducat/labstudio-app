@@ -13,6 +13,7 @@ import {
   Mail,
   Phone,
   Smartphone,
+  Trash2,
   User,
 } from 'lucide-react';
 import Card from '../components/Card';
@@ -106,6 +107,8 @@ export default function ProfileView() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [homeData, setHomeData] = useState<HomeData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -152,6 +155,32 @@ export default function ProfileView() {
   const bodyFat = homeData?.latestStats?.body_fat_pct;
   const restingHr = homeData?.latestStats?.resting_hr;
   const latestPr = homeData?.progress?.latestPr ?? null;
+
+  async function deleteAccount() {
+    if (deleting) return;
+
+    const confirmed = window.confirm(
+      'Delete your Lab Studio account and saved training data? This cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setDeleteMessage(null);
+
+    try {
+      const response = await fetch('/api/lab/account', { method: 'DELETE' });
+      const data = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || `Account deletion failed (${response.status})`);
+      }
+      window.location.href = '/login';
+    } catch (deleteError) {
+      const message = deleteError instanceof Error ? deleteError.message : 'Account deletion failed';
+      setDeleteMessage(message);
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="pb-20 space-y-6">
@@ -269,6 +298,42 @@ export default function ProfileView() {
             ) : (
               <div className="text-sm text-zinc-500">No injuries or constraints recorded.</div>
             )}
+          </Card>
+
+          <Card className="p-4 bg-zinc-900/70 border-white/5">
+            <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-3">Support & Legal</div>
+            <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
+              <a className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 font-bold text-zinc-200 transition hover:border-violet-400/40 hover:text-white" href="/support">
+                Support
+              </a>
+              <a className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 font-bold text-zinc-200 transition hover:border-violet-400/40 hover:text-white" href="/privacy">
+                Privacy
+              </a>
+              <a className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 font-bold text-zinc-200 transition hover:border-violet-400/40 hover:text-white" href="/terms">
+                Terms
+              </a>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-zinc-900/70 border-rose-500/20">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-[10px] uppercase tracking-widest font-bold text-rose-300 mb-2">Account</div>
+                <div className="text-sm text-zinc-400">
+                  Delete your member account and saved Lab Studio training data.
+                </div>
+                {deleteMessage ? <div className="mt-2 text-xs text-rose-200">{deleteMessage}</div> : null}
+              </div>
+              <button
+                type="button"
+                onClick={deleteAccount}
+                disabled={deleting}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs font-black uppercase tracking-widest text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Trash2 size={14} />
+                {deleting ? 'Deleting' : 'Delete Account'}
+              </button>
+            </div>
           </Card>
         </div>
       ) : null}

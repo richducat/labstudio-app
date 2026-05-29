@@ -11,3 +11,9 @@ memory/ringcentral-token.json
 memory/zoho-token.json
 .vercel
 .env*.local
+
+# Generated local artifacts
+build/
+.playwright-cli/
+.playwright-mcp/
+ios/**/.build/

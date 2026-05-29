@@ -4,74 +4,39 @@ This is the LabStudio-specific version of the generic runbook:
 - See: `/Users/richardducat/clawd/docs/RUNBOOK_DEPLOY_GENERIC.md`
 
 ## Goal
-Get changes from local → GitHub → Vercel production (https://app.labstudio.fit) reliably, without trial-and-error.
+Get changes from local → Namecheap production (https://app.labstudio.fit) reliably, without trial-and-error.
 
 ## 0) Know what is “live”
-- `https://app.labstudio.fit/*` serves **Vercel Production**.
-- Production may be sourced from **"vercel deploy"** (Vercel CLI) or from **Git**. Either can be valid, but you must deploy via the same pipeline.
+- `https://app.labstudio.fit/*` should serve the Namecheap/cPanel Node app rooted at `/app.labstudio.fit`.
+- Vercel must not own `labstudio.fit` or `app.labstudio.fit`.
+- Namecheap DNS must point `app` at the hosting IP, not `cname.vercel-dns.com`.
 
 ## 1) Local build sanity
 ```bash
-cd /Users/richardducat/clawd/labstudio-app
+cd /Users/richardducat/GITHUB/labstudio-app/labstudio-app
 npm run build
+npm run package:namecheap
 ```
 
-## 2) Push code to GitHub (if using Git pipeline)
-Ensure the repo has a remote and branch is pushed.
+## 2) Upload to Namecheap
 
 ```bash
-cd /Users/richardducat/clawd
-git remote -v
-
-git push -u origin <branch>
+NAMECHEAP_ENV_FILE=/Users/richardducat/GITHUB/tyfys-benefits/.env.namecheap.local \
+  /Users/richardducat/GITHUB/wakeupyabish-landing/scripts/upload-namecheap-directory.sh \
+  --local-dir /Users/richardducat/GITHUB/labstudio-app/labstudio-app/output/namecheap-deploy \
+  --remote-dir /app.labstudio.fit
 ```
 
-## 3) Vercel CLI setup (recommended)
-Link once:
-```bash
-cd /Users/richardducat/clawd/labstudio-app
-npx vercel whoami
-npx vercel teams ls
-npx vercel link
-```
-- Choose scope/team: **EB28 LLC's projects**
-- Link project: **eb28-llcs-projects/labstudio-app**
+## 3) DNS and cPanel
+- Namecheap Advanced DNS: `app A 162.213.253.62`.
+- cPanel addon/domain app: `app.labstudio.fit`.
+- Node app root: `/app.labstudio.fit`.
+- Startup file: `app.js`.
 
-Deploy to production:
-```bash
-npx vercel --prod --yes
-```
-Expected output includes:
-- `Production: https://...vercel.app`
-- `Aliased: https://app.labstudio.fit`
-
-## 4) If Vercel blocks deploy: “Git author …@Mac.lan must have access …”
-This happens when commits have an author email not recognized as a team member.
-
-Fix:
-```bash
-git config --global user.name "Richard Ducat"
-git config --global user.email "richducat@gmail.com"
-
-# rewrite authors on branch history
-cd /Users/richardducat/clawd
-git rebase --root --exec "git commit --amend --no-edit --reset-author"
-
-# push rewritten history
-
-git push --force-with-lease
-```
-Then redeploy:
-```bash
-cd /Users/richardducat/clawd/labstudio-app
-npx vercel --prod --yes
-```
-
-## 5) Quick live verification (Toby)
+## 4) Quick live verification
 This checks the real production API behavior:
 ```bash
-curl -s -i -X POST https://app.labstudio.fit/api/toby/chat \
-  -H 'content-type: application/json' \
-  -d '{"message":"My knee feels off"}' | sed -n '1,120p'
+curl -I https://app.labstudio.fit/login
+curl -I https://app.labstudio.fit/privacy
+curl -I https://app.labstudio.fit/support
 ```
-Look for the strict 4-question gate + mandatory closing.

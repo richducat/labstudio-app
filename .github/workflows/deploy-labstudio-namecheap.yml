@@ -1,0 +1,114 @@
+name: Deploy Lab Studio to Namecheap
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: labstudio-namecheap-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: labstudio-app
+    env:
+      NAMECHEAP_FTP_HOST: ${{ secrets.NAMECHEAP_FTP_HOST }}
+      NAMECHEAP_FTP_PORT: ${{ secrets.NAMECHEAP_FTP_PORT }}
+      NAMECHEAP_FTP_USER: ${{ secrets.NAMECHEAP_FTP_USER }}
+      NAMECHEAP_FTP_PASS: ${{ secrets.NAMECHEAP_FTP_PASS }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      LABSTUDIO_ACCESS_CODE: ${{ secrets.LABSTUDIO_ACCESS_CODE }}
+      LABSTUDIO_BOOKINGS_ICAL_URL: ${{ secrets.LABSTUDIO_BOOKINGS_ICAL_URL }}
+      LABSTUDIO_SESSION_SECRET: ${{ secrets.LABSTUDIO_SESSION_SECRET }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      TOBY_AI_PROVIDER: ${{ secrets.TOBY_AI_PROVIDER }}
+      TOBY_CHAT_WRAPPER_URL: ${{ secrets.TOBY_CHAT_WRAPPER_URL }}
+      TOBY_MODEL: ${{ secrets.TOBY_MODEL }}
+      USDA_FDC_API_KEY: ${{ secrets.USDA_FDC_API_KEY }}
+      NEXT_PUBLIC_SITE_URL: https://app.labstudio.fit
+      SITE_URL: https://app.labstudio.fit
+      APP_BASE_URL: https://app.labstudio.fit
+      NAMECHEAP_ENV_FILE: ${{ github.workspace }}/labstudio-app/.deploy-env
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: labstudio-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check app
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Write deployment env
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const keys = [
+            'APP_BASE_URL',
+            'DATABASE_URL',
+            'LABSTUDIO_ACCESS_CODE',
+            'LABSTUDIO_BOOKINGS_ICAL_URL',
+            'LABSTUDIO_SESSION_SECRET',
+            'NEXT_PUBLIC_SITE_URL',
+            'OPENAI_API_KEY',
+            'SITE_URL',
+            'STRIPE_SECRET_KEY',
+            'TOBY_AI_PROVIDER',
+            'TOBY_CHAT_WRAPPER_URL',
+            'TOBY_MODEL',
+            'USDA_FDC_API_KEY',
+          ];
+          const lines = [];
+          for (const key of keys) {
+            const value = process.env[key];
+            if (value) {
+              lines.push(`${key}=${JSON.stringify(String(value).replace(/\n/g, '\\n'))}`);
+            }
+          }
+          fs.writeFileSync(process.env.NAMECHEAP_ENV_FILE, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Package Namecheap bundle
+        run: npm run package:namecheap
+
+      - name: Install lftp
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp
+
+      - name: Upload to Namecheap
+        shell: bash
+        run: |
+          set -euo pipefail
+          lftp -u "$NAMECHEAP_FTP_USER","$NAMECHEAP_FTP_PASS" -p "$NAMECHEAP_FTP_PORT" "$NAMECHEAP_FTP_HOST" <<'LFTP'
+          set cmd:fail-exit yes
+          set net:timeout 60
+          set net:max-retries 5
+          set net:reconnect-interval-base 5
+          set ftp:ssl-force true
+          set ftp:ssl-protect-data true
+          set ftp:passive-mode true
+          set ssl:verify-certificate no
+          set xfer:clobber true
+          lcd output/namecheap-deploy
+          mirror -R --parallel=2 --continue --only-newer --delete --no-perms --no-umask . /app.labstudio.fit
+          bye
+          LFTP
+
+      - name: Verify live API
+        run: |
+          curl --fail --show-error --location https://app.labstudio.fit/privacy >/dev/null
+          curl --fail --show-error --location https://app.labstudio.fit/support >/dev/null
+          curl --fail --show-error --location https://app.labstudio.fit/api/lab/services | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d); if(!j.ok || !Array.isArray(j.services)) process.exit(1); console.log('services', j.services.length);})"

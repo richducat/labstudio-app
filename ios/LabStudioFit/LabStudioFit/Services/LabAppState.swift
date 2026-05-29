@@ -1,0 +1,587 @@
+import Foundation
+import Observation
+import UIKit
+
+private struct LabErrorResponse: Decodable {
+    let ok: Bool?
+    let error: String?
+}
+
+private struct LoginResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let user: LabUser?
+    let profile: LabProfile?
+}
+
+private struct UserResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let user: LabUser?
+}
+
+private struct ProfileResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let onboardingComplete: Bool?
+    let profile: LabProfile?
+}
+
+private struct HomeResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let home: LabHome?
+}
+
+private struct ServicesResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let location: String?
+    let services: [LabBookableService]
+    let timeGroups: [LabTimeGroup]
+}
+
+private struct ShopResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let products: [LabShopProduct]
+}
+
+private struct CafeResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let items: [LabCafeItem]
+}
+
+private struct NutritionResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let today: NutritionDay?
+    let avg7: NutritionTotals?
+}
+
+private struct BookingResponse: Decodable {
+    struct Item: Decodable {
+        let id: String?
+        let title: String?
+        let time: String?
+        let scheduledAt: String?
+    }
+
+    let ok: Bool
+    let error: String?
+    let item: Item?
+}
+
+private struct CheckoutResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let url: String?
+}
+
+private struct TobyResponse: Decodable {
+    let reply: String?
+    let error: String?
+}
+
+private struct GenericResponse: Decodable {
+    let ok: Bool?
+    let error: String?
+}
+
+private enum LabAPIError: LocalizedError {
+    case unauthorized
+    case server(String)
+    case invalidURL
+    case invalidResponse
+
+    var errorDescription: String? {
+        switch self {
+        case .unauthorized:
+            "Sign in to continue."
+        case .server(let message):
+            message
+        case .invalidURL:
+            "Invalid API URL."
+        case .invalidResponse:
+            "The Lab Studio API returned an unreadable response."
+        }
+    }
+}
+
+@MainActor
+final class LabAPIClient {
+    let baseURL = URL(string: "https://app.labstudio.fit")!
+
+    private let session: URLSession
+    private let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return decoder
+    }()
+
+    init() {
+        let configuration = URLSessionConfiguration.default
+        configuration.httpCookieStorage = .shared
+        configuration.httpCookieAcceptPolicy = .always
+        configuration.httpShouldSetCookies = true
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        self.session = URLSession(configuration: configuration)
+    }
+
+    func get<T: Decodable>(_ path: String) async throws -> T {
+        try await request(path, method: "GET")
+    }
+
+    func post<T: Decodable>(_ path: String, json: [String: Any?] = [:]) async throws -> T {
+        try await request(path, method: "POST", json: json)
+    }
+
+    func delete<T: Decodable>(_ path: String) async throws -> T {
+        try await request(path, method: "DELETE")
+    }
+
+    func clearCookies() {
+        guard let cookies = HTTPCookieStorage.shared.cookies(for: baseURL) else { return }
+        cookies.forEach { HTTPCookieStorage.shared.deleteCookie($0) }
+    }
+
+    private func request<T: Decodable>(_ path: String, method: String, json: [String: Any?]? = nil) async throws -> T {
+        guard let url = URL(string: path, relativeTo: baseURL) else { throw LabAPIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "accept")
+        request.setValue("LabStudioFit-iOS/1.0", forHTTPHeaderField: "user-agent")
+
+        if let json {
+            request.setValue("application/json", forHTTPHeaderField: "content-type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: sanitize(json), options: [])
+        }
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw LabAPIError.invalidResponse }
+
+        if http.statusCode == 401 {
+            throw LabAPIError.unauthorized
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            let apiError = try? decoder.decode(LabErrorResponse.self, from: data)
+            throw LabAPIError.server(apiError?.error ?? "Request failed with status \(http.statusCode).")
+        }
+
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw LabAPIError.invalidResponse
+        }
+    }
+
+    private func sanitize(_ value: Any?) -> Any {
+        switch value {
+        case nil:
+            return NSNull()
+        case let dict as [String: Any?]:
+            return dict.reduce(into: [String: Any]()) { partial, pair in
+                partial[pair.key] = sanitize(pair.value)
+            }
+        case let array as [Any?]:
+            return array.map { sanitize($0) }
+        case let value?:
+            return value
+        }
+    }
+}
+
+@MainActor
+@Observable
+final class LabAppState {
+    var selectedTab: LabTab = .home
+    var isBootstrapping = true
+    var isLoading = false
+    var isAuthenticated = false
+    var errorMessage: String?
+    var successMessage: String?
+
+    var user: LabUser?
+    var profile: LabProfile?
+    var home: LabHome?
+    var services: [LabBookableService] = []
+    var timeGroups: [LabTimeGroup] = []
+    var location = "3280 Suntree Blvd, Melbourne, FL"
+    var shopProducts: [LabShopProduct] = []
+    var cafeItems: [LabCafeItem] = []
+    var nutrition: LabNutrition?
+    var cart: [LabCartLine] = []
+    var coachMessages: [ChatMessage] = [
+        .init(text: "I’m Toby. Sign in and I’ll use your Lab Studio profile, training logs, and nutrition data to help you stay on track.", isCoach: true)
+    ]
+
+    private let api = LabAPIClient()
+
+    var displayName: String {
+        profile?.displayName ?? user?.displayName ?? "Lab Member"
+    }
+
+    var xp: Int {
+        user?.xp ?? 0
+    }
+
+    var level: Int {
+        max(1, user?.level ?? 1)
+    }
+
+    var nextLevelXP: Int {
+        max(1_000, (level + 1) * 1_000)
+    }
+
+    var cartTotalCents: Int {
+        cart.reduce(0) { $0 + ($1.priceCents * $1.quantity) }
+    }
+
+    var cartCount: Int {
+        cart.reduce(0) { $0 + $1.quantity }
+    }
+
+    var bookingCalendar: [BookingEvent] {
+        home?.bookingCalendar ?? []
+    }
+
+    func bootstrap() async {
+        isBootstrapping = true
+        defer { isBootstrapping = false }
+
+        do {
+            try await refreshAll()
+            isAuthenticated = true
+        } catch LabAPIError.unauthorized {
+            isAuthenticated = false
+            user = nil
+            profile = nil
+            home = nil
+            await loadPublicCatalogs()
+        } catch {
+            errorMessage = error.localizedDescription
+            await loadPublicCatalogs()
+        }
+    }
+
+    func login(email: String, phone: String) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let response: LoginResponse = try await api.post("/api/lab/auth/login", json: [
+                "email": email,
+                "phone": phone,
+            ])
+            if !response.ok {
+                throw LabAPIError.server(response.error ?? "Unable to log in.")
+            }
+            user = response.user
+            profile = response.profile
+            isAuthenticated = true
+            coachMessages = [
+                .init(text: "You’re in. I’ll use your Lab Studio profile and current logs for training, nutrition, booking, and recovery guidance.", isCoach: true)
+            ]
+            try await refreshAll()
+        } catch {
+            errorMessage = error.localizedDescription
+            isAuthenticated = false
+        }
+    }
+
+    func logout() async {
+        _ = try? await api.post("/api/lab/auth/logout", json: [:]) as GenericResponse
+        api.clearCookies()
+        user = nil
+        profile = nil
+        home = nil
+        nutrition = nil
+        cart.removeAll()
+        isAuthenticated = false
+        selectedTab = .home
+        successMessage = "Signed out."
+    }
+
+    func refreshAll() async throws {
+        let userResponse: UserResponse = try await api.get("/api/lab/user")
+        let profileResponse: ProfileResponse = try await api.get("/api/lab/profile")
+        let homeResponse: HomeResponse = try await api.get("/api/lab/home")
+        let servicesResponse: ServicesResponse = try await api.get("/api/lab/services")
+        let shopResponse: ShopResponse = try await api.get("/api/lab/shop")
+        let cafeResponse: CafeResponse = try await api.get("/api/lab/cafe")
+        let nutritionResponse: NutritionResponse = try await api.get("/api/lab/nutrition")
+
+        user = userResponse.user
+        profile = profileResponse.profile ?? homeResponse.home?.profile
+        home = homeResponse.home
+        services = servicesResponse.services
+        timeGroups = servicesResponse.timeGroups
+        location = servicesResponse.location ?? location
+        shopProducts = shopResponse.products
+        cafeItems = cafeResponse.items
+        nutrition = LabNutrition(today: nutritionResponse.today, avg7: nutritionResponse.avg7)
+        isAuthenticated = true
+    }
+
+    func refreshAfterMutation(success: String? = nil) async {
+        do {
+            try await refreshAll()
+            successMessage = success
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func loadPublicCatalogs() async {
+        do {
+            let servicesResponse: ServicesResponse = try await api.get("/api/lab/services")
+            let shopResponse: ShopResponse = try await api.get("/api/lab/shop")
+            let cafeResponse: CafeResponse = try await api.get("/api/lab/cafe")
+            services = servicesResponse.services
+            timeGroups = servicesResponse.timeGroups
+            location = servicesResponse.location ?? location
+            shopProducts = shopResponse.products
+            cafeItems = cafeResponse.items
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func book(service: LabBookableService, day: String, time: String) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let response: BookingResponse = try await api.post("/api/lab/agenda", json: [
+                "day": day,
+                "timeLabel": time,
+                "title": service.name,
+                "type": "Session",
+                "action": "book",
+                "durationMin": service.durationMinutes,
+                "details": [
+                    "description": service.desc,
+                    "location": location,
+                    "price": service.price,
+                    "serviceId": service.id,
+                ],
+            ])
+            if !response.ok {
+                throw LabAPIError.server(response.error ?? "Unable to book that session.")
+            }
+            await refreshAfterMutation(success: "Session booked for \(day) at \(time).")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func logWorkout(kind: String = "workout", durationMin: Int = 45, note: String = "Logged from native iOS") async {
+        await mutate("/api/lab/workouts", body: [
+            "kind": kind,
+            "durationMin": durationMin,
+            "note": note,
+        ], success: "Workout logged.")
+    }
+
+    func logNutrition(name: String, protein: Int, carbs: Int, fat: Int) async {
+        await mutate("/api/lab/nutrition", body: [
+            "name": name,
+            "p": protein,
+            "c": carbs,
+            "f": fat,
+            "time": "iOS",
+        ], success: "Nutrition logged.")
+    }
+
+    func saveDailyStats(weight: String, bodyFat: String, restingHr: String, note: String) async {
+        await mutate("/api/lab/daily-stats", body: [
+            "weight": weight.nilIfBlank,
+            "bodyFat": bodyFat.nilIfBlank,
+            "restingHr": restingHr.nilIfBlank,
+            "note": note.nilIfBlank,
+        ], success: "Daily stats saved.")
+    }
+
+    func saveProfile(firstName: String, lastName: String, email: String, phone: String, goal: String, activityLevel: String) async {
+        await mutate("/api/lab/profile", body: [
+            "first_name": firstName,
+            "last_name": lastName,
+            "email": email,
+            "phone": phone,
+            "goal": goal,
+            "activity_level": activityLevel,
+            "schedule_days": profile?.scheduleDays ?? [],
+        ], success: "Profile saved.")
+    }
+
+    func uploadProgressPhoto(data: Data) async {
+        guard let imageData = compressedJPEGData(from: data), imageData.count < 1_100_000 else {
+            errorMessage = "That photo is too large. Choose a smaller image."
+            return
+        }
+
+        await mutate("/api/lab/progress-photos", body: [
+            "imageDataUrl": "data:image/jpeg;base64,\(imageData.base64EncodedString())",
+            "note": "Uploaded from native iOS",
+        ], success: "Progress photo uploaded.")
+    }
+
+    func deleteAccount() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            _ = try await api.delete("/api/lab/account") as GenericResponse
+            api.clearCookies()
+            user = nil
+            profile = nil
+            home = nil
+            nutrition = nil
+            cart.removeAll()
+            isAuthenticated = false
+            selectedTab = .home
+            successMessage = "Account deleted."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func sendCoachMessage(_ text: String) async {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+
+        coachMessages.append(.init(text: clean, isCoach: false))
+
+        do {
+            let response: TobyResponse = try await api.post("/api/toby/chat", json: ["message": clean])
+            if let error = response.error {
+                throw LabAPIError.server(error)
+            }
+            coachMessages.append(.init(text: response.reply ?? "I’m here, but I didn’t get a clean response back. Try that again.", isCoach: true))
+        } catch {
+            coachMessages.append(.init(text: error.localizedDescription, isCoach: true))
+        }
+    }
+
+    func addToCart(product: LabShopProduct) {
+        let priceId = product.stripePriceId
+        let checkoutURL = product.checkoutUrl.flatMap(URL.init(string:))
+        upsertCartLine(
+            id: "shop:\(product.slug)",
+            name: product.name,
+            priceCents: product.priceCents ?? 0,
+            priceId: priceId,
+            checkoutURL: checkoutURL
+        )
+    }
+
+    func addToCart(cafeItem: LabCafeItem) {
+        upsertCartLine(
+            id: "cafe:\(cafeItem.slug)",
+            name: cafeItem.name,
+            priceCents: cafeItem.priceCents,
+            priceId: cafeItem.stripePriceId ?? "cafe:\(cafeItem.slug)",
+            checkoutURL: cafeItem.productUrl.flatMap(URL.init(string:))
+        )
+    }
+
+    func clearCart() {
+        cart.removeAll()
+    }
+
+    func checkoutCart() async -> URL? {
+        guard !cart.isEmpty else { return nil }
+        errorMessage = nil
+
+        if cart.count == 1, let url = cart[0].checkoutURL, cart[0].priceId == nil {
+            cart.removeAll()
+            return url
+        }
+
+        let lines = cart.compactMap { item -> [String: Any]? in
+            guard let priceId = item.priceId else { return nil }
+            return ["price_id": priceId, "quantity": item.quantity]
+        }
+
+        guard lines.count == cart.count else {
+            errorMessage = "Checkout these direct-link items one at a time."
+            return nil
+        }
+
+        do {
+            let response: CheckoutResponse = try await api.post("/api/lab/shop/checkout-cart", json: ["lines": lines])
+            guard response.ok, let rawURL = response.url, let url = URL(string: rawURL) else {
+                throw LabAPIError.server(response.error ?? "Unable to start checkout.")
+            }
+            cart.removeAll()
+            return url
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    private func mutate(_ path: String, body: [String: Any?], success: String) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let response: GenericResponse = try await api.post(path, json: body)
+            if let ok = response.ok, !ok {
+                throw LabAPIError.server(response.error ?? "Request failed.")
+            }
+            await refreshAfterMutation(success: success)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func upsertCartLine(id: String, name: String, priceCents: Int, priceId: String?, checkoutURL: URL?) {
+        if let index = cart.firstIndex(where: { $0.id == id }) {
+            cart[index].quantity += 1
+        } else {
+            cart.append(.init(id: id, name: name, priceCents: priceCents, priceId: priceId, checkoutURL: checkoutURL, quantity: 1))
+        }
+        successMessage = "\(name) added to cart."
+    }
+
+    private func compressedJPEGData(from data: Data) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        let maxSide: CGFloat = 1_200
+        let largestSide = max(image.size.width, image.size.height)
+        let scale = largestSide > maxSide ? maxSide / largestSide : 1
+        let targetSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        let resized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
+        return resized.jpegData(compressionQuality: 0.58)
+    }
+}
+
+enum LabTab: String, CaseIterable, Identifiable {
+    case home = "Home"
+    case train = "Train"
+    case market = "Market"
+    case coach = "Coach"
+    case profile = "Profile"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .home: "house.fill"
+        case .train: "dumbbell.fill"
+        case .market: "bag.fill"
+        case .coach: "bubble.left.and.bubble.right.fill"
+        case .profile: "person.crop.circle.fill"
+        }
+    }
+}

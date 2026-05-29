@@ -114,7 +114,9 @@ function sql() {
   return neon(url);
 }
 
-export async function ensureSchema() {
+let schemaReadyPromise: Promise<void> | null = null;
+
+async function ensureSchemaInner() {
   const q = sql();
   await q`
     create table if not exists lab_users (
@@ -307,6 +309,15 @@ export async function ensureSchema() {
   `;
   await q`create index if not exists lab_game_scores_user_game_idx on lab_game_scores(user_id, game_id);`;
   await q`create index if not exists lab_game_scores_high_scores_idx on lab_game_scores(game_id, score desc);`;
+}
+
+export async function ensureSchema() {
+  schemaReadyPromise ??= ensureSchemaInner().catch((error) => {
+    schemaReadyPromise = null;
+    throw error;
+  });
+
+  await schemaReadyPromise;
 }
 
 
@@ -515,4 +526,10 @@ export async function updateUserDisplayName(userId: string, displayName: string 
   await ensureSchema();
   const q = sql();
   await q`update lab_users set display_name = ${displayName} where id = ${userId};`;
+}
+
+export async function deleteUserAccount(userId: string): Promise<void> {
+  await ensureSchema();
+  const q = sql();
+  await q`delete from lab_users where id = ${userId};`;
 }

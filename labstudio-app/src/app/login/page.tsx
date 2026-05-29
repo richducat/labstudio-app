@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Activity, ArrowRight, HeartPulse, LogIn, Mail, Phone, Sparkles } from 'lucide-react';
+import { Activity, HeartPulse, LogIn, Mail, Phone, Sparkles } from 'lucide-react';
 import { dbConfigured, findOrCreateUserByContact } from '@/lib/db';
 import { createLabstudioSessionToken, getSessionSecret, SESSION_COOKIE_MAX_AGE_SECONDS, verifyLabstudioSessionToken } from '@/lib/session';
+import LoginSubmitButton from './LoginSubmitButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -197,13 +198,7 @@ export default async function LoginPage({
                     <span className="font-semibold text-violet-300">Same member profile</span>
                   </div>
 
-                  <button
-                    type="submit"
-                    className="mt-2 inline-flex items-center justify-center gap-2 rounded-[1.4rem] bg-[linear-gradient(135deg,_#7c3aed_0%,_#a21caf_100%)] px-4 py-4 text-sm font-black uppercase tracking-[0.22em] text-white shadow-[0_18px_34px_rgba(124,58,237,0.34)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_42px_rgba(124,58,237,0.42)]"
-                  >
-                    Enter Lab Studio
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
+                  <LoginSubmitButton />
                 </form>
 
                 <div className="mt-6 flex items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">

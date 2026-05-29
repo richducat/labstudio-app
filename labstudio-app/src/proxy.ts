@@ -28,8 +28,15 @@ function clearAuthCookies(res: NextResponse, req: NextRequest) {
   res.cookies.set({ name: SESSION_COOKIE, value: '', httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 0 });
 }
 
+const PUBLIC_LAB_API_PATHS = new Set([
+  '/api/lab/auth/login',
+  '/api/lab/cafe',
+  '/api/lab/services',
+  '/api/lab/shop',
+]);
+
 function isPublicApiPath(pathname: string) {
-  return pathname === '/api/lab/shop' || pathname === '/api/lab/cafe';
+  return PUBLIC_LAB_API_PATHS.has(pathname);
 }
 
 function unauthorized(req: NextRequest) {

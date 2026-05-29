@@ -5,7 +5,10 @@
     "subtitle": "Training and coaching",
     "bundleId": "fit.labstudio.app",
     "sku": "fit.labstudio.app",
-    "platforms": ["iOS", "iPadOS"],
+    "platforms": [
+      "iOS",
+      "iPadOS"
+    ],
     "primaryCategory": "Health & Fitness",
     "secondaryCategory": "Lifestyle",
     "copyright": "2026 Lab Studio Fit",
@@ -66,18 +69,20 @@
         "publicLinkEnabled": true,
         "publicLinkLimitEnabled": false,
         "publicLink": "https://testflight.apple.com/join/rtpbMJhP",
-        "buildIds": ["de50b6a7-b90b-4a1b-a008-91735a6d0fb8"]
+        "buildIds": [
+          "de50b6a7-b90b-4a1b-a008-91735a6d0fb8"
+        ]
       }
     },
     "latestNativeUpload": {
-      "buildNumber": "2026052902",
+      "buildNumber": "2026052903",
       "version": "1.0",
       "bundleId": "fit.labstudio.app",
-      "deliveryUuid": "c949b791-9552-486e-b59d-722b0d40a9ba",
-      "uploadedAt": "2026-05-29T05:53:08Z",
+      "deliveryUuid": "035bd7e6-b5ff-47c5-b9c6-fd8072d0d3c6",
+      "uploadedAt": "2026-05-29T07:18:45Z",
       "state": "UPLOADED_PACKAGE_PROCESSING",
       "tool": "xcodebuild -exportArchive",
-      "archivePath": "build/LabStudioFit-1.0-2026052902.xcarchive"
+      "archivePath": "build/LabStudioFit-1.0-2026052903.xcarchive"
     }
   },
   "version": {
@@ -87,7 +92,14 @@
     "phasedRelease": false,
     "promotionalText": "Members-only training, nutrition, booking, progress tracking, and Toby coaching for Lab Studio.",
     "description": "Lab Studio is the members-only companion for training at Lab Studio Fit.\n\nMembers can sign in with an email address or phone number, complete their profile, track workouts, log nutrition, review progress photos and strength PRs, book sessions, review habits, and use Toby coaching support built around Lab Studio training knowledge.\n\nPurchases available in the app are for in-person gym services, physical products, or facility-based memberships provided by Lab Studio.",
-    "keywords": ["fitness", "training", "gym", "coach", "nutrition", "workout"],
+    "keywords": [
+      "fitness",
+      "training",
+      "gym",
+      "coach",
+      "nutrition",
+      "workout"
+    ],
     "whatsNew": "Native SwiftUI release with production Lab Studio API login, Home, Train booking, Market checkout, Toby coaching, progress photo upload, profile management, and account deletion."
   },
   "urls": {
@@ -159,12 +171,19 @@
   },
   "assets": {
     "appIconSource": "../../../ios/LabStudioFit/LabStudioFit/Resources.xcassets/AppIcon.appiconset/AppIcon-512@2x.png",
-    "iphoneScreenshots": ["screenshots/native/iphone-17-pro-login.png"],
-    "ipadScreenshots": ["screenshots/native/ipad-pro-13-login.png"],
+    "iphoneScreenshots": [
+      "screenshots/native/iphone-17-pro-login.png"
+    ],
+    "ipadScreenshots": [
+      "screenshots/native/ipad-pro-13-login.png"
+    ],
     "appPreviewVideos": []
   },
   "verification": {
-    "testedDevices": ["iPhone 17 Pro simulator on iOS 26.2", "iPad Pro 13-inch simulator on iOS 26.2"],
+    "testedDevices": [
+      "iPhone 17 Pro simulator on iOS 26.2",
+      "iPad Pro 13-inch simulator on iOS 26.2"
+    ],
     "testedFlows": [
       "native SwiftUI iOS 26.2 simulator build, install, and launch",
       "standalone Namecheap bundle boot",
@@ -172,8 +191,10 @@
       "privacy, support, terms, and account deletion pages render",
       "account deletion endpoint added and protected by member session middleware",
       "native app API-backed login, home, booking, workout, nutrition, progress photo, market, Toby, profile, logout, and account deletion flows wired to https://app.labstudio.fit",
-      "App Store Connect upload succeeded for native build 2026052902; Apple reported the uploaded package is processing",
+      "App Store Connect upload succeeded for native build 2026052903; Apple reported the uploaded package is processing",
       "App Store Connect app record created for Apple ID 6763787815",
+      "Namecheap/cPanel production deploy passed through GitHub Actions run 26625865004 after switching to the cPanel SFTP app root.",
+      "Production native API smoke test passed: /api/lab/shop catalog, /api/lab/services, /api/lab/auth/login cookies, /api/lab/user session lookup, and /api/lab/auth/logout.",
       "App Store Connect age rating completed as 12+",
       "App Store Connect App Privacy details published",
       "App Store Connect free app pricing configured for USA base territory",
@@ -184,8 +205,7 @@
     ],
     "knownRisks": [
       "App Store Connect trader status should still be reviewed before release if Apple requests business compliance confirmation.",
-      "Native login screenshots were captured from iPhone 17 Pro and iPad Pro 13-inch simulators for build 2026052902; additional in-app screenshots can be added if Apple requires more submission assets.",
-      "Build 2026052902 must finish Apple processing before it can be selected for TestFlight or App Review.",
+      "Build 2026052903 must finish Apple processing before it can be selected for TestFlight or App Review.",
       "External TestFlight testers cannot install from the public link until Apple approves Beta App Review for build 2026042401."
     ]
   }

@@ -170,11 +170,34 @@ jobs:
           set xfer:clobber true
           lcd output/namecheap-targeted
           mirror -R --parallel=1 --continue --only-newer --no-perms --no-umask . /app.labstudio.fit
+          put -O /app.labstudio.fit/tmp tmp/restart.txt
           bye
           LFTP
 
       - name: Verify live API
         run: |
-          curl --fail --show-error --location https://app.labstudio.fit/privacy >/dev/null
-          curl --fail --show-error --location https://app.labstudio.fit/support >/dev/null
-          curl --fail --show-error --location https://app.labstudio.fit/api/lab/services | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d); if(!j.ok || !Array.isArray(j.services)) process.exit(1); console.log('services', j.services.length);})"
+          curl --fail --show-error --location "https://app.labstudio.fit/privacy?deploy=${GITHUB_RUN_ID}" >/dev/null
+          curl --fail --show-error --location "https://app.labstudio.fit/support?deploy=${GITHUB_RUN_ID}" >/dev/null
+          node <<'NODE'
+          const url = `https://app.labstudio.fit/api/lab/services?deploy=${process.env.GITHUB_RUN_ID}`;
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+          for (let attempt = 1; attempt <= 30; attempt += 1) {
+            const response = await fetch(url, { cache: 'no-store' });
+            const text = await response.text();
+            let parsed = null;
+            try {
+              parsed = JSON.parse(text);
+            } catch {}
+
+            if (response.ok && parsed?.ok && Array.isArray(parsed.services)) {
+              console.log(`services ${parsed.services.length}`);
+              process.exit(0);
+            }
+
+            console.log(`Waiting for Passenger restart, attempt ${attempt}/30, status ${response.status}`);
+            await sleep(10000);
+          }
+
+          throw new Error('Live /api/lab/services did not expose public services after restart window.');
+          NODE

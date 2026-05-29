@@ -23,6 +23,7 @@ struct TrainView: View {
             }
             .refreshable { await state.refreshAfterMutation() }
             .navigationTitle("Train")
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear {
                 selectedService = selectedService ?? state.services.first
                 selectedDay = selectedDay ?? dateOptions.first?.value
@@ -35,8 +36,9 @@ struct TrainView: View {
         PremiumCard {
             VStack(alignment: .leading, spacing: 10) {
                 Text("BOOKING")
-                    .font(.caption.weight(.black))
-                    .foregroundStyle(LabTheme.orange)
+                    .font(LabTheme.eyebrow())
+                    .tracking(2.6)
+                    .foregroundStyle(LabTheme.violetLight)
                 Text("Book sessions against the live Lab Studio calendar.")
                     .font(.title2.weight(.black))
                     .foregroundStyle(.white)
@@ -64,8 +66,9 @@ struct TrainView: View {
                                     .foregroundStyle(selectedService?.id == service.id ? LabTheme.green : LabTheme.muted)
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(service.type.uppercased())
-                                        .font(.caption2.weight(.black))
-                                        .foregroundStyle(LabTheme.orange)
+                                        .font(LabTheme.eyebrow())
+                                        .tracking(1.8)
+                                        .foregroundStyle(LabTheme.violetLight)
                                     Text(service.name)
                                         .font(.title3.weight(.black))
                                         .foregroundStyle(.white)
@@ -123,7 +126,7 @@ struct TrainView: View {
                         }
                     }
 
-                    LabButton(title: state.isLoading ? "Booking" : "Book Session", icon: "calendar.badge.plus", tint: LabTheme.blue, isDisabled: !canBook || state.isLoading) {
+                    LabButton(title: state.isLoading ? "Booking" : "Book Session", icon: "calendar.badge.plus", tint: LabTheme.violet, isDisabled: !canBook || state.isLoading) {
                         guard let selectedService, let selectedDay, let selectedTime else { return }
                         Task { await state.book(service: selectedService, day: selectedDay, time: selectedTime) }
                     }
@@ -153,7 +156,7 @@ struct TrainView: View {
                             Spacer()
                             Text(event.source == "google_calendar" ? "Google" : "Lab")
                                 .font(.caption2.weight(.black))
-                                .foregroundStyle(event.source == "google_calendar" ? LabTheme.blue : LabTheme.orange)
+                                .foregroundStyle(event.source == "google_calendar" ? LabTheme.blue : LabTheme.violetLight)
                         }
                     }
                 }
@@ -172,8 +175,8 @@ struct TrainView: View {
                 .foregroundStyle(disabled ? LabTheme.muted.opacity(0.5) : active ? .white : LabTheme.muted)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(active ? LabTheme.orange.opacity(0.30) : LabTheme.elevated, in: Capsule())
-                .overlay(Capsule().stroke(active ? LabTheme.orange.opacity(0.7) : .white.opacity(0.08), lineWidth: 1))
+                .background(active ? LabTheme.violet.opacity(0.30) : LabTheme.elevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(active ? LabTheme.violet.opacity(0.7) : .white.opacity(0.08), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .disabled(disabled)

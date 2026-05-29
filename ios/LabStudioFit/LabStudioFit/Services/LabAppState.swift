@@ -586,11 +586,21 @@ enum LabTab: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .home: "house.fill"
-        case .train: "dumbbell.fill"
+        case .home: "waveform.path.ecg"
+        case .train: "calendar"
         case .market: "bag.fill"
-        case .coach: "bubble.left.and.bubble.right.fill"
-        case .profile: "person.crop.circle.fill"
+        case .coach: "message.fill"
+        case .profile: "person.fill"
+        }
+    }
+
+    var navLabel: String {
+        switch self {
+        case .home: "Dash"
+        case .train: "Book"
+        case .market: "Shop"
+        case .coach: "Coach"
+        case .profile: "Me"
         }
     }
 }

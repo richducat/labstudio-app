@@ -1,25 +1,43 @@
 import SwiftUI
 
 enum LabTheme {
-    static let background = Color(red: 0.03, green: 0.03, blue: 0.04)
-    static let surface = Color(red: 0.08, green: 0.08, blue: 0.10)
-    static let elevated = Color(red: 0.12, green: 0.12, blue: 0.15)
-    static let blue = Color(red: 0.00, green: 0.48, blue: 1.00)
-    static let orange = Color(red: 1.00, green: 0.39, blue: 0.10)
-    static let green = Color(red: 0.13, green: 0.77, blue: 0.37)
+    static let background = Color(red: 0.035, green: 0.035, blue: 0.043)
+    static let chrome = Color(red: 0.035, green: 0.035, blue: 0.043)
+    static let surface = Color(red: 0.095, green: 0.095, blue: 0.106)
+    static let elevated = Color(red: 0.15, green: 0.15, blue: 0.165)
+    static let violet = Color(red: 0.486, green: 0.227, blue: 0.929)
+    static let violetLight = Color(red: 0.545, green: 0.361, blue: 0.965)
+    static let emerald = Color(red: 0.063, green: 0.725, blue: 0.506)
+    static let blue = Color(red: 0.024, green: 0.714, blue: 0.831)
+    static let orange = violet
+    static let green = emerald
     static let red = Color(red: 0.96, green: 0.22, blue: 0.28)
-    static let muted = Color(red: 0.68, green: 0.68, blue: 0.72)
+    static let muted = Color(red: 0.45, green: 0.45, blue: 0.50)
+    static let secondaryText = Color(red: 0.68, green: 0.68, blue: 0.72)
+    static let border = Color.white.opacity(0.05)
 
     static let heroGradient = LinearGradient(
-        colors: [LabTheme.blue.opacity(0.40), LabTheme.orange.opacity(0.28), .clear],
+        colors: [LabTheme.violet.opacity(0.20), LabTheme.emerald.opacity(0.10), .clear],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
+
+    static func eyebrow(_ color: Color = LabTheme.violetLight) -> Font {
+        .system(size: 10, weight: .black, design: .default)
+    }
+
+    static func sectionTitle() -> Font {
+        .system(size: 24, weight: .black, design: .default).italic()
+    }
+
+    static func mono(_ size: CGFloat = 14, weight: Font.Weight = .bold) -> Font {
+        .system(size: size, weight: weight, design: .monospaced)
+    }
 }
 
 struct PremiumCard<Content: View>: View {
-    var padding: CGFloat = 18
-    var radius: CGFloat = 28
+    var padding: CGFloat = 16
+    var radius: CGFloat = 16
     var interactive = false
     @ViewBuilder let content: Content
 
@@ -30,23 +48,22 @@ struct PremiumCard<Content: View>: View {
             if #available(iOS 26.0, *) {
                 content
                     .padding(padding)
-                    .background(LabTheme.surface.opacity(0.34), in: shape)
-                    .glassEffect(.regular.tint(.white.opacity(0.04)).interactive(interactive), in: .rect(cornerRadius: radius))
+                    .background(LabTheme.surface, in: shape)
+                    .glassEffect(.regular.tint(.white.opacity(0.015)).interactive(interactive), in: .rect(cornerRadius: radius))
             } else {
                 content
                     .padding(padding)
-                    .background(.ultraThinMaterial, in: shape)
+                    .background(LabTheme.surface, in: shape)
             }
         }
-        .overlay(shape.stroke(.white.opacity(0.10), lineWidth: 1))
-        .shadow(color: .black.opacity(0.35), radius: 24, x: 0, y: 18)
+        .overlay(shape.stroke(LabTheme.border, lineWidth: 1))
     }
 }
 
 struct LabButton: View {
     let title: String
     var icon: String = "arrow.right"
-    var tint: Color = LabTheme.orange
+    var tint: Color = LabTheme.violet
     var isDisabled = false
     var action: () -> Void
 
@@ -62,9 +79,9 @@ struct LabButton: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(tint.gradient, in: Capsule(style: .continuous))
-            .shadow(color: tint.opacity(isDisabled ? 0 : 0.35), radius: 18, x: 0, y: 10)
+            .padding(.vertical, 14)
+            .background(tint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .shadow(color: tint.opacity(isDisabled ? 0 : 0.28), radius: 16, x: 0, y: 8)
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
@@ -83,16 +100,17 @@ struct MetricPill: View {
             Image(systemName: icon)
                 .font(.headline.weight(.bold))
                 .foregroundStyle(tint)
-                .frame(width: 38, height: 38)
-                .background(tint.opacity(0.16), in: Circle())
+                .frame(width: 42, height: 42)
+                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(title.uppercased())
-                    .font(.caption2.weight(.black))
+                    .font(LabTheme.eyebrow(LabTheme.muted))
+                    .tracking(1.7)
                     .foregroundStyle(LabTheme.muted)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Text(value)
-                    .font(.headline.weight(.black))
+                    .font(LabTheme.mono(16, weight: .black))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
@@ -107,9 +125,12 @@ struct SectionHeader: View {
     let icon: String
 
     var body: some View {
-        HStack {
-            Label(title, systemImage: icon)
-                .font(.title3.weight(.black))
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.headline.weight(.black))
+                .foregroundStyle(LabTheme.violetLight)
+            Text(title.uppercased())
+                .font(LabTheme.sectionTitle())
                 .foregroundStyle(.white)
             Spacer(minLength: 0)
         }
@@ -126,7 +147,7 @@ struct EmptyLabState: View {
             VStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.largeTitle.weight(.black))
-                    .foregroundStyle(LabTheme.blue)
+                    .foregroundStyle(LabTheme.violetLight)
                 Text(title)
                     .font(.headline.weight(.black))
                     .foregroundStyle(.white)

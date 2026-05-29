@@ -18,7 +18,7 @@ struct CoachView: View {
                             if sending {
                                 HStack {
                                     ProgressView()
-                                        .tint(LabTheme.orange)
+                                        .tint(LabTheme.violet)
                                     Text("Toby is reading your Lab data…")
                                         .font(.caption.weight(.bold))
                                         .foregroundStyle(LabTheme.muted)
@@ -38,6 +38,7 @@ struct CoachView: View {
                 composer
             }
             .navigationTitle("Toby")
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -46,9 +47,9 @@ struct CoachView: View {
             HStack(spacing: 14) {
                 Image(systemName: "brain.head.profile")
                     .font(.largeTitle.weight(.black))
-                    .foregroundStyle(LabTheme.blue)
+                    .foregroundStyle(LabTheme.violetLight)
                     .frame(width: 58, height: 58)
-                    .background(LabTheme.blue.opacity(0.15), in: Circle())
+                    .background(LabTheme.violet.opacity(0.15), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Toby is online")
                         .font(.title3.weight(.black))
@@ -69,7 +70,7 @@ struct CoachView: View {
                 .font(.body.weight(.medium))
                 .foregroundStyle(.white)
                 .padding(14)
-                .background(message.isCoach ? LabTheme.elevated : LabTheme.blue, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .background(message.isCoach ? LabTheme.elevated : LabTheme.violet, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             if message.isCoach { Spacer(minLength: 48) }
         }
     }
@@ -81,7 +82,7 @@ struct CoachView: View {
                 .foregroundStyle(.white)
                 .lineLimit(1...4)
                 .padding(14)
-                .background(LabTheme.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .background(LabTheme.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             Button {
                 let message = draft
                 draft = ""
@@ -95,12 +96,17 @@ struct CoachView: View {
                     .font(.headline.weight(.black))
                     .foregroundStyle(.white)
                     .frame(width: 46, height: 46)
-                    .background(LabTheme.orange.gradient, in: Circle())
+                    .background(LabTheme.violet, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .disabled(sending || draft.nilIfBlank == nil)
             .opacity(sending || draft.nilIfBlank == nil ? 0.5 : 1)
         }
         .padding(16)
-        .background(.ultraThinMaterial)
+        .background(LabTheme.chrome)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(.white.opacity(0.06))
+                .frame(height: 1)
+        }
     }
 }

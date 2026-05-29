@@ -159,17 +159,59 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          candidates=()
+          expected_marker="$(node -p 'require("./output/namecheap-targeted/DEPLOY_INFO.json").packagedAt')"
+
+          candidates=(
+            "app.labstudio.fit"
+            "/app.labstudio.fit"
+            "public_html/app.labstudio.fit"
+            "/public_html/app.labstudio.fit"
+          )
           if [[ -n "${NAMECHEAP_REMOTE_ABS_ROOT:-}" ]]; then
             candidates+=("$NAMECHEAP_REMOTE_ABS_ROOT")
           fi
-          candidates+=("/app.labstudio.fit" "app.labstudio.fit")
 
-          uploaded=0
+          live_root=""
           for remote_root in "${candidates[@]}"; do
             [[ -n "$remote_root" ]] || continue
-            echo "Trying Namecheap upload target with ${#remote_root} characters"
-            if lftp -u "$NAMECHEAP_FTP_USER","$NAMECHEAP_FTP_PASS" -p "$NAMECHEAP_FTP_PORT" "$NAMECHEAP_FTP_HOST" <<LFTP
+            echo "Probing Namecheap upload target with ${#remote_root} characters"
+            if ! lftp -u "$NAMECHEAP_FTP_USER","$NAMECHEAP_FTP_PASS" -p "$NAMECHEAP_FTP_PORT" "$NAMECHEAP_FTP_HOST" <<LFTP
+          set cmd:fail-exit yes
+          set net:timeout 60
+          set net:max-retries 3
+          set net:reconnect-interval-base 5
+          set ftp:ssl-force true
+          set ftp:ssl-protect-data true
+          set ftp:passive-mode true
+          set ssl:verify-certificate no
+          set xfer:clobber true
+          mkdir -p "$remote_root/tmp"
+          put -O "$remote_root" output/namecheap-targeted/DEPLOY_INFO.json
+          put -O "$remote_root/tmp" output/namecheap-targeted/tmp/restart.txt
+          bye
+          LFTP
+            then
+              continue
+            fi
+
+            live_marker="$(
+              curl --silent --show-error --max-time 20 --location "https://app.labstudio.fit/DEPLOY_INFO.json?probe=${GITHUB_RUN_ID}" |
+                node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{try{console.log(JSON.parse(s).packagedAt||'')}catch{console.log('')}})"
+            )"
+
+            if [[ "$live_marker" == "$expected_marker" ]]; then
+              live_root="$remote_root"
+              break
+            fi
+          done
+
+          if [[ -z "$live_root" ]]; then
+            echo "No Namecheap upload target updated the live DEPLOY_INFO marker." >&2
+            exit 1
+          fi
+
+          echo "Live Namecheap root selected with ${#live_root} characters"
+          lftp -u "$NAMECHEAP_FTP_USER","$NAMECHEAP_FTP_PASS" -p "$NAMECHEAP_FTP_PORT" "$NAMECHEAP_FTP_HOST" <<LFTP
           set cmd:fail-exit yes
           set net:timeout 60
           set net:max-retries 5
@@ -181,22 +223,12 @@ jobs:
           set xfer:clobber true
           set mirror:overwrite true
           lcd output/namecheap-targeted
-          mkdir -p "$remote_root/tmp"
-          mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$remote_root"
-          put -O "$remote_root/tmp" tmp/restart.txt
-          cat "$remote_root/DEPLOY_INFO.json"
+          mkdir -p "$live_root/tmp"
+          mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$live_root"
+          put -O "$live_root/tmp" tmp/restart.txt
+          cat "$live_root/DEPLOY_INFO.json"
           bye
           LFTP
-            then
-              uploaded=1
-              break
-            fi
-          done
-
-          if [[ "$uploaded" != "1" ]]; then
-            echo "No Namecheap upload target accepted the bundle." >&2
-            exit 1
-          fi
 
       - name: Verify live API
         run: |

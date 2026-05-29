@@ -185,7 +185,9 @@ jobs:
           set ftp:passive-mode true
           set ssl:verify-certificate no
           set xfer:clobber true
-          mkdir -p "$remote_root/tmp"
+          set cmd:fail-exit no
+          mkdir "$remote_root/tmp"
+          set cmd:fail-exit yes
           put -O "$remote_root" output/namecheap-targeted/DEPLOY_INFO.json
           put -O "$remote_root/tmp" output/namecheap-targeted/tmp/restart.txt
           bye
@@ -223,7 +225,9 @@ jobs:
           set xfer:clobber true
           set mirror:overwrite true
           lcd output/namecheap-targeted
-          mkdir -p "$live_root/tmp"
+          set cmd:fail-exit no
+          mkdir "$live_root/tmp"
+          set cmd:fail-exit yes
           mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$live_root"
           put -O "$live_root/tmp" tmp/restart.txt
           cat "$live_root/DEPLOY_INFO.json"

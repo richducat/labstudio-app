@@ -229,7 +229,10 @@
       "Native Toby stress test found and fixed compact iPhone composer overlap with the floating tab bar; post-fix text entry and send button remained on the Coach tab.",
       "Native runtime and OS logs after Release simulator launch showed no app crash output.",
       "Signed Release archive succeeded for build 2026060101 using team WN3K69XEP4 and bundle ID fit.labstudio.app.",
-      "App Store Connect upload succeeded for native build 2026060101; Apple reported the uploaded package is processing."
+      "App Store Connect upload succeeded for native build 2026060101; Apple reported the uploaded package is processing.",
+      "Production Namecheap deploy passed through GitHub Actions run 26781410091 after Toby fallback route update.",
+      "Live Toby API smoke test passed for reviewer+labstudio@labstudio.fit: /api/toby/chat returned HTTP 200 with provider fallback instead of raw OPENAI_API_KEY error.",
+      "Native iPhone 16 Pro iOS 18.2 simulator sent Recovery today against production after deploy and rendered fallback recovery guidance in the Toby transcript."
     ],
     "knownRisks": [
       "App Store Connect trader status should still be reviewed before release if Apple requests business compliance confirmation.",

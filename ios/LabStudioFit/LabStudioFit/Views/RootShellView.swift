@@ -36,8 +36,10 @@ struct RootShellView: View {
                     switch state.selectedTab {
                     case .home: HomeView()
                     case .train: TrainView()
+                    case .games: GamesView()
                     case .market: MarketView()
                     case .coach: CoachView()
+                    case .social: RankView()
                     case .profile: ProfileView()
                     }
                 }
@@ -258,17 +260,17 @@ private struct PremiumTabBar: View {
             Rectangle()
                 .fill(.white.opacity(0.10))
                 .frame(height: 1)
-            HStack(alignment: .bottom, spacing: 4) {
-                ForEach([LabTab.home, .train], id: \.id) { tab in
+            HStack(alignment: .bottom, spacing: 2) {
+                ForEach([LabTab.home, .train, .games], id: \.id) { tab in
                     tabButton(tab)
                 }
                 coachButton
                     .offset(y: -18)
-                ForEach([LabTab.market, .profile], id: \.id) { tab in
+                ForEach([LabTab.social, .market, .profile], id: \.id) { tab in
                     tabButton(tab)
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 8)
             .padding(.top, 8)
             .padding(.bottom, 10)
         }

@@ -42,17 +42,17 @@
       "id": "b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b",
       "itemId": "YjU2ZDk4ZmYtYzViZS00YjhkLWJkNGUtNGFjYjk0YTllYjFifDZ8ODg0OTMyMjcw",
       "state": "WAITING_FOR_REVIEW",
-      "submittedAt": "2026-04-25T18:31:20.768Z"
+      "submittedAt": "2026-06-01T02:12:00Z"
     },
     "testFlight": {
       "configuredAt": "2026-04-26T12:52:20Z",
-      "buildId": "de50b6a7-b90b-4a1b-a008-91735a6d0fb8",
-      "buildNumber": "2026042401",
-      "internalBuildState": "IN_BETA_TESTING",
-      "externalBuildState": "WAITING_FOR_BETA_REVIEW",
-      "betaReviewSubmissionId": "de50b6a7-b90b-4a1b-a008-91735a6d0fb8",
-      "betaReviewState": "WAITING_FOR_REVIEW",
-      "betaReviewSubmittedAt": "2026-04-26T05:51:23-07:00",
+      "buildId": "97b9aadd-f715-4895-8326-00ac8f8ce354",
+      "buildNumber": "2026053101",
+      "internalBuildState": "READY_TO_SUBMIT",
+      "externalBuildState": "NOT_SUBMITTED_FOR_BUILD_2026053101",
+      "betaReviewSubmissionId": null,
+      "betaReviewState": "NOT_SUBMITTED_FOR_BUILD_2026053101",
+      "betaReviewSubmittedAt": null,
       "internalGroup": {
         "id": "bf8b399f-baed-4072-ba0c-3b19f34397f7",
         "name": "Studio Crew",
@@ -69,25 +69,26 @@
         "publicLinkEnabled": true,
         "publicLinkLimitEnabled": false,
         "publicLink": "https://testflight.apple.com/join/rtpbMJhP",
+        "currentPublicBuildNumber": "2026042401",
         "buildIds": [
           "de50b6a7-b90b-4a1b-a008-91735a6d0fb8"
         ]
       }
     },
     "latestNativeUpload": {
-      "buildNumber": "2026052903",
+      "buildNumber": "2026053101",
       "version": "1.0",
       "bundleId": "fit.labstudio.app",
-      "deliveryUuid": "035bd7e6-b5ff-47c5-b9c6-fd8072d0d3c6",
-      "uploadedAt": "2026-05-29T07:18:45Z",
-      "state": "UPLOADED_PACKAGE_PROCESSING",
+      "uploadedAt": "2026-06-01T01:49:23Z",
+      "state": "SUBMITTED_FOR_APP_REVIEW",
       "tool": "xcodebuild -exportArchive",
-      "archivePath": "build/LabStudioFit-1.0-2026052903.xcarchive"
+      "archivePath": "build/LabStudioFit-1.0-2026053101.xcarchive",
+      "appStoreReviewSubmittedAt": "2026-06-01T02:12:00Z"
     }
   },
   "version": {
     "marketingVersion": "1.0",
-    "buildNumber": "2026052903",
+    "buildNumber": "2026053101",
     "releaseType": "MANUAL",
     "phasedRelease": false,
     "promotionalText": "Members-only training, nutrition, booking, progress tracking, and Toby coaching for Lab Studio.",
@@ -100,7 +101,7 @@
       "nutrition",
       "workout"
     ],
-    "whatsNew": "Native SwiftUI release with production Lab Studio API login, Home, Train booking, Market checkout, Toby coaching, progress photo upload, profile management, and account deletion."
+    "whatsNew": "Native SwiftUI release restored to the original Lab Studio visual system with Dash, Book, Games, Coach, Rank, Shop, and Me navigation plus production API-backed login, booking, market, Toby, progress, profile, and account deletion."
   },
   "urls": {
     "marketingUrl": "https://labstudio.fit",
@@ -117,9 +118,10 @@
     "demoUsername": "reviewer+labstudio@labstudio.fit",
     "demoPassword": "No password is required. Enter the demo email on the login screen and leave phone optional.",
     "notes": [
-      "Build 2026052903 is version 1.0 for bundle ID fit.labstudio.app.",
+      "Build 2026053101 is version 1.0 for bundle ID fit.labstudio.app.",
       "Login uses email or phone only; no password or email verification is required for review.",
-      "Use reviewer+labstudio@labstudio.fit on the login screen, complete onboarding if prompted, then review the native Home, Train, Market, Coach, and Profile tabs.",
+      "Use reviewer+labstudio@labstudio.fit on the login screen, complete onboarding if prompted, then review the native Dash, Book, Games, Coach, Rank, Shop, and Me tabs.",
+      "Games and Rank use the existing Lab Studio game score and leaderboard APIs; score submission is available from the native Games tab.",
       "Any Stripe checkout flows are for in-person gym services, facility memberships, or physical products provided by Lab Studio, not digital content."
     ]
   },
@@ -172,7 +174,9 @@
   "assets": {
     "appIconSource": "../../../ios/LabStudioFit/LabStudioFit/Resources.xcassets/AppIcon.appiconset/AppIcon-512@2x.png",
     "iphoneScreenshots": [
-      "screenshots/native/iphone-17-pro-login.png"
+      "screenshots/native/asc/iphone-6-5-home.png",
+      "screenshots/native/asc/iphone-6-5-games.png",
+      "screenshots/native/asc/iphone-6-5-rank.png"
     ],
     "ipadScreenshots": [
       "screenshots/native/ipad-pro-13-login.png"
@@ -191,7 +195,6 @@
       "privacy, support, terms, and account deletion pages render",
       "account deletion endpoint added and protected by member session middleware",
       "native app API-backed login, home, booking, workout, nutrition, progress photo, market, Toby, profile, logout, and account deletion flows wired to https://app.labstudio.fit",
-      "App Store Connect upload succeeded for native build 2026052903; Apple reported the uploaded package is processing",
       "App Store Connect app record created for Apple ID 6763787815",
       "Namecheap/cPanel production deploy passed through GitHub Actions run 26625865004 after switching to the cPanel SFTP app root.",
       "Production native API smoke test passed: /api/lab/shop catalog, /api/lab/services, /api/lab/auth/login cookies, /api/lab/user session lookup, and /api/lab/auth/logout.",
@@ -201,12 +204,23 @@
       "App Store Connect build 2026042401 submitted for App Review",
       "TestFlight internal group Studio Crew has build 2026042401 and richducat@gmail.com invited",
       "TestFlight public link group Studio Crew has build 2026042401 and public link enabled",
-      "TestFlight build 2026042401 submitted for Beta App Review"
+      "TestFlight build 2026042401 submitted for Beta App Review",
+      "Native SwiftUI simulator verified restored original 7-slot member navigation: Dash, Book, Games, Coach, Rank, Shop, and Me.",
+      "Native Games and Rank tabs compile and render against the existing /api/lab/games/score score and leaderboard endpoints.",
+      "Regenerated exact iPhone 6.5-inch App Store screenshots for restored Dash, Games, and Rank screens.",
+      "Regenerated native iPad Pro 13-inch screenshot from the restored login/catalog design.",
+      "Signed Release archive succeeded for build 2026053101 using team WN3K69XEP4 and bundle ID fit.labstudio.app.",
+      "App Store Connect upload succeeded for native build 2026053101; Apple reported the uploaded package is processing.",
+      "App Store Connect TestFlight confirmed build 2026053101 is available in the internal Studio Crew group with one invite and expires in 90 days.",
+      "App Store Connect accepted exact 1242 x 2688 iPhone 6.5-inch screenshots for Dash, Games, and Rank without screenshot dimension errors.",
+      "App Store Connect version 1.0 was updated from build 2026042401 to build 2026053101.",
+      "App Review notes were updated and persisted for build 2026053101, including Dash, Book, Games, Coach, Rank, Shop, and Me review flow.",
+      "App Store Connect resubmitted iOS version 1.0 build 2026053101 to App Review; final state verified as Waiting for Review.",
+      "Archive icon verification confirmed build 2026053101 contains the final Lab Studio Fit app icon, replacing the placeholder blue mark from build 2026042401."
     ],
     "knownRisks": [
       "App Store Connect trader status should still be reviewed before release if Apple requests business compliance confirmation.",
-      "Build 2026052903 must finish Apple processing before it can be selected for TestFlight or App Review.",
-      "External TestFlight testers cannot install from the public link until Apple approves Beta App Review for build 2026042401."
+      "External TestFlight public link access still points at the previously approved build 2026042401; build 2026053101 is available to the internal Studio Crew group and will need separate external Beta App Review if public-link testing is required before App Review approval."
     ]
   }
 }

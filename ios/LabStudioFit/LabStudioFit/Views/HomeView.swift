@@ -36,7 +36,7 @@ struct HomeView: View {
                             .font(LabTheme.eyebrow())
                             .tracking(2.6)
                             .foregroundStyle(LabTheme.violetLight)
-                        Text("Welcome back, \(state.displayName)")
+                        Text("Welcome back, \(greetingName)")
                             .font(.system(size: 34, weight: .black))
                             .foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)
@@ -182,6 +182,16 @@ struct HomeView: View {
         Button { state.selectedTab = .market } label: {
             Label("\(state.cartCount)", systemImage: state.cart.isEmpty ? "bag" : "bag.fill")
         }
+    }
+
+    private var greetingName: String {
+        let name = state.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let at = name.firstIndex(of: "@") {
+            let emailPrefix = String(name[..<at])
+            let emailName = emailPrefix.split(separator: "+").first.map(String.init) ?? emailPrefix
+            return emailName.isEmpty ? "Athlete" : emailName
+        }
+        return name.isEmpty ? "Athlete" : name
     }
 
     private func formatDate(_ raw: String?) -> String {

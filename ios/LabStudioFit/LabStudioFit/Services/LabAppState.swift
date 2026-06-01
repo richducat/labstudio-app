@@ -98,6 +98,13 @@ private struct GenericResponse: Decodable {
     let error: String?
 }
 
+private struct GameScoresResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let highScores: [LabGameHighScore]?
+    let leaderboards: [LabLeaderboardEntry]?
+}
+
 private enum LabAPIError: LocalizedError {
     case unauthorized
     case server(String)
@@ -223,6 +230,8 @@ final class LabAppState {
     var cafeItems: [LabCafeItem] = []
     var nutrition: LabNutrition?
     var cart: [LabCartLine] = []
+    var gameHighScores: [String: Int] = [:]
+    var leaderboard: [LabLeaderboardEntry] = []
     var coachMessages: [ChatMessage] = [
         .init(text: "I’m Toby. Sign in and I’ll use your Lab Studio profile, training logs, and nutrition data to help you stay on track.", isCoach: true)
     ]
@@ -311,6 +320,8 @@ final class LabAppState {
         home = nil
         nutrition = nil
         cart.removeAll()
+        gameHighScores = [:]
+        leaderboard = []
         isAuthenticated = false
         selectedTab = .home
         successMessage = "Signed out."
@@ -335,6 +346,8 @@ final class LabAppState {
         cafeItems = cafeResponse.items
         nutrition = LabNutrition(today: nutritionResponse.today, avg7: nutritionResponse.avg7)
         isAuthenticated = true
+        await refreshGameScores()
+        await refreshLeaderboard()
     }
 
     func refreshAfterMutation(success: String? = nil) async {
@@ -453,6 +466,8 @@ final class LabAppState {
             home = nil
             nutrition = nil
             cart.removeAll()
+            gameHighScores = [:]
+            leaderboard = []
             isAuthenticated = false
             selectedTab = .home
             successMessage = "Account deleted."
@@ -475,6 +490,49 @@ final class LabAppState {
             coachMessages.append(.init(text: response.reply ?? "I’m here, but I didn’t get a clean response back. Try that again.", isCoach: true))
         } catch {
             coachMessages.append(.init(text: error.localizedDescription, isCoach: true))
+        }
+    }
+
+    func refreshGameScores() async {
+        do {
+            let response: GameScoresResponse = try await api.get("/api/lab/games/score")
+            if response.ok {
+                gameHighScores = Dictionary(uniqueKeysWithValues: (response.highScores ?? []).map { ($0.gameId, $0.topScore) })
+            }
+        } catch {
+            // Scores are additive; the rest of the member app should stay usable if this endpoint is unavailable.
+        }
+    }
+
+    func refreshLeaderboard() async {
+        do {
+            let response: GameScoresResponse = try await api.get("/api/lab/games/score?scope=global")
+            if response.ok {
+                leaderboard = response.leaderboards ?? []
+            }
+        } catch {
+            leaderboard = []
+        }
+    }
+
+    func submitGameScore(gameId: String, score: Int) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let response: GenericResponse = try await api.post("/api/lab/games/score", json: [
+                "gameId": gameId,
+                "score": max(0, score),
+            ])
+            if let ok = response.ok, !ok {
+                throw LabAPIError.server(response.error ?? "Unable to save score.")
+            }
+            await refreshGameScores()
+            await refreshLeaderboard()
+            successMessage = "Score saved."
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -578,8 +636,10 @@ final class LabAppState {
 enum LabTab: String, CaseIterable, Identifiable {
     case home = "Home"
     case train = "Train"
+    case games = "Games"
     case market = "Market"
     case coach = "Coach"
+    case social = "Social"
     case profile = "Profile"
 
     var id: String { rawValue }
@@ -588,8 +648,10 @@ enum LabTab: String, CaseIterable, Identifiable {
         switch self {
         case .home: "waveform.path.ecg"
         case .train: "calendar"
+        case .games: "brain.head.profile"
         case .market: "bag.fill"
         case .coach: "message.fill"
+        case .social: "trophy.fill"
         case .profile: "person.fill"
         }
     }
@@ -598,8 +660,10 @@ enum LabTab: String, CaseIterable, Identifiable {
         switch self {
         case .home: "Dash"
         case .train: "Book"
+        case .games: "Games"
         case .market: "Shop"
         case .coach: "Coach"
+        case .social: "Rank"
         case .profile: "Me"
         }
     }

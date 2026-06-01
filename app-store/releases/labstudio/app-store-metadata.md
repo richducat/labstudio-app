@@ -7,7 +7,7 @@
 - Bundle ID: fit.labstudio.app
 - SKU: fit.labstudio.app
 - Version: 1.0
-- Build: 2026052903
+- Build: 2026053101
 - Primary category: Health & Fitness
 - Secondary category: Lifestyle
 - App Store Connect Apple ID: 6763787815
@@ -36,11 +36,11 @@ fitness, training, gym, coach, nutrition, workout
 
 ## What's New
 
-Native SwiftUI release with production Lab Studio API login, Home, Train booking, Market checkout, Toby coaching, progress photo upload, profile management, and account deletion.
+Native SwiftUI release restored to the original Lab Studio visual system with Dash, Book, Games, Coach, Rank, Shop, and Me navigation plus production API-backed login, booking, market, Toby, progress, profile, and account deletion.
 
 ## Review Notes
 
-Login uses email or phone only; no password or email verification is required. Use reviewer+labstudio@labstudio.fit, complete onboarding if prompted, and review the native Home, Train, Market, Coach, and Profile tabs.
+Login uses email or phone only; no password or email verification is required. Use reviewer+labstudio@labstudio.fit, complete onboarding if prompted, and review the native Dash, Book, Games, Coach, Rank, Shop, and Me tabs.
 
 ## Submission Snapshot
 
@@ -61,20 +61,23 @@ Login uses email or phone only; no password or email verification is required. U
 - Public group: Studio Crew
 - Public link: https://testflight.apple.com/join/rtpbMJhP
 - Public link limit: None
-- Build: 2026042401
-- Internal build state: In Beta Testing
-- External build state: Waiting for Beta Review
-- Beta App Review submitted: 2026-04-26T05:51:23-07:00
+- Build: 2026053101
+- Build ID: 97b9aadd-f715-4895-8326-00ac8f8ce354
+- Internal build state: Ready to Submit, listed in the internal Studio Crew group with one invite
+- External build state: Not submitted for external Beta App Review for build 2026053101
+- Public link build: 2026042401 remains the previously approved external TestFlight build
 
 ## Internal Launch Notes
 
 - App Store Connect version state: Waiting for Review
-- Attached build ID or build number: 2026052903 after upload/processing
+- Attached build ID or build number: 2026053101
 - Native screenshot sources:
-  - app-store/releases/labstudio/screenshots/native/iphone-17-pro-login.png
+  - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-home.png
+  - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-games.png
+  - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-rank.png
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-login.png
 - Review submission ID: b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b
-- Review submitted at: 2026-04-25T18:31:20.768Z
+- Review submitted at: 2026-06-01T02:12:00Z
 - App Privacy state: Published on April 25, 2026
 - Manual release after approval: Yes
 - Post-approval checks to run:

@@ -203,6 +203,60 @@ struct ChatMessage: Identifiable, Hashable {
     let isCoach: Bool
 }
 
+struct LabGameHighScore: Decodable, Identifiable, Hashable {
+    let gameId: String
+    let topScore: Int
+
+    var id: String { gameId }
+
+    enum CodingKeys: String, CodingKey {
+        case gameId
+        case topScore
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        gameId = try container.decode(String.self, forKey: .gameId)
+        topScore = try container.decodeFlexibleInt(forKey: .topScore) ?? 0
+    }
+}
+
+struct LabLeaderboardEntry: Decodable, Identifiable, Hashable {
+    let displayName: String?
+    let score: Int
+    let gamesPlayed: Int?
+
+    var id: String { "\(displayName ?? "member")-\(score)-\(gamesPlayed ?? 0)" }
+
+    enum CodingKeys: String, CodingKey {
+        case displayName
+        case score
+        case gamesPlayed
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
+        score = try container.decodeFlexibleInt(forKey: .score) ?? 0
+        gamesPlayed = try container.decodeFlexibleInt(forKey: .gamesPlayed)
+    }
+}
+
+extension KeyedDecodingContainer {
+    func decodeFlexibleInt(forKey key: Key) throws -> Int? {
+        if let value = try decodeIfPresent(Int.self, forKey: key) {
+            return value
+        }
+        if let value = try decodeIfPresent(Double.self, forKey: key) {
+            return Int(value)
+        }
+        if let value = try decodeIfPresent(String.self, forKey: key) {
+            return Int(value)
+        }
+        return nil
+    }
+}
+
 enum Currency {
     static func format(cents: Int?) -> String {
         let value = Decimal(cents ?? 0) / Decimal(100)

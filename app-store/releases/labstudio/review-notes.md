@@ -6,12 +6,14 @@ Use this file as the exact reviewer-facing source for the build being submitted.
 
 - App: Lab Studio
 - Version: 1.0
-- Build: 2026053101
+- Build: 2026060101
 - Bundle ID: fit.labstudio.app
 
 ## Summary for App Review
 
 Lab Studio is a native SwiftUI members-only fitness app for Lab Studio Fit. Members sign in with email or phone, complete a profile, track workouts, nutrition, progress photos, and training stats, book in-person sessions, play Lab games, review leaderboards, review facility shop/cafe items, and use Toby coaching support.
+
+Build 2026060101 is a stability rebuild. It keeps the restored Lab Studio visual system while improving API startup behavior, fixing Toby chat input placement above the native tab bar on compact iPhones, and preventing a raw AI-provider configuration error from appearing to members.
 
 ## Login
 
@@ -50,10 +52,12 @@ Lab Studio is a native SwiftUI members-only fitness app for Lab Studio Fit. Memb
 
 - Verified devices:
   - iPhone 17 Pro simulator on iOS 26.2
+  - iPhone 16 Pro simulator on iOS 18.2
   - iPad Pro 13-inch simulator on iOS 26.2
-  - Signed Release archive for build 2026053101 using team WN3K69XEP4 and bundle ID fit.labstudio.app
+  - Signed Release archive for build 2026060101 using team WN3K69XEP4 and bundle ID fit.labstudio.app
 - App Store Connect state:
-  - Submitted to App Review and verified as Waiting for Review on May 31, 2026 at 10:12 PM EDT.
+  - Build 2026060101 uploaded to App Store Connect on June 1, 2026 at 4:51 PM EDT and is processing.
+  - The previous build 2026053101 was submitted to App Review and verified as Waiting for Review on May 31, 2026 at 10:12 PM EDT.
   - Native Dash, Games, and Rank screenshots are attached in the iPhone 6.5-inch slot.
   - The selected build contains the final Lab Studio Fit app icon.
 - Anything Apple should not misinterpret:

@@ -76,19 +76,20 @@
       }
     },
     "latestNativeUpload": {
-      "buildNumber": "2026053101",
+      "buildNumber": "2026060101",
       "version": "1.0",
       "bundleId": "fit.labstudio.app",
-      "uploadedAt": "2026-06-01T01:49:23Z",
-      "state": "SUBMITTED_FOR_APP_REVIEW",
+      "uploadedAt": "2026-06-01T20:51:36Z",
+      "state": "PROCESSING",
       "tool": "xcodebuild -exportArchive",
-      "archivePath": "build/LabStudioFit-1.0-2026053101.xcarchive",
-      "appStoreReviewSubmittedAt": "2026-06-01T02:12:00Z"
+      "archivePath": "build/LabStudioFit-1.0-2026060101.xcarchive",
+      "uploadLogPath": "build/LabStudioFit-upload-2026060101.log",
+      "notes": "Crash/stability rebuild: bounded startup API timeouts, parallel bootstrap, Toby signed-in prompt restore, fixed Toby composer overlap with bottom tab bar, and server-side Toby fallback when external AI provider is unavailable."
     }
   },
   "version": {
     "marketingVersion": "1.0",
-    "buildNumber": "2026053101",
+    "buildNumber": "2026060101",
     "releaseType": "MANUAL",
     "phasedRelease": false,
     "promotionalText": "Members-only training, nutrition, booking, progress tracking, and Toby coaching for Lab Studio.",
@@ -101,7 +102,7 @@
       "nutrition",
       "workout"
     ],
-    "whatsNew": "Native SwiftUI release restored to the original Lab Studio visual system with Dash, Book, Games, Coach, Rank, Shop, and Me navigation plus production API-backed login, booking, market, Toby, progress, profile, and account deletion."
+    "whatsNew": "Stability rebuild for the native SwiftUI release: faster API-backed startup, fixed Toby chat input placement above the tab bar, and improved Toby fallback behavior when the external AI provider is unavailable."
   },
   "urls": {
     "marketingUrl": "https://labstudio.fit",
@@ -118,10 +119,11 @@
     "demoUsername": "reviewer+labstudio@labstudio.fit",
     "demoPassword": "No password is required. Enter the demo email on the login screen and leave phone optional.",
     "notes": [
-      "Build 2026053101 is version 1.0 for bundle ID fit.labstudio.app.",
+      "Build 2026060101 is version 1.0 for bundle ID fit.labstudio.app.",
       "Login uses email or phone only; no password or email verification is required for review.",
       "Use reviewer+labstudio@labstudio.fit on the login screen, complete onboarding if prompted, then review the native Dash, Book, Games, Coach, Rank, Shop, and Me tabs.",
       "Games and Rank use the existing Lab Studio game score and leaderboard APIs; score submission is available from the native Games tab.",
+      "Toby chat is positioned above the native tab bar on compact iPhone layouts and falls back to built-in coaching guidance if the external AI provider is unavailable.",
       "Any Stripe checkout flows are for in-person gym services, facility memberships, or physical products provided by Lab Studio, not digital content."
     ]
   },
@@ -216,11 +218,23 @@
       "App Store Connect version 1.0 was updated from build 2026042401 to build 2026053101.",
       "App Review notes were updated and persisted for build 2026053101, including Dash, Book, Games, Coach, Rank, Shop, and Me review flow.",
       "App Store Connect resubmitted iOS version 1.0 build 2026053101 to App Review; final state verified as Waiting for Review.",
-      "Archive icon verification confirmed build 2026053101 contains the final Lab Studio Fit app icon, replacing the placeholder blue mark from build 2026042401."
+      "Archive icon verification confirmed build 2026053101 contains the final Lab Studio Fit app icon, replacing the placeholder blue mark from build 2026042401.",
+      "Native Swift package tests passed for build 2026060101.",
+      "Web lint and production Next build passed after Toby chat fallback route update.",
+      "Native Release simulator build/install/launch passed on iPhone 16 Pro simulator running iOS 18.2 for build 2026060101.",
+      "Native startup stress test confirmed dashboard loads without the previous long blocking bootstrap wait.",
+      "Native tab stress test covered Dash, Book, Games, Coach/Toby, Rank, Shop, and Me without process crash.",
+      "Native Games stress test completed Gear Sort round and confirmed score-save success UI.",
+      "Native Shop stress test added Day Pass to cart and confirmed cart/checkout state enabled without purchase completion.",
+      "Native Toby stress test found and fixed compact iPhone composer overlap with the floating tab bar; post-fix text entry and send button remained on the Coach tab.",
+      "Native runtime and OS logs after Release simulator launch showed no app crash output.",
+      "Signed Release archive succeeded for build 2026060101 using team WN3K69XEP4 and bundle ID fit.labstudio.app.",
+      "App Store Connect upload succeeded for native build 2026060101; Apple reported the uploaded package is processing."
     ],
     "knownRisks": [
       "App Store Connect trader status should still be reviewed before release if Apple requests business compliance confirmation.",
-      "External TestFlight public link access still points at the previously approved build 2026042401; build 2026053101 is available to the internal Studio Crew group and will need separate external Beta App Review if public-link testing is required before App Review approval."
+      "External TestFlight public link access still points at the previously approved build 2026042401; build 2026053101 is available to the internal Studio Crew group and will need separate external Beta App Review if public-link testing is required before App Review approval.",
+      "Build 2026060101 has been uploaded and is processing in App Store Connect; App Review still needs to be switched from build 2026053101 after processing completes."
     ]
   }
 }

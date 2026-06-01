@@ -4,6 +4,7 @@ struct CoachView: View {
     @Environment(LabAppState.self) private var state
     @State private var draft = ""
     @State private var sending = false
+    private let tabBarClearance: CGFloat = 92
 
     var body: some View {
         NavigationStack {
@@ -36,6 +37,7 @@ struct CoachView: View {
                     }
                 }
                 composer
+                    .padding(.bottom, tabBarClearance)
             }
             .navigationTitle("Toby")
             .toolbar(.hidden, for: .navigationBar)

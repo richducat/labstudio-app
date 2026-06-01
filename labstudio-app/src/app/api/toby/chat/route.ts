@@ -102,6 +102,47 @@ function messageContentToText(content: TobyMessage['content']) {
     .trim();
 }
 
+function fallbackCoachReply(text: string) {
+  const normalized = text.toLowerCase();
+
+  if (/\b(leg|legs|squat|glute|hamstring|quad|lower)\b/.test(normalized)) {
+    return [
+      'Here is a clean lower-body session for today:',
+      '1. Warm up for 8-10 minutes with hips, ankles, hamstrings, and two light ramp sets.',
+      '2. Main lift: squat or leg press for 4 sets of 5-8 controlled reps.',
+      '3. Posterior chain: Romanian deadlift for 3 sets of 8-10.',
+      '4. Single-leg work: split squat or step-up for 3 sets of 8 each side.',
+      '5. Finish with calves, core, and 5 minutes of easy down-regulation.',
+      'Keep 1-2 reps in reserve unless your coach programmed a hard push today.',
+    ].join('\n');
+  }
+
+  if (/\b(nutrition|protein|macro|meal|food|calorie)\b/.test(normalized)) {
+    return [
+      'For nutrition today, anchor the day around protein, water, and consistency.',
+      'Aim for a protein serving at each meal, add a carb around training, and keep fats moderate before hard sessions.',
+      'If you log your meals in the app, I can use those numbers to keep the guidance tighter.',
+    ].join('\n');
+  }
+
+  if (/\b(book|booking|session|appointment|schedule)\b/.test(normalized)) {
+    return 'Open Book, choose the service that matches your goal, pick a time, and book it. After it is booked, it will show on your dashboard.';
+  }
+
+  if (/\b(recover|recovery|sore|sleep|mobility)\b/.test(normalized)) {
+    return [
+      'For recovery, keep today simple: easy movement, mobility for the tight areas, protein, hydration, and sleep.',
+      'If soreness is sharp, one-sided, or changing your movement, skip max effort and book a coach check-in.',
+    ].join('\n');
+  }
+
+  return [
+    'I can help with training, nutrition, booking, and recovery.',
+    'For today, pick one main priority, keep the session clean, and log what you complete so your dashboard stays current.',
+    'If you want a precise plan, tell me the muscle group, time available, and any soreness or equipment limits.',
+  ].join('\n');
+}
+
 async function chatCompletion(
   url: string,
   headers: Record<string, string>,
@@ -175,7 +216,13 @@ export async function POST(req: Request) {
     }
 
     const llmConfig = getTobyLlmConfig('gpt-4o');
-    if (!llmConfig.ok) return NextResponse.json({ error: llmConfig.error }, { status: 500 });
+    if (!llmConfig.ok) {
+      return NextResponse.json({
+        reply: fallbackCoachReply(text),
+        retrieval: retrieval?.sources ? { sources: retrieval.sources } : undefined,
+        provider: 'fallback',
+      });
+    }
     const llm = llmConfig.value;
 
     // Build the message stack

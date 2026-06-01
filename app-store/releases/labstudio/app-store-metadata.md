@@ -7,7 +7,7 @@
 - Bundle ID: fit.labstudio.app
 - SKU: fit.labstudio.app
 - Version: 1.0
-- Build: 2026053101
+- Build: 2026060101
 - Primary category: Health & Fitness
 - Secondary category: Lifestyle
 - App Store Connect Apple ID: 6763787815
@@ -36,7 +36,7 @@ fitness, training, gym, coach, nutrition, workout
 
 ## What's New
 
-Native SwiftUI release restored to the original Lab Studio visual system with Dash, Book, Games, Coach, Rank, Shop, and Me navigation plus production API-backed login, booking, market, Toby, progress, profile, and account deletion.
+Stability rebuild for the native SwiftUI release: faster API-backed startup, fixed Toby chat input placement above the tab bar, and improved Toby fallback behavior when the external AI provider is unavailable.
 
 ## Review Notes
 
@@ -61,23 +61,24 @@ Login uses email or phone only; no password or email verification is required. U
 - Public group: Studio Crew
 - Public link: https://testflight.apple.com/join/rtpbMJhP
 - Public link limit: None
-- Build: 2026053101
-- Build ID: 97b9aadd-f715-4895-8326-00ac8f8ce354
-- Internal build state: Ready to Submit, listed in the internal Studio Crew group with one invite
-- External build state: Not submitted for external Beta App Review for build 2026053101
+- Build: 2026060101
+- Build ID: Processing in App Store Connect
+- Internal build state: Processing after upload
+- External build state: Not submitted for external Beta App Review for build 2026060101
 - Public link build: 2026042401 remains the previously approved external TestFlight build
 
 ## Internal Launch Notes
 
 - App Store Connect version state: Waiting for Review
-- Attached build ID or build number: 2026053101
+- Attached build ID or build number: 2026060101 uploaded; App Store version still needs to be switched after processing completes
 - Native screenshot sources:
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-home.png
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-games.png
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-rank.png
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-login.png
 - Review submission ID: b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b
-- Review submitted at: 2026-06-01T02:12:00Z
+- Latest native upload: 2026-06-01T20:51:36Z for build 2026060101
+- Review submitted at: 2026-06-01T02:12:00Z for prior build 2026053101
 - App Privacy state: Published on April 25, 2026
 - Manual release after approval: Yes
 - Post-approval checks to run:

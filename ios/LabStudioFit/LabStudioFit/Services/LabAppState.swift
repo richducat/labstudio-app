@@ -142,6 +142,8 @@ final class LabAPIClient {
         configuration.httpCookieAcceptPolicy = .always
         configuration.httpShouldSetCookies = true
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.timeoutIntervalForRequest = 12
+        configuration.timeoutIntervalForResource = 20
         self.session = URLSession(configuration: configuration)
     }
 
@@ -213,6 +215,9 @@ final class LabAPIClient {
 @MainActor
 @Observable
 final class LabAppState {
+    private static let signedOutCoachPrompt = "I’m Toby. Sign in and I’ll use your Lab Studio profile, training logs, and nutrition data to help you stay on track."
+    private static let signedInCoachPrompt = "You’re in. I’ll use your Lab Studio profile and current logs for training, nutrition, booking, and recovery guidance."
+
     var selectedTab: LabTab = .home
     var isBootstrapping = true
     var isLoading = false
@@ -233,7 +238,7 @@ final class LabAppState {
     var gameHighScores: [String: Int] = [:]
     var leaderboard: [LabLeaderboardEntry] = []
     var coachMessages: [ChatMessage] = [
-        .init(text: "I’m Toby. Sign in and I’ll use your Lab Studio profile, training logs, and nutrition data to help you stay on track.", isCoach: true)
+        .init(text: LabAppState.signedOutCoachPrompt, isCoach: true)
     ]
 
     private let api = LabAPIClient()
@@ -271,8 +276,10 @@ final class LabAppState {
         defer { isBootstrapping = false }
 
         do {
-            try await refreshAll()
+            try await refreshAll(includeGameData: false)
             isAuthenticated = true
+            updateCoachPromptForAuthenticatedSession()
+            refreshGameDataInBackground()
         } catch LabAPIError.unauthorized {
             isAuthenticated = false
             user = nil
@@ -291,8 +298,7 @@ final class LabAppState {
         defer { isLoading = false }
 
         do {
-            let response: LoginResponse = try await api.post("/api/lab/shop", json: [
-                "action": "login",
+            let response: LoginResponse = try await api.post("/api/lab/auth/login", json: [
                 "email": email,
                 "phone": phone,
             ])
@@ -303,9 +309,10 @@ final class LabAppState {
             profile = response.profile
             isAuthenticated = true
             coachMessages = [
-                .init(text: "You’re in. I’ll use your Lab Studio profile and current logs for training, nutrition, booking, and recovery guidance.", isCoach: true)
+                .init(text: Self.signedInCoachPrompt, isCoach: true)
             ]
-            try await refreshAll()
+            try await refreshAll(includeGameData: false)
+            refreshGameDataInBackground()
         } catch {
             errorMessage = error.localizedDescription
             isAuthenticated = false
@@ -313,7 +320,7 @@ final class LabAppState {
     }
 
     func logout() async {
-        _ = try? await api.post("/api/lab/shop", json: ["action": "logout"]) as GenericResponse
+        _ = try? await api.post("/api/lab/auth/logout") as GenericResponse
         api.clearCookies()
         user = nil
         profile = nil
@@ -322,19 +329,40 @@ final class LabAppState {
         cart.removeAll()
         gameHighScores = [:]
         leaderboard = []
+        coachMessages = [
+            .init(text: Self.signedOutCoachPrompt, isCoach: true)
+        ]
         isAuthenticated = false
         selectedTab = .home
         successMessage = "Signed out."
     }
 
-    func refreshAll() async throws {
-        let userResponse: UserResponse = try await api.get("/api/lab/user")
-        let profileResponse: ProfileResponse = try await api.get("/api/lab/profile")
-        let homeResponse: HomeResponse = try await api.get("/api/lab/home")
-        let servicesResponse: ServicesResponse = try await api.get("/api/lab/services")
-        let shopResponse: ShopResponse = try await api.get("/api/lab/shop")
-        let cafeResponse: CafeResponse = try await api.get("/api/lab/cafe")
-        let nutritionResponse: NutritionResponse = try await api.get("/api/lab/nutrition")
+    func refreshAll(includeGameData: Bool = true) async throws {
+        async let userRequest: UserResponse = api.get("/api/lab/user")
+        async let profileRequest: ProfileResponse = api.get("/api/lab/profile")
+        async let homeRequest: HomeResponse = api.get("/api/lab/home")
+        async let servicesRequest: ServicesResponse = api.get("/api/lab/services")
+        async let shopRequest: ShopResponse = api.get("/api/lab/shop")
+        async let cafeRequest: CafeResponse = api.get("/api/lab/cafe")
+        async let nutritionRequest: NutritionResponse = api.get("/api/lab/nutrition")
+
+        let (
+            userResponse,
+            profileResponse,
+            homeResponse,
+            servicesResponse,
+            shopResponse,
+            cafeResponse,
+            nutritionResponse
+        ) = try await (
+            userRequest,
+            profileRequest,
+            homeRequest,
+            servicesRequest,
+            shopRequest,
+            cafeRequest,
+            nutritionRequest
+        )
 
         user = userResponse.user
         profile = profileResponse.profile ?? homeResponse.home?.profile
@@ -346,8 +374,11 @@ final class LabAppState {
         cafeItems = cafeResponse.items
         nutrition = LabNutrition(today: nutritionResponse.today, avg7: nutritionResponse.avg7)
         isAuthenticated = true
-        await refreshGameScores()
-        await refreshLeaderboard()
+        updateCoachPromptForAuthenticatedSession()
+        if includeGameData {
+            await refreshGameScores()
+            await refreshLeaderboard()
+        }
     }
 
     func refreshAfterMutation(success: String? = nil) async {
@@ -617,6 +648,21 @@ final class LabAppState {
             cart.append(.init(id: id, name: name, priceCents: priceCents, priceId: priceId, checkoutURL: checkoutURL, quantity: 1))
         }
         successMessage = "\(name) added to cart."
+    }
+
+    private func updateCoachPromptForAuthenticatedSession() {
+        if coachMessages.count == 1, coachMessages.first?.text == Self.signedOutCoachPrompt {
+            coachMessages = [
+                .init(text: Self.signedInCoachPrompt, isCoach: true)
+            ]
+        }
+    }
+
+    private func refreshGameDataInBackground() {
+        Task { @MainActor in
+            await refreshGameScores()
+            await refreshLeaderboard()
+        }
     }
 
     private func compressedJPEGData(from data: Data) -> Data? {

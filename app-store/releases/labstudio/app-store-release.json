@@ -76,20 +76,20 @@
       }
     },
     "latestNativeUpload": {
-      "buildNumber": "2026060101",
+      "buildNumber": "2026060201",
       "version": "1.0",
       "bundleId": "fit.labstudio.app",
-      "uploadedAt": "2026-06-01T20:51:36Z",
+      "uploadedAt": "2026-06-02T18:42:16Z",
       "state": "PROCESSING",
       "tool": "xcodebuild -exportArchive",
-      "archivePath": "build/LabStudioFit-1.0-2026060101.xcarchive",
-      "uploadLogPath": "build/LabStudioFit-upload-2026060101.log",
-      "notes": "Crash/stability rebuild: bounded startup API timeouts, parallel bootstrap, Toby signed-in prompt restore, fixed Toby composer overlap with bottom tab bar, and server-side Toby fallback when external AI provider is unavailable."
+      "archivePath": "build/LabStudioFit-1.0-2026060201.xcarchive",
+      "uploadLogPath": "build/LabStudioFit-upload-2026060201.log",
+      "notes": "Reaction-only games cleanup: removed broken duplicate Lab games from native and web surfaces, kept Reaction Lab playable, and restricted score/leaderboard APIs to reaction-lab."
     }
   },
   "version": {
     "marketingVersion": "1.0",
-    "buildNumber": "2026060101",
+    "buildNumber": "2026060201",
     "releaseType": "MANUAL",
     "phasedRelease": false,
     "promotionalText": "Members-only training, nutrition, booking, progress tracking, and Toby coaching for Lab Studio.",
@@ -102,7 +102,7 @@
       "nutrition",
       "workout"
     ],
-    "whatsNew": "Stability rebuild for the native SwiftUI release: faster API-backed startup, fixed Toby chat input placement above the tab bar, and improved Toby fallback behavior when the external AI provider is unavailable."
+    "whatsNew": "Games cleanup for the native SwiftUI release: Reaction Lab is now the only active Lab game, with broken duplicate game modes removed from the app and leaderboard scoring."
   },
   "urls": {
     "marketingUrl": "https://labstudio.fit",
@@ -119,10 +119,10 @@
     "demoUsername": "reviewer+labstudio@labstudio.fit",
     "demoPassword": "No password is required. Enter the demo email on the login screen and leave phone optional.",
     "notes": [
-      "Build 2026060101 is version 1.0 for bundle ID fit.labstudio.app.",
+      "Build 2026060201 is version 1.0 for bundle ID fit.labstudio.app.",
       "Login uses email or phone only; no password or email verification is required for review.",
       "Use reviewer+labstudio@labstudio.fit on the login screen, complete onboarding if prompted, then review the native Dash, Book, Games, Coach, Rank, Shop, and Me tabs.",
-      "Games and Rank use the existing Lab Studio game score and leaderboard APIs; score submission is available from the native Games tab.",
+      "Games now exposes Reaction Lab only. Rank and leaderboard scoring are restricted to Reaction Lab scores for this build.",
       "Toby chat is positioned above the native tab bar on compact iPhone layouts and falls back to built-in coaching guidance if the external AI provider is unavailable.",
       "Any Stripe checkout flows are for in-person gym services, facility memberships, or physical products provided by Lab Studio, not digital content."
     ]
@@ -232,12 +232,20 @@
       "App Store Connect upload succeeded for native build 2026060101; Apple reported the uploaded package is processing.",
       "Production Namecheap deploy passed through GitHub Actions run 26781410091 after Toby fallback route update.",
       "Live Toby API smoke test passed for reviewer+labstudio@labstudio.fit: /api/toby/chat returned HTTP 200 with provider fallback instead of raw OPENAI_API_KEY error.",
-      "Native iPhone 16 Pro iOS 18.2 simulator sent Recovery today against production after deploy and rendered fallback recovery guidance in the Toby transcript."
+      "Native iPhone 16 Pro iOS 18.2 simulator sent Recovery today against production after deploy and rendered fallback recovery guidance in the Toby transcript.",
+      "Native iPhone 17 Pro iOS 26.2 Release simulator build/install/launch passed for build 2026060201.",
+      "Native Games screen runtime snapshot confirmed Reaction Lab is the only visible game; Gear Sort, Pattern Master, and Neuro Grid are absent.",
+      "Native Reaction Lab session started, target taps incremented the score, and the round completed with the Play Again state without a crash.",
+      "Native runtime and OS logs after Reaction Lab testing showed no crash, fatal, exception, or error output.",
+      "Web lint, production Next build, and Swift package tests passed after removing the duplicate games.",
+      "Game score API now rejects non-reaction-lab score submissions and only returns Reaction Lab leaderboard/high-score data.",
+      "Signed Release archive succeeded for build 2026060201 using team WN3K69XEP4 and bundle ID fit.labstudio.app.",
+      "App Store Connect upload succeeded for native build 2026060201; Apple reported the uploaded package is processing."
     ],
     "knownRisks": [
       "App Store Connect trader status should still be reviewed before release if Apple requests business compliance confirmation.",
       "External TestFlight public link access still points at the previously approved build 2026042401; build 2026053101 is available to the internal Studio Crew group and will need separate external Beta App Review if public-link testing is required before App Review approval.",
-      "Build 2026060101 has been uploaded and is processing in App Store Connect; App Review still needs to be switched from build 2026053101 after processing completes."
+      "Build 2026060201 has been uploaded and is processing in App Store Connect; App Review still needs to be switched from build 2026053101 after processing completes."
     ]
   }
 }

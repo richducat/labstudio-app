@@ -13,26 +13,6 @@ private struct LabGameDefinition: Identifiable, Hashable {
 
 private let labGames: [LabGameDefinition] = [
     .init(
-        id: "gear-sort",
-        title: "GEAR SORT",
-        subtitle: "Sorting",
-        detail: "Sort each color into its own tube as efficiently as you can.",
-        icon: "gearshape.2.fill",
-        tint: LabTheme.violetLight,
-        points: 50,
-        tags: ["Brain", "Speed"]
-    ),
-    .init(
-        id: "pattern-master",
-        title: "PATTERN MASTER",
-        subtitle: "Sequence Recall",
-        detail: "Watch the sequence, then repeat it from memory.",
-        icon: "brain.head.profile",
-        tint: .pink,
-        points: 30,
-        tags: ["Memory", "Focus"]
-    ),
-    .init(
         id: "reaction-lab",
         title: "REACTION LAB",
         subtitle: "Reaction Speed",
@@ -41,16 +21,6 @@ private let labGames: [LabGameDefinition] = [
         tint: .yellow,
         points: 40,
         tags: ["Reflex", "Speed"]
-    ),
-    .init(
-        id: "neuro-grid",
-        title: "NEURO GRID",
-        subtitle: "Visual Processing",
-        detail: "Find the mismatch in each grid before time runs out.",
-        icon: "square.grid.3x3.fill",
-        tint: LabTheme.blue,
-        points: 60,
-        tags: ["Visual", "Logic"]
     ),
 ]
 
@@ -99,7 +69,7 @@ struct GamesView: View {
             Text("BRAIN TRAINING")
                 .font(.system(size: 30, weight: .black).italic())
                 .foregroundStyle(.white)
-            Text("FOCUS, MEMORY, REACTION, AND VISUAL SCANNING")
+            Text("REACTION SPEED CHALLENGE")
                 .font(LabTheme.eyebrow())
                 .tracking(2.2)
                 .foregroundStyle(LabTheme.muted)

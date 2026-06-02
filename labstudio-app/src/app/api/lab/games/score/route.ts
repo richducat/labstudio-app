@@ -5,6 +5,8 @@ import { neon } from '@neondatabase/serverless';
 
 export const runtime = 'nodejs';
 
+const ACTIVE_GAME_ID = 'reaction-lab';
+
 function sql() {
     const url = process.env.DATABASE_URL || '';
     if (!url) throw new Error('DATABASE_URL not configured');
@@ -30,6 +32,9 @@ export async function POST(req: Request) {
 
         if (!gameId || !Number.isFinite(score) || score < 0) {
             return NextResponse.json({ ok: false, error: 'Invalid gameId or score' }, { status: 400 });
+        }
+        if (gameId !== ACTIVE_GAME_ID) {
+            return NextResponse.json({ ok: false, error: 'Unsupported gameId' }, { status: 400 });
         }
 
         await ensureSchema();
@@ -73,6 +78,9 @@ export async function GET(req: Request) {
     const q = sql();
 
     if (gameId) {
+        if (gameId !== ACTIVE_GAME_ID) {
+            return NextResponse.json({ ok: true, leaderboards: [] });
+        }
         // Get top 10 for specific game
         const leaderboards = await q`
       select u.display_name, gs.score, gs.created_at
@@ -88,7 +96,7 @@ export async function GET(req: Request) {
       with best_scores as (
         select user_id, game_id, max(score)::int as best_score
         from lab_game_scores
-        where score > 0
+        where score > 0 and game_id = ${ACTIVE_GAME_ID}
         group by user_id, game_id
       )
       select
@@ -110,7 +118,7 @@ export async function GET(req: Request) {
         const highScores = uid ? await q`
       select game_id, max(score) as top_score
       from lab_game_scores
-      where user_id = ${uid}
+      where user_id = ${uid} and game_id = ${ACTIVE_GAME_ID}
       group by game_id;
     ` : [];
 

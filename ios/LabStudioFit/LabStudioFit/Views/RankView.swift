@@ -40,7 +40,7 @@ struct RankView: View {
             Text("LEADERBOARD")
                 .font(.system(size: 30, weight: .black).italic())
                 .foregroundStyle(.white)
-            Text("COMPARE YOUR BEST GAME SCORES")
+            Text("COMPARE YOUR BEST REACTION SCORE")
                 .font(LabTheme.eyebrow())
                 .tracking(2.2)
                 .foregroundStyle(LabTheme.muted)
@@ -110,7 +110,7 @@ struct RankView: View {
             }
             .padding(.horizontal, 2)
 
-            Text("COMBINED BEST SCORES ACROSS YOUR GAMES")
+            Text("BEST REACTION LAB SCORES")
                 .font(.system(size: 10, weight: .bold))
                 .tracking(1.4)
                 .foregroundStyle(LabTheme.muted)

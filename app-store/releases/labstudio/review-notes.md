@@ -6,14 +6,14 @@ Use this file as the exact reviewer-facing source for the build being submitted.
 
 - App: Lab Studio
 - Version: 1.0
-- Build: 2026060101
+- Build: 2026060201
 - Bundle ID: fit.labstudio.app
 
 ## Summary for App Review
 
-Lab Studio is a native SwiftUI members-only fitness app for Lab Studio Fit. Members sign in with email or phone, complete a profile, track workouts, nutrition, progress photos, and training stats, book in-person sessions, play Lab games, review leaderboards, review facility shop/cafe items, and use Toby coaching support.
+Lab Studio is a native SwiftUI members-only fitness app for Lab Studio Fit. Members sign in with email or phone, complete a profile, track workouts, nutrition, progress photos, and training stats, book in-person sessions, play Reaction Lab, review leaderboards, review facility shop/cafe items, and use Toby coaching support.
 
-Build 2026060101 is a stability rebuild. It keeps the restored Lab Studio visual system while improving API startup behavior, fixing Toby chat input placement above the native tab bar on compact iPhones, and preventing a raw AI-provider configuration error from appearing to members.
+Build 2026060201 is a games cleanup release. It keeps the restored Lab Studio visual system and removes the broken duplicate game modes so Reaction Lab is the only active game in Games and Rank.
 
 ## Login
 
@@ -26,7 +26,7 @@ Build 2026060101 is a stability rebuild. It keeps the restored Lab Studio visual
 
 1. Launch the app and sign in with reviewer+labstudio@labstudio.fit.
 2. Review Dash, Book, Games, Coach, Rank, Shop, and Me from the native tab bar.
-3. In Games, start a game round and confirm the score is saved. In Rank, confirm the leaderboard renders.
+3. In Games, start a Reaction Lab round and confirm the score is saved. In Rank, confirm the Reaction Lab leaderboard renders.
 4. In Me, update daily stats or profile details, upload a progress photo if requested, and confirm Delete Account is present. Do not delete the demo account unless Apple needs to validate account deletion.
 
 ## Permissions and background behavior
@@ -54,9 +54,9 @@ Build 2026060101 is a stability rebuild. It keeps the restored Lab Studio visual
   - iPhone 17 Pro simulator on iOS 26.2
   - iPhone 16 Pro simulator on iOS 18.2
   - iPad Pro 13-inch simulator on iOS 26.2
-  - Signed Release archive for build 2026060101 using team WN3K69XEP4 and bundle ID fit.labstudio.app
+  - Signed Release archive succeeded for build 2026060201 using team WN3K69XEP4 and bundle ID fit.labstudio.app
 - App Store Connect state:
-  - Build 2026060101 uploaded to App Store Connect on June 1, 2026 at 4:51 PM EDT and is processing.
+  - Build 2026060201 uploaded to App Store Connect on June 2, 2026 at 2:42 PM EDT and is processing.
   - The previous build 2026053101 was submitted to App Review and verified as Waiting for Review on May 31, 2026 at 10:12 PM EDT.
   - Native Dash, Games, and Rank screenshots are attached in the iPhone 6.5-inch slot.
   - The selected build contains the final Lab Studio Fit app icon.

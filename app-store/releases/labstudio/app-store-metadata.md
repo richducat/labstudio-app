@@ -7,7 +7,7 @@
 - Bundle ID: fit.labstudio.app
 - SKU: fit.labstudio.app
 - Version: 1.0
-- Build: 2026060101
+- Build: 2026060201
 - Primary category: Health & Fitness
 - Secondary category: Lifestyle
 - App Store Connect Apple ID: 6763787815
@@ -36,11 +36,11 @@ fitness, training, gym, coach, nutrition, workout
 
 ## What's New
 
-Stability rebuild for the native SwiftUI release: faster API-backed startup, fixed Toby chat input placement above the tab bar, and improved Toby fallback behavior when the external AI provider is unavailable.
+Games cleanup for the native SwiftUI release: Reaction Lab is now the only active Lab game, with broken duplicate game modes removed from the app and leaderboard scoring.
 
 ## Review Notes
 
-Login uses email or phone only; no password or email verification is required. Use reviewer+labstudio@labstudio.fit, complete onboarding if prompted, and review the native Dash, Book, Games, Coach, Rank, Shop, and Me tabs.
+Login uses email or phone only; no password or email verification is required. Use reviewer+labstudio@labstudio.fit, complete onboarding if prompted, and review the native Dash, Book, Games, Coach, Rank, Shop, and Me tabs. Games now exposes Reaction Lab only; Rank compares Reaction Lab scores.
 
 ## Submission Snapshot
 
@@ -61,23 +61,23 @@ Login uses email or phone only; no password or email verification is required. U
 - Public group: Studio Crew
 - Public link: https://testflight.apple.com/join/rtpbMJhP
 - Public link limit: None
-- Build: 2026060101
+- Build: 2026060201
 - Build ID: Processing in App Store Connect
 - Internal build state: Processing after upload
-- External build state: Not submitted for external Beta App Review for build 2026060101
+- External build state: Not submitted for external Beta App Review for build 2026060201
 - Public link build: 2026042401 remains the previously approved external TestFlight build
 
 ## Internal Launch Notes
 
 - App Store Connect version state: Waiting for Review
-- Attached build ID or build number: 2026060101 uploaded; App Store version still needs to be switched after processing completes
+- Attached build ID or build number: 2026060201 uploaded; App Store version still needs to be switched after processing completes
 - Native screenshot sources:
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-home.png
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-games.png
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-rank.png
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-login.png
 - Review submission ID: b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b
-- Latest native upload: 2026-06-01T20:51:36Z for build 2026060101
+- Latest native upload: 2026-06-02T18:42:16Z for build 2026060201
 - Review submitted at: 2026-06-01T02:12:00Z for prior build 2026053101
 - App Privacy state: Published on April 25, 2026
 - Manual release after approval: Yes

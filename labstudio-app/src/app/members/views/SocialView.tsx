@@ -40,7 +40,7 @@ export default function SocialView() {
       `}} />
       <div className="text-center py-6">
         <h2 className="text-2xl font-black italic uppercase tracking-tighter">Leaderboard</h2>
-        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.2em]">Compare your best game scores</p>
+        <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-[0.2em]">Compare your best Reaction Lab score</p>
       </div>
 
       {/* Active Challenges */}
@@ -75,7 +75,7 @@ export default function SocialView() {
           </div>
         </div>
         <div className="px-2 pb-2 text-[10px] text-zinc-500 uppercase font-bold tracking-widest">
-          Combined best scores across your games
+          Best Reaction Lab scores
         </div>
 
         <div className="space-y-2">

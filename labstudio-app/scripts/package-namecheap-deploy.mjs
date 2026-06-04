@@ -275,7 +275,7 @@ async function main() {
         packagedAt: new Date().toISOString(),
         commit: process.env.GITHUB_SHA || null,
         workflowRun: process.env.GITHUB_RUN_ID || null,
-        deploymentStrategy: 'full-standalone-ssh-tar',
+        deploymentStrategy: 'full-standalone-sftp',
         envSourceUsed: envSource && await exists(envSource) ? path.basename(envSource) : null,
       },
       null,

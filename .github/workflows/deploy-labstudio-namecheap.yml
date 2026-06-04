@@ -93,10 +93,10 @@ jobs:
           du -sh output/namecheap-deploy
           node -e "const info=require('./output/namecheap-deploy/DEPLOY_INFO.json'); console.log(JSON.stringify(info, null, 2));"
 
-      - name: Archive Namecheap bundle
+      - name: Install lftp
         run: |
-          tar -C output/namecheap-deploy -czf output/namecheap-deploy.tar.gz .
-          du -sh output/namecheap-deploy.tar.gz
+          sudo apt-get update
+          sudo apt-get install -y lftp
 
       - name: Upload to Namecheap
         shell: bash
@@ -115,17 +115,24 @@ jobs:
           chmod 600 "$key_path"
           printf 'restart=%s\n' "$(date -u +%FT%TZ)" > output/namecheap-deploy/tmp/restart.txt
 
-          tar -C output/namecheap-deploy -czf - . | ssh -i "$key_path" \
-            -p "$ssh_port" \
-            -o BatchMode=yes \
-            -o StrictHostKeyChecking=no \
-            "$NAMECHEAP_CPANEL_USER@$NAMECHEAP_SSH_HOST" \
-            "set -e;
-             command -v tar >/dev/null;
-             mkdir -p '$remote_root' '$remote_root/tmp';
-             tar -xzf - -C '$remote_root';
-             printf 'restart=%s\n' \"\$(date -u +%FT%TZ)\" > '$remote_root/tmp/restart.txt';
-             cat '$remote_root/DEPLOY_INFO.json'"
+          lftp -u "$NAMECHEAP_CPANEL_USER", "sftp://$NAMECHEAP_SSH_HOST:$ssh_port" <<LFTP
+          set cmd:fail-exit yes
+          set sftp:connect-program "ssh -a -x -i $key_path -o BatchMode=yes -o StrictHostKeyChecking=no"
+          set net:timeout 60
+          set net:max-retries 5
+          set net:reconnect-interval-base 5
+          set xfer:clobber true
+          set mirror:overwrite true
+          set cmd:fail-exit no
+          mkdir "$remote_root"
+          mkdir "$remote_root/tmp"
+          set cmd:fail-exit yes
+          lcd output/namecheap-deploy
+          mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$remote_root"
+          put -O "$remote_root/tmp" tmp/restart.txt
+          cat "$remote_root/DEPLOY_INFO.json"
+          bye
+          LFTP
 
       - name: Verify live API
         run: |

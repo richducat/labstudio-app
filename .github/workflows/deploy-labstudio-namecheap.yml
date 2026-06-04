@@ -88,80 +88,10 @@ jobs:
       - name: Package Namecheap bundle
         run: npm run package:namecheap
 
-      - name: Stage changed runtime files
+      - name: Inspect Namecheap bundle
         run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const src = path.resolve('output/namecheap-deploy');
-          const stage = path.resolve('output/namecheap-targeted');
-          fs.rmSync(stage, { recursive: true, force: true });
-          fs.mkdirSync(stage, { recursive: true });
-
-          const files = new Set([
-            'DEPLOY_INFO.json',
-            'app.js',
-            '.next/app-path-routes-manifest.json',
-            '.next/BUILD_ID',
-            '.next/build-manifest.json',
-            '.next/package.json',
-            '.next/prerender-manifest.json',
-            '.next/required-server-files.json',
-            '.next/routes-manifest.json',
-            '.next/server/app-paths-manifest.json',
-            '.next/server/functions-config-manifest.json',
-            '.next/server/middleware-build-manifest.js',
-            '.next/server/middleware-manifest.json',
-            '.next/server/middleware.js',
-            '.next/server/next-font-manifest.js',
-            '.next/server/next-font-manifest.json',
-            '.next/server/pages-manifest.json',
-            '.next/server/server-reference-manifest.js',
-            '.next/server/server-reference-manifest.json',
-          ]);
-
-          function addTree(relativeDir) {
-            const absoluteDir = path.join(src, relativeDir);
-            if (!fs.existsSync(absoluteDir)) return;
-            for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
-              const relativePath = path.join(relativeDir, entry.name);
-              const absolutePath = path.join(src, relativePath);
-              if (entry.isDirectory()) {
-                addTree(relativePath);
-              } else if (entry.isFile()) {
-                files.add(relativePath);
-              }
-            }
-          }
-
-          for (const dir of [
-            '.next/server/app/api/lab',
-            '.next/server/app/api/toby',
-            '.next/server/app/account-deletion',
-            '.next/server/app/privacy',
-            '.next/server/app/support',
-            '.next/server/app/terms',
-            '.next/server/chunks',
-            '.next/server/chunks/ssr',
-            'data',
-            'tmp',
-          ]) {
-            addTree(dir);
-          }
-
-          let copied = 0;
-          for (const relativePath of files) {
-            const from = path.join(src, relativePath);
-            if (!fs.existsSync(from)) continue;
-            const to = path.join(stage, relativePath);
-            fs.mkdirSync(path.dirname(to), { recursive: true });
-            fs.copyFileSync(from, to);
-            copied += 1;
-          }
-
-          console.log(`Staged ${copied} files for targeted upload.`);
-          NODE
-          du -sh output/namecheap-targeted
+          du -sh output/namecheap-deploy
+          node -e "const info=require('./output/namecheap-deploy/DEPLOY_INFO.json'); console.log(JSON.stringify(info, null, 2));"
 
       - name: Install lftp
         run: |
@@ -183,7 +113,7 @@ jobs:
 
           printf '%s\n' "$NAMECHEAP_SSH_KEY" > "$key_path"
           chmod 600 "$key_path"
-          printf 'restart=%s\n' "$(date -u +%FT%TZ)" > output/namecheap-targeted/tmp/restart.txt
+          printf 'restart=%s\n' "$(date -u +%FT%TZ)" > output/namecheap-deploy/tmp/restart.txt
 
           lftp -u "$NAMECHEAP_CPANEL_USER", "sftp://$NAMECHEAP_SSH_HOST:$ssh_port" <<LFTP
           set cmd:fail-exit yes
@@ -193,7 +123,11 @@ jobs:
           set net:reconnect-interval-base 5
           set xfer:clobber true
           set mirror:overwrite true
-          lcd output/namecheap-targeted
+          set cmd:fail-exit no
+          mkdir "$remote_root"
+          mkdir "$remote_root/tmp"
+          set cmd:fail-exit yes
+          lcd output/namecheap-deploy
           mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$remote_root"
           put -O "$remote_root/tmp" tmp/restart.txt
           cat "$remote_root/DEPLOY_INFO.json"

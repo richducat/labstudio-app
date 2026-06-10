@@ -98,7 +98,7 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
-                EmptyLabState(title: "No upcoming session", detail: "Book from the Train tab and it will appear here immediately.", icon: "calendar.badge.plus")
+                EmptyLabState(title: "No upcoming session", detail: "Book from the Book tab and it will appear here immediately.", icon: "calendar.badge.plus")
             }
         }
     }

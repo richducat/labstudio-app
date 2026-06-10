@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://app.labstudio.fit',
     cleartext: false,
-    allowNavigation: ['app.labstudio.fit', '*.vercel.app'],
+    allowNavigation: ['app.labstudio.fit'],
   },
 };
 

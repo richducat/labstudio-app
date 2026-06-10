@@ -157,14 +157,21 @@ private struct LoginView: View {
     @State private var phone = ""
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 18) {
-                Spacer(minLength: 40)
-                hero
-                form
-                catalogPreview
+        GeometryReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 18) {
+                    hero
+                    form
+                    catalogPreview
+                }
+                .padding(20)
+                .padding(.top, 24)
+                .padding(.bottom, 44)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: proxy.size.height, alignment: .top)
+                .contentShape(Rectangle())
             }
-            .padding(20)
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
     }
 
@@ -275,11 +282,16 @@ private struct PremiumTabBar: View {
             .padding(.bottom, 10)
         }
         .background {
-            if #available(iOS 26.0, *) {
-                LabTheme.chrome.opacity(0.90)
-                    .glassEffect(.regular.tint(.black.opacity(0.20)), in: .rect)
-            } else {
-                LabTheme.chrome.opacity(0.94)
+            ZStack {
+                LabTheme.chrome
+                    .ignoresSafeArea(.container, edges: .bottom)
+
+                if #available(iOS 26.0, *) {
+                    LabTheme.chrome.opacity(0.90)
+                        .glassEffect(.regular.tint(.black.opacity(0.20)), in: .rect)
+                } else {
+                    LabTheme.chrome.opacity(0.94)
+                }
             }
         }
     }

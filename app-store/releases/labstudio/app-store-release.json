@@ -42,7 +42,10 @@
       "id": "b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b",
       "itemId": "YjU2ZDk4ZmYtYzViZS00YjhkLWJkNGUtNGFjYjk0YTllYjFifDZ8ODg0OTMyMjcw",
       "state": "WAITING_FOR_REVIEW",
-      "submittedAt": "2026-06-01T02:12:00Z"
+      "submittedAt": "2026-06-04T13:51:32.771Z",
+      "lastVerifiedAt": "2026-06-04T13:51:32.771Z",
+      "verificationReceipt": "output/app-store-connect/labstudio-hydrated-resubmit-2026060401.json",
+      "freshVerificationStatus": "NEEDS_AUTHENTICATED_ASC_RECHECK"
     },
     "testFlight": {
       "configuredAt": "2026-04-26T12:52:20Z",
@@ -76,20 +79,37 @@
       }
     },
     "latestNativeUpload": {
-      "buildNumber": "2026060201",
+      "buildNumber": "2026060401",
+      "buildId": "b7a642f4-56e7-4db7-9bff-c70a5c1c7e94",
       "version": "1.0",
       "bundleId": "fit.labstudio.app",
-      "uploadedAt": "2026-06-02T18:42:16Z",
-      "state": "PROCESSING",
+      "uploadedAt": "2026-06-04T13:39:38Z",
+      "state": "VALID",
       "tool": "xcodebuild -exportArchive",
-      "archivePath": "build/LabStudioFit-1.0-2026060201.xcarchive",
-      "uploadLogPath": "build/LabStudioFit-upload-2026060201.log",
-      "notes": "Reaction-only games cleanup: removed broken duplicate Lab games from native and web surfaces, kept Reaction Lab playable, and restricted score/leaderboard APIs to reaction-lab."
+      "archivePath": "build/LabStudioFit-1.0-2026060401.xcarchive",
+      "uploadLogPath": "build/LabStudioFit-upload-2026060401.log",
+      "notes": "Reaction-only games cleanup plus native bottom navigation chrome fix: removed broken duplicate Lab games, kept Reaction Lab playable, restricted score/leaderboard APIs to reaction-lab, and extended the tab bar background through the iPhone bottom safe area."
+    },
+    "candidateBuild": {
+      "buildNumber": "2026061001",
+      "version": "1.0",
+      "bundleId": "fit.labstudio.app",
+      "status": "LOCAL_RC_NOT_UPLOADED",
+      "sourceBranch": "codex/labstudio-appstore-2026061001",
+      "createdAt": "2026-06-10T17:11:49-04:00",
+      "summary": "Candidate build includes the Reaction Lab cleanup, refreshed actual-app screenshots, native bottom navigation chrome fix, and June 10 login scroll hardening for compact iPhone review devices.",
+      "requiresApprovalBefore": [
+        "archive",
+        "upload_build",
+        "edit_screenshots_previews",
+        "select_build",
+        "submit_for_review"
+      ]
     }
   },
   "version": {
     "marketingVersion": "1.0",
-    "buildNumber": "2026060201",
+    "buildNumber": "2026061001",
     "releaseType": "MANUAL",
     "phasedRelease": false,
     "promotionalText": "Members-only training, nutrition, booking, progress tracking, and Toby coaching for Lab Studio.",
@@ -102,7 +122,7 @@
       "nutrition",
       "workout"
     ],
-    "whatsNew": "Games cleanup for the native SwiftUI release: Reaction Lab is now the only active Lab game, with broken duplicate game modes removed from the app and leaderboard scoring."
+    "whatsNew": "Games cleanup for the native SwiftUI release: Reaction Lab is now the only active Lab game, with broken duplicate game modes removed from the app and leaderboard scoring. This build also fixes the bottom navigation chrome on iPhone review devices."
   },
   "urls": {
     "marketingUrl": "https://labstudio.fit",
@@ -119,11 +139,11 @@
     "demoUsername": "reviewer+labstudio@labstudio.fit",
     "demoPassword": "No password is required. Enter the demo email on the login screen and leave phone optional.",
     "notes": [
-      "Build 2026060201 is version 1.0 for bundle ID fit.labstudio.app.",
+      "Build 2026061001 is version 1.0 for bundle ID fit.labstudio.app.",
       "Login uses email or phone only; no password or email verification is required for review.",
       "Use reviewer+labstudio@labstudio.fit on the login screen, complete onboarding if prompted, then review the native Dash, Book, Games, Coach, Rank, Shop, and Me tabs.",
       "Games now exposes Reaction Lab only. Rank and leaderboard scoring are restricted to Reaction Lab scores for this build.",
-      "Toby chat is positioned above the native tab bar on compact iPhone layouts and falls back to built-in coaching guidance if the external AI provider is unavailable.",
+      "Toby chat is positioned above the native tab bar on compact iPhone layouts, the bottom navigation chrome extends through the iPhone safe area, the login screen scroll layout is hardened for compact iPhone review devices, and Toby falls back to built-in coaching guidance if the external AI provider is unavailable.",
       "Any Stripe checkout flows are for in-person gym services, facility memberships, or physical products provided by Lab Studio, not digital content."
     ]
   },
@@ -180,6 +200,11 @@
       "screenshots/native/asc/iphone-6-5-games.png",
       "screenshots/native/asc/iphone-6-5-rank.png"
     ],
+    "iphone67Screenshots": [
+      "screenshots/native/iphone-17-pro-max-home.png",
+      "screenshots/native/iphone-17-pro-max-games.png",
+      "screenshots/native/iphone-17-pro-max-rank.png"
+    ],
     "ipadScreenshots": [
       "screenshots/native/ipad-pro-13-login.png"
     ],
@@ -188,6 +213,9 @@
   "verification": {
     "testedDevices": [
       "iPhone 17 Pro simulator on iOS 26.2",
+      "iPhone 17 Pro Max simulator on iOS 26.2",
+      "iPhone 17 Pro Max simulator on iOS 26.5",
+      "iPad Pro 13-inch simulator on iOS 26.5",
       "iPad Pro 13-inch simulator on iOS 26.2"
     ],
     "testedFlows": [
@@ -196,7 +224,7 @@
       "login page render",
       "privacy, support, terms, and account deletion pages render",
       "account deletion endpoint added and protected by member session middleware",
-      "native app API-backed login, home, booking, workout, nutrition, progress photo, market, Toby, profile, logout, and account deletion flows wired to https://app.labstudio.fit",
+      "native app API-backed login, home, booking, workout, nutrition, progress photo, shop, Toby, profile, logout, and account deletion flows wired to https://app.labstudio.fit",
       "App Store Connect app record created for Apple ID 6763787815",
       "Namecheap/cPanel production deploy passed through GitHub Actions run 26625865004 after switching to the cPanel SFTP app root.",
       "Production native API smoke test passed: /api/lab/shop catalog, /api/lab/services, /api/lab/auth/login cookies, /api/lab/user session lookup, and /api/lab/auth/logout.",
@@ -224,7 +252,7 @@
       "Native Release simulator build/install/launch passed on iPhone 16 Pro simulator running iOS 18.2 for build 2026060101.",
       "Native startup stress test confirmed dashboard loads without the previous long blocking bootstrap wait.",
       "Native tab stress test covered Dash, Book, Games, Coach/Toby, Rank, Shop, and Me without process crash.",
-      "Native Games stress test completed Gear Sort round and confirmed score-save success UI.",
+      "Native Games stress test on build 2026060101 predates the cleanup and is superseded by the 2026060201 Reaction Lab verification.",
       "Native Shop stress test added Day Pass to cart and confirmed cart/checkout state enabled without purchase completion.",
       "Native Toby stress test found and fixed compact iPhone composer overlap with the floating tab bar; post-fix text entry and send button remained on the Coach tab.",
       "Native runtime and OS logs after Release simulator launch showed no app crash output.",
@@ -234,18 +262,36 @@
       "Live Toby API smoke test passed for reviewer+labstudio@labstudio.fit: /api/toby/chat returned HTTP 200 with provider fallback instead of raw OPENAI_API_KEY error.",
       "Native iPhone 16 Pro iOS 18.2 simulator sent Recovery today against production after deploy and rendered fallback recovery guidance in the Toby transcript.",
       "Native iPhone 17 Pro iOS 26.2 Release simulator build/install/launch passed for build 2026060201.",
-      "Native Games screen runtime snapshot confirmed Reaction Lab is the only visible game; Gear Sort, Pattern Master, and Neuro Grid are absent.",
+      "Native Games screen runtime snapshot confirmed Reaction Lab is the only visible game; removed Gear Sort, Pattern Master, and Neuro Grid modes are absent.",
       "Native Reaction Lab session started, target taps incremented the score, and the round completed with the Play Again state without a crash.",
       "Native runtime and OS logs after Reaction Lab testing showed no crash, fatal, exception, or error output.",
+      "Native iPhone 17 Pro Max iOS 26.2 Debug simulator build/install/launch passed after the reviewer-flow copy fix and refreshed App Store screenshots.",
+      "Regenerated exact 1242 x 2688 iPhone 6.5-inch App Store screenshots for Dash, Games, and Rank from the current Reaction Lab-only native UI.",
       "Web lint, production Next build, and Swift package tests passed after removing the duplicate games.",
       "Game score API now rejects non-reaction-lab score submissions and only returns Reaction Lab leaderboard/high-score data.",
       "Signed Release archive succeeded for build 2026060201 using team WN3K69XEP4 and bundle ID fit.labstudio.app.",
-      "App Store Connect upload succeeded for native build 2026060201; Apple reported the uploaded package is processing."
+      "App Store Connect upload succeeded for native build 2026060201; superseded by build 2026060401 because the native bottom navigation chrome was fixed after the June 2 upload.",
+      "Native iPhone 17 Pro Max iOS 26.2 simulator verified the bottom tab bar background extends through the bottom safe area with no visible gap below the app UI.",
+      "Regenerated exact 1242 x 2688 iPhone 6.5-inch App Store screenshots for Dash, Games, and Rank after the bottom navigation chrome fix.",
+      "Native Swift package tests passed for build 2026060401.",
+      "Clean signed Release archive succeeded for build 2026060401 using team WN3K69XEP4 and bundle ID fit.labstudio.app.",
+      "App Store Connect upload succeeded for native build 2026060401 at 2026-06-04T13:39:38Z; Apple processed the build as VALID and APP_STORE_ELIGIBLE with build ID b7a642f4-56e7-4db7-9bff-c70a5c1c7e94.",
+      "App Store Connect screenshots were refreshed from the repo and processed as COMPLETE for APP_IPHONE_65, APP_IPHONE_67, and APP_IPAD_PRO_3GEN_129.",
+      "App Store Connect version 1.0 was updated from build 2026053101 to build 2026060401.",
+      "App Review notes were updated and persisted for build 2026060401, including Dash, Book, Games, Coach/Toby, Rank, Shop, Me, account deletion, screenshot, and bottom-navigation review context.",
+      "App Store Connect resubmitted iOS version 1.0 build 2026060401 to App Review at 2026-06-04T13:51:32.771Z; final state verified as Waiting for Review.",
+      "App Store Connect live icon verification on 2026-06-04 confirmed the selected version storeIcon is the final dark Lab Studio icon at 1024 x 1024, and the attached build thumbnail is also the dark Lab Studio icon.",
+      "Native iPhone 17 Pro Max iOS 26.5 Debug simulator build, install, and launch passed on 2026-06-10 for candidate build 2026061001 after login scroll hardening in RootShellView.swift.",
+      "Native iPhone 17 Pro Max iOS 26.5 login screen scroll was verified by dragging inside the Simulator viewport; before/after screenshots show the login content moved upward and live catalog remained visible.",
+      "Native iPad Pro 13-inch iOS 26.5 Debug simulator build, install, launch, and screenshot passed for candidate build 2026061001 with actual login/catalog UI visible.",
+      "Live app.labstudio.fit smoke passed on 2026-06-10: /privacy, /support, /terms, /account-deletion, /api/lab/shop, /api/lab/services, /api/lab/cafe, reviewer login, /api/lab/user, and /api/toby/chat returned HTTP 200."
     ],
     "knownRisks": [
+      "Fresh App Store Connect status could not be reverified on 2026-06-10 because the asc CLI was unauthenticated and Chrome redirected to App Store Connect login with authResult=FAILED. Treat June 4 App Store Connect receipts as historical evidence until a new authenticated receipt is captured.",
+      "Candidate build 2026061001 has not been archived, uploaded, selected, or submitted. Do not perform external mutations until EB28 approval records exist and fresh ASC state is captured.",
       "App Store Connect trader status should still be reviewed before release if Apple requests business compliance confirmation.",
-      "External TestFlight public link access still points at the previously approved build 2026042401; build 2026053101 is available to the internal Studio Crew group and will need separate external Beta App Review if public-link testing is required before App Review approval.",
-      "Build 2026060201 has been uploaded and is processing in App Store Connect; App Review still needs to be switched from build 2026053101 after processing completes."
+      "External TestFlight public link access still points at the previously approved build 2026042401; build 2026060401 should be tested through App Store Connect/internal access if public-link testing is not updated.",
+      "Builds 2026053101 and 2026060201 are superseded for App Review; the June 4 App Store Connect receipt showed build 2026060401 waiting for review."
     ]
   }
 }

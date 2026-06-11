@@ -29,7 +29,7 @@
     "appInfoLocalizationId": "e9a00c74-9496-4271-b4ac-0b9726db1bd8",
     "appStoreVersionId": "0f4f4ff5-c9fd-4948-9494-3cfee4fd0712",
     "appStoreVersionLocalizationId": "843bac0e-2e4d-409c-ab53-f1e6cb777427",
-    "state": "WAITING_FOR_REVIEW",
+    "state": "REJECTED",
     "ageRating": "TWELVE_PLUS",
     "priceSchedule": {
       "downloadPrice": "FREE",
@@ -41,11 +41,11 @@
     "reviewSubmission": {
       "id": "b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b",
       "itemId": "YjU2ZDk4ZmYtYzViZS00YjhkLWJkNGUtNGFjYjk0YTllYjFifDZ8ODg0OTMyMjcw",
-      "state": "WAITING_FOR_REVIEW",
+      "state": "UNRESOLVED_ISSUES",
       "submittedAt": "2026-06-04T13:51:32.771Z",
-      "lastVerifiedAt": "2026-06-04T13:51:32.771Z",
-      "verificationReceipt": "output/app-store-connect/labstudio-hydrated-resubmit-2026060401.json",
-      "freshVerificationStatus": "NEEDS_AUTHENTICATED_ASC_RECHECK"
+      "lastVerifiedAt": "2026-06-10T22:11:18.841Z",
+      "verificationReceipt": "output/app-store-connect/labstudio-asc-submission-details-20260610.json",
+      "freshVerificationStatus": "VERIFIED_IN_VISIBLE_ASC_UI_20260610"
     },
     "testFlight": {
       "configuredAt": "2026-04-26T12:52:20Z",
@@ -97,7 +97,7 @@
       "status": "LOCAL_RC_NOT_UPLOADED",
       "sourceBranch": "codex/labstudio-appstore-2026061001",
       "createdAt": "2026-06-10T17:11:49-04:00",
-      "summary": "Candidate build includes the Reaction Lab cleanup, refreshed actual-app screenshots, native bottom navigation chrome fix, and June 10 login scroll hardening for compact iPhone review devices.",
+      "summary": "Candidate build includes the Reaction Lab cleanup, refreshed actual-app iPhone and iPad screenshots, native bottom navigation chrome fix, and June 10 login scroll hardening for compact iPhone review devices.",
       "requiresApprovalBefore": [
         "archive",
         "upload_build",
@@ -206,7 +206,9 @@
       "screenshots/native/iphone-17-pro-max-rank.png"
     ],
     "ipadScreenshots": [
-      "screenshots/native/ipad-pro-13-login.png"
+      "screenshots/native/ipad-pro-13-home.png",
+      "screenshots/native/ipad-pro-13-games.png",
+      "screenshots/native/ipad-pro-13-rank.png"
     ],
     "appPreviewVideos": []
   },
@@ -283,15 +285,17 @@
       "App Store Connect live icon verification on 2026-06-04 confirmed the selected version storeIcon is the final dark Lab Studio icon at 1024 x 1024, and the attached build thumbnail is also the dark Lab Studio icon.",
       "Native iPhone 17 Pro Max iOS 26.5 Debug simulator build, install, and launch passed on 2026-06-10 for candidate build 2026061001 after login scroll hardening in RootShellView.swift.",
       "Native iPhone 17 Pro Max iOS 26.5 login screen scroll was verified by dragging inside the Simulator viewport; before/after screenshots show the login content moved upward and live catalog remained visible.",
-      "Native iPad Pro 13-inch iOS 26.5 Debug simulator build, install, launch, and screenshot passed for candidate build 2026061001 with actual login/catalog UI visible.",
+      "Native iPad Pro 13-inch iOS 26.5 Debug simulator build, install, launch, and screenshot capture passed for candidate build 2026061001.",
+      "Regenerated exact 2064 x 2752 iPad Pro 13-inch screenshots for Dash, Games, and Rank from the current native SwiftUI member app.",
       "Live app.labstudio.fit smoke passed on 2026-06-10: /privacy, /support, /terms, /account-deletion, /api/lab/shop, /api/lab/services, /api/lab/cafe, reviewer login, /api/lab/user, and /api/toby/chat returned HTTP 200."
     ],
     "knownRisks": [
-      "Fresh App Store Connect status could not be reverified on 2026-06-10 because the asc CLI was unauthenticated and Chrome redirected to App Store Connect login with authResult=FAILED. Treat June 4 App Store Connect receipts as historical evidence until a new authenticated receipt is captured.",
+      "Visible App Store Connect UI on 2026-06-10 showed the active submission as Rejected / Unresolved Issues for version 1.0 build 2026060401; target build 2026061001 was not visible in TestFlight.",
       "Candidate build 2026061001 has not been archived, uploaded, selected, or submitted. Do not perform external mutations until EB28 approval records exist and fresh ASC state is captured.",
+      "Visible App Store Connect Apps overview on 2026-06-10 showed an updated Apple Developer Program License Agreement banner that must be accepted by the Account Holder before app updates or submissions.",
       "App Store Connect trader status should still be reviewed before release if Apple requests business compliance confirmation.",
       "External TestFlight public link access still points at the previously approved build 2026042401; build 2026060401 should be tested through App Store Connect/internal access if public-link testing is not updated.",
-      "Builds 2026053101 and 2026060201 are superseded for App Review; the June 4 App Store Connect receipt showed build 2026060401 waiting for review."
+      "Builds 2026053101, 2026060201, and 2026060401 are superseded for App Review; the June 10 visible App Store Connect receipt showed build 2026060401 rejected with unresolved issues."
     ]
   }
 }

@@ -242,6 +242,9 @@ final class LabAppState {
     ]
 
     private let api = LabAPIClient()
+#if DEBUG
+    private var isUsingScreenshotFixture = false
+#endif
 
     var displayName: String {
         profile?.displayName ?? user?.displayName ?? "Lab Member"
@@ -274,6 +277,12 @@ final class LabAppState {
     func bootstrap() async {
         isBootstrapping = true
         defer { isBootstrapping = false }
+
+#if DEBUG
+        if applyScreenshotFixtureIfRequested() {
+            return
+        }
+#endif
 
         do {
             try await refreshAll(includeGameData: false)
@@ -525,6 +534,9 @@ final class LabAppState {
     }
 
     func refreshGameScores() async {
+#if DEBUG
+        if isUsingScreenshotFixture { return }
+#endif
         do {
             let response: GameScoresResponse = try await api.get("/api/lab/games/score")
             if response.ok {
@@ -536,6 +548,9 @@ final class LabAppState {
     }
 
     func refreshLeaderboard() async {
+#if DEBUG
+        if isUsingScreenshotFixture { return }
+#endif
         do {
             let response: GameScoresResponse = try await api.get("/api/lab/games/score?scope=global")
             if response.ok {
@@ -664,6 +679,144 @@ final class LabAppState {
             await refreshLeaderboard()
         }
     }
+
+#if DEBUG
+    private func applyScreenshotFixtureIfRequested() -> Bool {
+        let process = ProcessInfo.processInfo
+        let arguments = process.arguments
+        let environment = process.environment
+
+        let rawMode: String?
+        if let index = arguments.firstIndex(of: "-LabStudioScreenshotMode"),
+           arguments.indices.contains(index + 1) {
+            rawMode = arguments[index + 1]
+        } else {
+            rawMode = environment["LABSTUDIO_SCREENSHOT_MODE"]
+        }
+
+        guard let rawMode, let tab = screenshotTab(for: rawMode) else {
+            return false
+        }
+
+        applyScreenshotFixture(selectedTab: tab)
+        return true
+    }
+
+    private func screenshotTab(for rawMode: String) -> LabTab? {
+        switch rawMode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "dash", "home":
+            .home
+        case "book", "train":
+            .train
+        case "games", "game":
+            .games
+        case "shop", "market":
+            .market
+        case "coach", "toby":
+            .coach
+        case "rank", "social", "leaderboard":
+            .social
+        case "me", "profile":
+            .profile
+        default:
+            nil
+        }
+    }
+
+    private func applyScreenshotFixture(selectedTab tab: LabTab) {
+        let fixtureProfile = LabProfile(
+            userId: "reviewer",
+            firstName: "Avery",
+            lastName: "Member",
+            email: "reviewer+labstudio@labstudio.fit",
+            phone: "321-555-0198",
+            goal: "Build strength and stay consistent",
+            activityLevel: "Active",
+            scheduleDays: ["mon", "wed", "fri"],
+            nutritionRating: 4
+        )
+
+        user = LabUser(id: "reviewer", displayName: "Avery Member", xp: 1840, level: 3, onboardingComplete: true)
+        profile = fixtureProfile
+        location = "3280 Suntree Blvd, Melbourne, FL"
+        services = [
+            .init(id: "private-strength", name: "Private Strength", price: 85, time: "60 min", desc: "One-on-one programming and coaching.", type: "Training"),
+            .init(id: "performance-checkin", name: "Performance Check-In", price: 45, time: "30 min", desc: "Movement review, goal setting, and recovery planning.", type: "Coaching"),
+            .init(id: "small-group", name: "Small Group Training", price: 35, time: "45 min", desc: "Coach-led strength session with a focused group.", type: "Training")
+        ]
+        timeGroups = [
+            .init(label: "Morning", slots: ["7:00 AM", "8:30 AM", "10:00 AM"]),
+            .init(label: "Afternoon", slots: ["12:30 PM", "2:00 PM", "4:30 PM"]),
+            .init(label: "Evening", slots: ["5:30 PM", "6:30 PM"])
+        ]
+        shopProducts = [
+            .init(slug: "day-pass", name: "Day Pass", description: "Single-day facility access.", priceCents: 2500, imageUrl: nil, stripePriceId: nil, checkoutUrl: nil),
+            .init(slug: "private-pack", name: "Private Training Pack", description: "Five private coaching sessions.", priceCents: 39900, imageUrl: nil, stripePriceId: nil, checkoutUrl: nil),
+            .init(slug: "membership", name: "Studio Membership", description: "Monthly access for Lab Studio members.", priceCents: 12900, imageUrl: nil, stripePriceId: nil, checkoutUrl: nil)
+        ]
+        cafeItems = [
+            .init(slug: "recovery-shake", name: "Recovery Shake", category: "Cafe", priceCents: 900, productUrl: nil, imageUrl: nil, stripePriceId: nil),
+            .init(slug: "protein-coffee", name: "Protein Coffee", category: "Cafe", priceCents: 650, productUrl: nil, imageUrl: nil, stripePriceId: nil)
+        ]
+        home = LabHome(
+            profile: fixtureProfile,
+            nutrition: .init(proteinG: 126, carbsG: 210, fatG: 62, calories: 1840),
+            latestStats: .init(id: 44, createdAt: "2026-06-10T13:30:00-04:00", weightLbs: 176.4, bodyFatPct: 15.8, restingHr: 54, note: "Feeling strong after lower-body day."),
+            nextBooking: .init(summary: "Private Strength Session", start: "2026-06-12T14:00:00-04:00", end: "2026-06-12T15:00:00-04:00", location: location, description: "Lower-body strength block.", source: "labstudio"),
+            upcomingBookings: [
+                .init(summary: "Private Strength Session", start: "2026-06-12T14:00:00-04:00", end: "2026-06-12T15:00:00-04:00", location: location, description: nil, source: "labstudio"),
+                .init(summary: "Small Group Training", start: "2026-06-15T17:30:00-04:00", end: "2026-06-15T18:15:00-04:00", location: location, description: nil, source: "labstudio")
+            ],
+            bookingCalendar: [
+                .init(summary: "Private Strength Session", start: "2026-06-12T14:00:00-04:00", end: "2026-06-12T15:00:00-04:00", location: location, description: nil, source: "labstudio"),
+                .init(summary: "Small Group Training", start: "2026-06-15T17:30:00-04:00", end: "2026-06-15T18:15:00-04:00", location: location, description: nil, source: "labstudio")
+            ],
+            calendarFeed: .init(connected: true, importedUpcomingCount: 2),
+            recentWorkouts: [
+                .init(id: 301, createdAt: "2026-06-10T09:45:00-04:00", kind: "strength", durationMin: 62, note: "Trap bar deadlift and sled work."),
+                .init(id: 300, createdAt: "2026-06-08T08:30:00-04:00", kind: "conditioning", durationMin: 38, note: "Intervals and mobility.")
+            ],
+            agenda: [
+                .init(id: "protein", title: "Hit protein target", time: "Today", type: "Nutrition", action: "log", completed: false),
+                .init(id: "mobility", title: "10-minute mobility reset", time: "4:00 PM", type: "Recovery", action: "checkoff", completed: true),
+                .init(id: "session", title: "Confirm Friday session", time: "6:00 PM", type: "Booking", action: "book", completed: false)
+            ],
+            sessionLog: .init(bookedUpcoming30d: 4, completed7d: 3, missedApprox30d: 0),
+            progress: .init(photos30d: 2, calories7dAvg: 1880, workouts7d: .init(count: 4, minutes: 215), latestPr: .init(lift: "Trap Bar Deadlift", value: 225, unit: "lb", reps: 3))
+        )
+        nutrition = LabNutrition(
+            today: .init(
+                proteinG: 126,
+                carbsG: 210,
+                fatG: 62,
+                calories: 1840,
+                entries: [
+                    .init(id: 1001, createdAt: "2026-06-10T08:00:00-04:00", name: "Protein oats", proteinG: 38, carbsG: 52, fatG: 12, timeLabel: "Breakfast"),
+                    .init(id: 1002, createdAt: "2026-06-10T12:30:00-04:00", name: "Chicken bowl", proteinG: 48, carbsG: 70, fatG: 18, timeLabel: "Lunch")
+                ]
+            ),
+            avg7: .init(proteinG: 121, carbsG: 198, fatG: 58, calories: 1815)
+        )
+        gameHighScores = ["reaction-lab": 540]
+        leaderboard = [
+            .init(displayName: "Maya Stone", score: 720, gamesPlayed: 9),
+            .init(displayName: "Avery Member", score: 540, gamesPlayed: 6),
+            .init(displayName: "Chris Lee", score: 480, gamesPlayed: 5),
+            .init(displayName: "Jordan Pace", score: 360, gamesPlayed: 4)
+        ]
+        coachMessages = [
+            .init(text: Self.signedInCoachPrompt, isCoach: true),
+            .init(text: "Focus today on the lower-body session and keep protein above 120g.", isCoach: true)
+        ]
+        cart.removeAll()
+        errorMessage = nil
+        successMessage = nil
+        isLoading = false
+        isAuthenticated = true
+        isUsingScreenshotFixture = true
+        selectedTab = tab
+    }
+#endif
 
     private func compressedJPEGData(from data: Data) -> Data? {
         guard let image = UIImage(data: data) else { return nil }

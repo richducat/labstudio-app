@@ -228,6 +228,12 @@ struct LabLeaderboardEntry: Decodable, Identifiable, Hashable {
 
     var id: String { "\(displayName ?? "member")-\(score)-\(gamesPlayed ?? 0)" }
 
+    init(displayName: String?, score: Int, gamesPlayed: Int?) {
+        self.displayName = displayName
+        self.score = score
+        self.gamesPlayed = gamesPlayed
+    }
+
     enum CodingKeys: String, CodingKey {
         case displayName
         case score

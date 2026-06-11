@@ -13,7 +13,7 @@ Use this file as the exact reviewer-facing source for the build being submitted.
 
 Lab Studio is a native SwiftUI members-only fitness app for Lab Studio Fit. Members sign in with email or phone, complete a profile, track workouts, nutrition, progress photos, and training stats, book in-person sessions, play Reaction Lab, review leaderboards, review facility shop/cafe items, and use Toby coaching support.
 
-Build 2026061001 is the reviewer-flow cleanup release. It keeps the restored Lab Studio visual system, removes the broken duplicate game modes so Reaction Lab is the only active game in Games and Rank, fixes the native bottom navigation chrome so no gap appears below the tab bar on iPhone review devices, and hardens the login screen scroll layout for compact iPhone review devices.
+Build 2026061001 is the reviewer-flow cleanup release. It keeps the restored Lab Studio visual system, removes the broken duplicate game modes so Reaction Lab is the only active game in Games and Rank, fixes the native bottom navigation chrome so no gap appears below the tab bar on iPhone review devices, hardens the login screen scroll layout for compact iPhone review devices, and replaces the iPad screenshot set with native Dash, Games, and Rank app screens.
 
 ## Login
 
@@ -61,9 +61,9 @@ Build 2026061001 is the reviewer-flow cleanup release. It keeps the restored Lab
   - Local Debug simulator build, install, launch, and login scroll verification passed for build 2026061001 on iPhone 17 Pro Max iOS 26.5
   - Local Debug simulator build, install, launch, and screenshot passed for build 2026061001 on iPad Pro 13-inch iOS 26.5
 - App Store Connect state:
-  - These notes are for candidate build 2026061001. Historical build 2026060401 was uploaded to App Store Connect on June 4, 2026 at 9:39 AM EDT and resubmitted to App Review on June 4, 2026 at 9:51 AM EDT.
+  - These notes are for candidate build 2026061001. Build 2026060401 was uploaded to App Store Connect on June 4, 2026 at 9:39 AM EDT and resubmitted to App Review on June 4, 2026 at 9:51 AM EDT. Fresh visible App Store Connect verification on June 10, 2026 showed that submission as Rejected / Unresolved Issues.
   - Previous builds 2026053101, 2026060201, and 2026060401 are superseded; they predate the final login scroll hardening included in build 2026061001.
-  - Native Dash, Games, and Rank screenshots are attached in the iPhone 6.5-inch and 6.7-inch slots; the iPad slot has the current native login/catalog screenshot.
+  - Native Dash, Games, and Rank screenshots are attached in the iPhone 6.5-inch, iPhone 6.7-inch, and 13-inch iPad slots.
   - Candidate build 2026061001 uses the final Lab Studio Fit app icon in the native asset catalog.
 - Anything Apple should not misinterpret:
   - Stripe checkout, when enabled, is for in-person fitness services, facility membership, and physical goods. The app does not sell digital content or digital subscriptions.

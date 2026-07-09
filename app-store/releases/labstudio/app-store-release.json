@@ -42,10 +42,13 @@
       "id": "b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b",
       "itemId": "YjU2ZDk4ZmYtYzViZS00YjhkLWJkNGUtNGFjYjk0YTllYjFifDZ8ODg0OTMyMjcw",
       "state": "UNRESOLVED_ISSUES",
-      "submittedAt": "2026-06-04T13:51:32.771Z",
-      "lastVerifiedAt": "2026-06-10T22:11:18.841Z",
-      "verificationReceipt": "output/app-store-connect/labstudio-asc-submission-details-20260610.json",
-      "freshVerificationStatus": "VERIFIED_IN_VISIBLE_ASC_UI_20260610"
+      "submittedAt": "2026-06-12T02:36:00Z",
+      "lastVerifiedAt": "2026-07-09T22:27:00Z",
+      "verificationReceipt": "Fresh authenticated App Store Connect UI inspection on 2026-07-09",
+      "freshVerificationStatus": "REJECTED_GUIDELINE_2_1_A_BOOKING_ERROR",
+      "latestReviewDate": "2026-06-13",
+      "latestReviewedBuild": "2026061001",
+      "latestReviewDevice": "iPad Air 11-inch (M3) on iPadOS 26.5"
     },
     "testFlight": {
       "configuredAt": "2026-04-26T12:52:20Z",
@@ -79,37 +82,31 @@
       }
     },
     "latestNativeUpload": {
-      "buildNumber": "2026060401",
-      "buildId": "b7a642f4-56e7-4db7-9bff-c70a5c1c7e94",
+      "buildNumber": "2026061001",
+      "buildId": "a9517467-e7a4-4db9-ab06-0f6cde3defd2",
       "version": "1.0",
       "bundleId": "fit.labstudio.app",
-      "uploadedAt": "2026-06-04T13:39:38Z",
+      "uploadedAt": "2026-06-12T02:22:25Z",
       "state": "VALID",
       "tool": "xcodebuild -exportArchive",
-      "archivePath": "build/LabStudioFit-1.0-2026060401.xcarchive",
-      "uploadLogPath": "build/LabStudioFit-upload-2026060401.log",
-      "notes": "Reaction-only games cleanup plus native bottom navigation chrome fix: removed broken duplicate Lab games, kept Reaction Lab playable, restricted score/leaderboard APIs to reaction-lab, and extended the tab bar background through the iPhone bottom safe area."
+      "archivePath": "build/LabStudioFit-1.0-2026061001.xcarchive",
+      "uploadLogPath": "build/LabStudioFit-upload-2026061001.log",
+      "notes": "The build resolved the earlier screenshot and scrolling findings, then was rejected on June 13 because a successful booking was followed by a misleading refresh error."
     },
     "candidateBuild": {
-      "buildNumber": "2026061001",
+      "buildNumber": "2026070901",
       "version": "1.0",
       "bundleId": "fit.labstudio.app",
-      "status": "LOCAL_RC_NOT_UPLOADED",
-      "sourceBranch": "codex/labstudio-appstore-2026061001",
-      "createdAt": "2026-06-10T17:11:49-04:00",
-      "summary": "Candidate build includes the Reaction Lab cleanup, refreshed actual-app iPhone and iPad screenshots, native bottom navigation chrome fix, and June 10 login scroll hardening for compact iPhone review devices.",
-      "requiresApprovalBefore": [
-        "archive",
-        "upload_build",
-        "edit_screenshots_previews",
-        "select_build",
-        "submit_for_review"
-      ]
+      "status": "LOCAL_RC_VALIDATED",
+      "sourceBranch": "codex/labstudio-booking-resubmission",
+      "createdAt": "2026-07-09T18:30:00-04:00",
+      "summary": "Candidate build fixes the Guideline 2.1(a) false booking-failure state, makes exact booking retries idempotent, disables unavailable slots, protects shared-calendar details, and updates the production web runtime dependencies.",
+      "requiresApprovalBefore": []
     }
   },
   "version": {
     "marketingVersion": "1.0",
-    "buildNumber": "2026061001",
+    "buildNumber": "2026070901",
     "releaseType": "MANUAL",
     "phasedRelease": false,
     "promotionalText": "Members-only training, nutrition, booking, progress tracking, and Toby coaching for Lab Studio.",
@@ -122,7 +119,7 @@
       "nutrition",
       "workout"
     ],
-    "whatsNew": "Games cleanup for the native SwiftUI release: Reaction Lab is now the only active Lab game, with broken duplicate game modes removed from the app and leaderboard scoring. This build also fixes the bottom navigation chrome on iPhone review devices."
+    "whatsNew": "Booking reliability update: successful reservations now keep their confirmation even if a later dashboard refresh is interrupted, repeated requests are retry-safe, unavailable times cannot be submitted, and calendar availability is displayed more clearly."
   },
   "urls": {
     "marketingUrl": "https://labstudio.fit",
@@ -139,9 +136,11 @@
     "demoUsername": "reviewer+labstudio@labstudio.fit",
     "demoPassword": "No password is required. Enter the demo email on the login screen and leave phone optional.",
     "notes": [
-      "Build 2026061001 is version 1.0 for bundle ID fit.labstudio.app.",
+      "Build 2026070901 is version 1.0 for bundle ID fit.labstudio.app.",
       "Login uses email or phone only; no password or email verification is required for review.",
       "Use reviewer+labstudio@labstudio.fit on the login screen, complete onboarding if prompted, then review the native Dash, Book, Games, Coach, Rank, Shop, and Me tabs.",
+      "Booking fix for the June 13 Guideline 2.1(a) rejection: the reviewer booking was successfully saved, but an unrelated seven-endpoint refresh displayed an error afterward. This build preserves the successful booking confirmation, refreshes best-effort, and treats an exact retry as the existing booking instead of an error.",
+      "In Book, unavailable times are disabled and shared-calendar event titles, locations, and descriptions are never exposed to members.",
       "Games now exposes Reaction Lab only. Rank and leaderboard scoring are restricted to Reaction Lab scores for this build.",
       "Toby chat is positioned above the native tab bar on compact iPhone layouts, the bottom navigation chrome extends through the iPhone safe area, the login screen scroll layout is hardened for compact iPhone review devices, and Toby falls back to built-in coaching guidance if the external AI provider is unavailable.",
       "Any Stripe checkout flows are for in-person gym services, facility memberships, or physical products provided by Lab Studio, not digital content."
@@ -217,6 +216,7 @@
       "iPhone 17 Pro simulator on iOS 26.2",
       "iPhone 17 Pro Max simulator on iOS 26.2",
       "iPhone 17 Pro Max simulator on iOS 26.5",
+      "iPad Air 11-inch (M4) simulator on iPadOS 26.5",
       "iPad Pro 13-inch simulator on iOS 26.5",
       "iPad Pro 13-inch simulator on iOS 26.2"
     ],
@@ -287,15 +287,27 @@
       "Native iPhone 17 Pro Max iOS 26.5 login screen scroll was verified by dragging inside the Simulator viewport; before/after screenshots show the login content moved upward and live catalog remained visible.",
       "Native iPad Pro 13-inch iOS 26.5 Debug simulator build, install, launch, and screenshot capture passed for candidate build 2026061001.",
       "Regenerated exact 2064 x 2752 iPad Pro 13-inch screenshots for Dash, Games, and Rank from the current native SwiftUI member app.",
-      "Live app.labstudio.fit smoke passed on 2026-06-10: /privacy, /support, /terms, /account-deletion, /api/lab/shop, /api/lab/services, /api/lab/cafe, reviewer login, /api/lab/user, and /api/toby/chat returned HTTP 200."
+      "Live app.labstudio.fit smoke passed on 2026-06-10: /privacy, /support, /terms, /account-deletion, /api/lab/shop, /api/lab/services, /api/lab/cafe, reviewer login, /api/lab/user, and /api/toby/chat returned HTTP 200.",
+      "Fresh authenticated App Store Connect inspection on 2026-07-09 confirmed the latest rejection is Guideline 2.1(a) on build 2026061001 after Apple saw an error when booking on iPad Air 11-inch (M3), iPadOS 26.5.",
+      "Production database evidence confirmed Apple's June 13 Intro Assessment booking was successfully inserted at 2026-06-13T04:07:27.593Z, proving the visible error came from the post-write refresh rather than the booking write.",
+      "Build 2026070901 preserves mutation success when a later dashboard refresh fails, so successful writes are never relabeled as failed.",
+      "Local release-candidate integration test passed: reviewer login returned 200, first booking returned 200, an exact retry returned 200 with existing=true, and the refreshed home response returned 200.",
+      "Local release-candidate privacy test confirmed shared Google Calendar blocks expose only Unavailable plus start/end, with no title, location, or description.",
+      "Native Swift package tests passed on 2026-07-09.",
+      "Native Debug build succeeded for build 2026070901 on the iPad Air 11-inch simulator class running iPadOS 26.5.",
+      "Xcode static analysis succeeded for build 2026070901 on the iPad Air 11-inch simulator class running iPadOS 26.5.",
+      "Native optimized Release build and store bundle validation succeeded for build 2026070901 on iPhone 17 Pro Max running iOS 26.5.",
+      "Web lint, TypeScript, and Next.js 16.2.10 production build passed on 2026-07-09.",
+      "Legacy v1 member sessions were invalidated and replacement v2 session lifetime was reduced from 400 days to 30 days.",
+      "Dependency audit reduced the production dependency findings from six high plus seven moderate plus one low to zero high/critical and two moderate findings in Next.js's pinned internal PostCSS dependency."
     ],
     "knownRisks": [
-      "Visible App Store Connect UI on 2026-06-10 showed the active submission as Rejected / Unresolved Issues for version 1.0 build 2026060401; target build 2026061001 was not visible in TestFlight.",
-      "Candidate build 2026061001 has not been archived, uploaded, selected, or submitted. Do not perform external mutations until EB28 approval records exist and fresh ASC state is captured.",
-      "Visible App Store Connect Apps overview on 2026-06-10 showed an updated Apple Developer Program License Agreement banner that must be accepted by the Account Holder before app updates or submissions.",
-      "App Store Connect trader status should still be reviewed before release if Apple requests business compliance confirmation.",
-      "External TestFlight public link access still points at the previously approved build 2026042401; build 2026060401 should be tested through App Store Connect/internal access if public-link testing is not updated.",
-      "Builds 2026053101, 2026060201, and 2026060401 are superseded for App Review; the June 10 visible App Store Connect receipt showed build 2026060401 rejected with unresolved issues."
+      "Candidate build 2026070901 has not yet been archived, uploaded, selected, or submitted.",
+      "App Store Connect trader status remains marked for a fresh account-level check before final submission.",
+      "External TestFlight public link access still points at the previously approved build 2026042401; internal App Store Connect processing will be used for build 2026070901 unless the public group is updated.",
+      "The latest stable Next.js release still pins an internal PostCSS version covered by two moderate npm advisories; no high or critical production dependency findings remain, and npm offers only an unsafe major downgrade as an automated fix.",
+      "Member login currently uses the product's passwordless email-or-phone contact model and does not have an OTP delivery provider. This release invalidates legacy sessions and reduces session lifetime from 400 days to 30 days; adding verified email/SMS ownership remains a post-release authentication project because no delivery channel is configured.",
+      "Builds 2026053101, 2026060201, 2026060401, and 2026061001 are superseded for App Review."
     ]
   }
 }

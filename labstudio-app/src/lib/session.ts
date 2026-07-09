@@ -1,5 +1,8 @@
-const SESSION_VERSION = 'v1';
-export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
+// Keep member sessions short enough that a lost device does not retain access for
+// more than a month. Bumping the version also invalidates the former 400-day
+// tokens the first time this release is deployed.
+const SESSION_VERSION = 'v2';
+export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 const encoder = new TextEncoder();
 

@@ -80,6 +80,7 @@ private struct BookingResponse: Decodable {
     let ok: Bool
     let error: String?
     let item: Item?
+    let existing: Bool?
 }
 
 private struct CheckoutResponse: Decodable {
@@ -391,11 +392,19 @@ final class LabAppState {
     }
 
     func refreshAfterMutation(success: String? = nil) async {
+        if let success {
+            errorMessage = nil
+            successMessage = success
+        }
+
         do {
             try await refreshAll()
-            successMessage = success
         } catch {
-            errorMessage = error.localizedDescription
+            // A completed write must not be reported as failed just because a
+            // later dashboard refresh was temporarily unavailable.
+            if success == nil {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -436,7 +445,10 @@ final class LabAppState {
             if !response.ok {
                 throw LabAPIError.server(response.error ?? "Unable to book that session.")
             }
-            await refreshAfterMutation(success: "Session booked for \(day) at \(time).")
+            let confirmation = response.existing == true
+                ? "That session was already booked for \(day) at \(time)."
+                : "Session booked for \(day) at \(time)."
+            await refreshAfterMutation(success: confirmation)
         } catch {
             errorMessage = error.localizedDescription
         }

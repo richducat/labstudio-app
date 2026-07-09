@@ -7,11 +7,11 @@
 - Bundle ID: fit.labstudio.app
 - SKU: fit.labstudio.app
 - Version: 1.0
-- Build: 2026061001
+- Build: 2026070901
 - Primary category: Health & Fitness
 - Secondary category: Lifestyle
 - App Store Connect Apple ID: 6763787815
-- App Store Connect state: Fresh visible ASC verification at 2026-06-10T22:11:18.841Z showed Rejected / Unresolved Issues for submission b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b on version 1.0 build 2026060401
+- App Store Connect state: Rejected / Unresolved Issues for Guideline 2.1(a) on version 1.0 build 2026061001; fresh authenticated verification completed July 9, 2026
 - App Store age rating: 12+
 - Marketing URL: https://labstudio.fit
 - Support URL: https://app.labstudio.fit/support
@@ -36,11 +36,11 @@ fitness, training, gym, coach, nutrition, workout
 
 ## What's New
 
-Games cleanup for the native SwiftUI release: Reaction Lab is now the only active Lab game, with broken duplicate game modes removed from the app and leaderboard scoring. This build also fixes the bottom navigation chrome on iPhone review devices.
+Booking reliability update: successful reservations now keep their confirmation even if a later dashboard refresh is interrupted, repeated requests are retry-safe, unavailable times cannot be submitted, and calendar availability is displayed more clearly.
 
 ## Review Notes
 
-Login uses email or phone only; no password or email verification is required. Use reviewer+labstudio@labstudio.fit, complete onboarding if prompted, and review the native Dash, Book, Games, Coach, Rank, Shop, and Me tabs. Games now exposes Reaction Lab only; Rank compares Reaction Lab scores. The iPhone bottom navigation chrome has been verified without a gap below the tab bar, and the iPad screenshot set has been replaced with native Dash, Games, and Rank app screens.
+Login uses email or phone only; no password or email verification is required. Use reviewer+labstudio@labstudio.fit, complete onboarding if prompted, then open Book and choose an enabled time. Build 2026070901 fixes the false booking-failure banner from the June 13 review, makes exact retries safe, disables unavailable slots, and keeps shared calendar details private.
 
 ## Submission Snapshot
 
@@ -61,17 +61,17 @@ Login uses email or phone only; no password or email verification is required. U
 - Public group: Studio Crew
 - Public link: https://testflight.apple.com/join/rtpbMJhP
 - Public link limit: None
-- Build: 2026061001
+- Build: 2026070901
 - Build ID: Not uploaded yet
-- Internal build state: Local release candidate pending archive/upload approval
-- External build state: Not submitted for external Beta App Review for build 2026061001
+- Internal build state: Local release candidate validated; archive/upload pending
+- External build state: Not submitted for external Beta App Review for build 2026070901
 - Public link build: 2026042401 remains the previously approved external TestFlight build
 
 ## Internal Launch Notes
 
-- App Store Connect version state: Fresh visible ASC verification at 2026-06-10T22:11:18.841Z showed Rejected / Unresolved Issues for 1.0 (2026060401)
-- Candidate build number: 2026061001
-- Last uploaded build ID or build number: b7a642f4-56e7-4db7-9bff-c70a5c1c7e94 / 2026060401
+- App Store Connect version state: Rejected / Unresolved Issues for Guideline 2.1(a) on 1.0 (2026061001)
+- Candidate build number: 2026070901
+- Last uploaded build ID or build number: a9517467-e7a4-4db9-ab06-0f6cde3defd2 / 2026061001
 - Native screenshot sources:
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-home.png
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-games.png
@@ -83,12 +83,11 @@ Login uses email or phone only; no password or email verification is required. U
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-games.png
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-rank.png
 - Review submission ID: b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b
-- Latest native upload: 2026-06-04T13:39:38Z for build 2026060401
-- Review submitted at: 2026-06-04T13:51:32.771Z for build 2026060401
-- Last direct ASC verification receipt: output/app-store-connect/labstudio-asc-submission-details-20260610.json on 2026-06-10
-- Fresh ASC verification result: visible ASC UI showed Rejected / Unresolved Issues for build 2026060401; TestFlight visible builds did not include target build 2026061001
-- Candidate delta: 2026061001 includes the 2026-06-10 login scroll hardening in RootShellView.swift and 2064 x 2752 iPad Dash/Games/Rank screenshots; archive, upload, build selection, screenshot edits, and submit-for-review still require EB28 approvals
-- Local verification: iPhone 17 Pro Max iOS 26.5 build/install/launch and scroll verification passed; iPad Pro 13-inch iOS 26.5 build/install/launch screenshot passed for Dash, Games, and Rank; live app.labstudio.fit public/API smoke passed
+- Latest native upload: 2026-06-12T02:22:25Z for build 2026061001
+- Review submitted at: 2026-06-12 for build 2026061001
+- Fresh ASC verification result: build 2026061001 is rejected under Guideline 2.1(a) after an error appeared during booking on iPad Air 11-inch (M3), iPadOS 26.5
+- Candidate delta: 2026070901 preserves successful write confirmations, makes booking retries idempotent, blocks unavailable-slot submission, protects shared-calendar details, and updates production runtime dependencies
+- Local verification: Swift tests, web lint/build, iPad Air 11-inch iPadOS 26.5 native build, and reviewer booking/idempotency/privacy integration tests passed
 - App Privacy state: Published on April 25, 2026
 - Manual release after approval: Yes
 - Reviewer-flow checks to keep current:

@@ -9,7 +9,6 @@ export const dynamic = 'force-dynamic';
 
 const UID_COOKIE = 'labstudio_uid';
 const SESSION_COOKIE = 'labstudio_session';
-const UID_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
 
 function safeNextPath(value: unknown) {
   return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/members';
@@ -109,7 +108,7 @@ export default async function LoginPage({
         sameSite: 'lax',
         secure,
         path: '/',
-        maxAge: UID_COOKIE_MAX_AGE_SECONDS,
+        maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to log in.';

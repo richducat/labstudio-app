@@ -62,8 +62,8 @@ Login uses email or phone only; no password or email verification is required. U
 - Public link: https://testflight.apple.com/join/rtpbMJhP
 - Public link limit: None
 - Build: 2026070901
-- Build ID: Not uploaded yet
-- Internal build state: Local release candidate validated; archive/upload pending
+- Build ID: Apple processing; ID pending
+- Internal build state: Uploaded July 9, 2026 at 6:51 PM EDT; Apple processing
 - External build state: Not submitted for external Beta App Review for build 2026070901
 - Public link build: 2026042401 remains the previously approved external TestFlight build
 
@@ -83,11 +83,11 @@ Login uses email or phone only; no password or email verification is required. U
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-games.png
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-rank.png
 - Review submission ID: b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b
-- Latest native upload: 2026-06-12T02:22:25Z for build 2026061001
+- Latest native upload: 2026-07-09T22:51:07Z for build 2026070901; Apple processing
 - Review submitted at: 2026-06-12 for build 2026061001
 - Fresh ASC verification result: build 2026061001 is rejected under Guideline 2.1(a) after an error appeared during booking on iPad Air 11-inch (M3), iPadOS 26.5
 - Candidate delta: 2026070901 preserves successful write confirmations, makes booking retries idempotent, blocks unavailable-slot submission, protects shared-calendar details, and updates production runtime dependencies
-- Local verification: Swift tests, web lint/build, iPad Air 11-inch iPadOS 26.5 native build, and reviewer booking/idempotency/privacy integration tests passed
+- Verification: Swift tests, Xcode analysis, web lint/build, optimized native builds, signed archive validation, production deploy run 29055606467, and live reviewer booking/idempotency/refresh/privacy tests passed
 - App Privacy state: Published on April 25, 2026
 - Manual release after approval: Yes
 - Reviewer-flow checks to keep current:

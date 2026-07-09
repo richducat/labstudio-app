@@ -82,24 +82,27 @@
       }
     },
     "latestNativeUpload": {
-      "buildNumber": "2026061001",
-      "buildId": "a9517467-e7a4-4db9-ab06-0f6cde3defd2",
+      "buildNumber": "2026070901",
+      "buildId": null,
       "version": "1.0",
       "bundleId": "fit.labstudio.app",
-      "uploadedAt": "2026-06-12T02:22:25Z",
-      "state": "VALID",
+      "uploadedAt": "2026-07-09T22:51:07Z",
+      "state": "PROCESSING",
       "tool": "xcodebuild -exportArchive",
-      "archivePath": "build/LabStudioFit-1.0-2026061001.xcarchive",
-      "uploadLogPath": "build/LabStudioFit-upload-2026061001.log",
-      "notes": "The build resolved the earlier screenshot and scrolling findings, then was rejected on June 13 because a successful booking was followed by a misleading refresh error."
+      "archivePath": "build/LabStudioFit-1.0-2026070901.xcarchive",
+      "uploadLogPath": null,
+      "notes": "Xcode and App Store Connect accepted the corrected archive; Apple reported that the uploaded package is processing."
     },
     "candidateBuild": {
       "buildNumber": "2026070901",
       "version": "1.0",
       "bundleId": "fit.labstudio.app",
-      "status": "LOCAL_RC_VALIDATED",
+      "status": "UPLOADED_PROCESSING",
       "sourceBranch": "codex/labstudio-booking-resubmission",
       "createdAt": "2026-07-09T18:30:00-04:00",
+      "uploadedAt": "2026-07-09T22:51:07Z",
+      "productionDeployRun": "29055606467",
+      "productionCommit": "42b18c29768213be1cbbb8af1fa914e4bde85bcc",
       "summary": "Candidate build fixes the Guideline 2.1(a) false booking-failure state, makes exact booking retries idempotent, disables unavailable slots, protects shared-calendar details, and updates the production web runtime dependencies.",
       "requiresApprovalBefore": []
     }
@@ -299,10 +302,13 @@
       "Native optimized Release build and store bundle validation succeeded for build 2026070901 on iPhone 17 Pro Max running iOS 26.5.",
       "Web lint, TypeScript, and Next.js 16.2.10 production build passed on 2026-07-09.",
       "Legacy v1 member sessions were invalidated and replacement v2 session lifetime was reduced from 400 days to 30 days.",
-      "Dependency audit reduced the production dependency findings from six high plus seven moderate plus one low to zero high/critical and two moderate findings in Next.js's pinned internal PostCSS dependency."
+      "Dependency audit reduced the production dependency findings from six high plus seven moderate plus one low to zero high/critical and two moderate findings in Next.js's pinned internal PostCSS dependency.",
+      "Production deployment run 29055606467 succeeded from exact commit 42b18c29768213be1cbbb8af1fa914e4bde85bcc and its live API verification passed.",
+      "Fresh live reviewer test passed after deployment: login 200, first booking 200, exact retry 200 with existing=true, post-booking home refresh 200, shared-calendar privacy pass, and the tagged test booking was deleted.",
+      "Signed archive build 2026070901 passed bundle/signature checks and App Store Connect upload at 2026-07-09T22:51:07Z; Apple reported the package is processing."
     ],
     "knownRisks": [
-      "Candidate build 2026070901 has not yet been archived, uploaded, selected, or submitted.",
+      "Build 2026070901 is uploaded and processing but has not yet been selected or resubmitted because the App Store Connect web session expired and requires a local Apple credential unlock.",
       "App Store Connect trader status remains marked for a fresh account-level check before final submission.",
       "External TestFlight public link access still points at the previously approved build 2026042401; internal App Store Connect processing will be used for build 2026070901 unless the public group is updated.",
       "The latest stable Next.js release still pins an internal PostCSS version covered by two moderate npm advisories; no high or critical production dependency findings remain, and npm offers only an unsafe major downgrade as an automated fix.",

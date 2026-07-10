@@ -11,7 +11,7 @@
 - Primary category: Health & Fitness
 - Secondary category: Lifestyle
 - App Store Connect Apple ID: 6763787815
-- App Store Connect state: Rejected / Unresolved Issues for Guideline 2.1(a) on version 1.0 build 2026061001; fresh authenticated verification completed July 9, 2026
+- App Store Connect state: Waiting for Review for version 1.0 build 2026070901; fresh authenticated submission-detail verification completed July 9, 2026
 - App Store age rating: 12+
 - Marketing URL: https://labstudio.fit
 - Support URL: https://app.labstudio.fit/support
@@ -62,16 +62,16 @@ Login uses email or phone only; no password or email verification is required. U
 - Public link: https://testflight.apple.com/join/rtpbMJhP
 - Public link limit: None
 - Build: 2026070901
-- Build ID: Apple processing; ID pending
-- Internal build state: Uploaded July 9, 2026 at 6:51 PM EDT; Apple processing
+- Build ID: f8e56909-b71a-4abe-9aa1-4633174c71ee
+- Internal build state: Valid, selected for version 1.0, and Waiting for Review
 - External build state: Not submitted for external Beta App Review for build 2026070901
 - Public link build: 2026042401 remains the previously approved external TestFlight build
 
 ## Internal Launch Notes
 
-- App Store Connect version state: Rejected / Unresolved Issues for Guideline 2.1(a) on 1.0 (2026061001)
+- App Store Connect version state: Waiting for Review on 1.0 (2026070901)
 - Candidate build number: 2026070901
-- Last uploaded build ID or build number: a9517467-e7a4-4db9-ab06-0f6cde3defd2 / 2026061001
+- Last uploaded build ID or build number: f8e56909-b71a-4abe-9aa1-4633174c71ee / 2026070901
 - Native screenshot sources:
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-home.png
   - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-games.png
@@ -83,9 +83,9 @@ Login uses email or phone only; no password or email verification is required. U
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-games.png
   - app-store/releases/labstudio/screenshots/native/ipad-pro-13-rank.png
 - Review submission ID: b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b
-- Latest native upload: 2026-07-09T22:51:07Z for build 2026070901; Apple processing
-- Review submitted at: 2026-06-12 for build 2026061001
-- Fresh ASC verification result: build 2026061001 is rejected under Guideline 2.1(a) after an error appeared during booking on iPad Air 11-inch (M3), iPadOS 26.5
+- Latest native upload: 2026-07-09T22:51:07Z for build 2026070901; build ID f8e56909-b71a-4abe-9aa1-4633174c71ee
+- Review submitted at: July 9, 2026 at 8:06 PM EDT for build 2026070901
+- Fresh ASC verification result: submission b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b contains version 1.0 build 2026070901 and is Waiting for Review
 - Candidate delta: 2026070901 preserves successful write confirmations, makes booking retries idempotent, blocks unavailable-slot submission, protects shared-calendar details, and updates production runtime dependencies
 - Verification: Swift tests, Xcode analysis, web lint/build, optimized native builds, signed archive validation, production deploy run 29055606467, and live reviewer booking/idempotency/refresh/privacy tests passed
 - App Privacy state: Published on April 25, 2026

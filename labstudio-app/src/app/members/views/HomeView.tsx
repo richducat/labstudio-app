@@ -287,13 +287,10 @@ export default function HomeView({
         {/* LEFT COLUMN */}
         <div className="space-y-4">
           <div className="relative pt-2">
-            <h1 className="mb-2 text-3xl font-black italic uppercase leading-[0.85] tracking-tighter sm:text-4xl">
-              UNLEASH
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 via-fuchsia-400 to-white">
-                POTENTIAL
-              </span>
+            <h1 className="mb-1 text-3xl font-semibold tracking-tight sm:text-4xl">
+              {homeData?.profile?.first_name ? `Welcome back, ${homeData.profile.first_name}` : 'Welcome back'}
             </h1>
+            <p className="mb-2 text-sm text-zinc-500">Here&apos;s where you stand today.</p>
           </div>
 
           {homeData?.nextBooking ? (
@@ -309,7 +306,7 @@ export default function HomeView({
                   {new Date(homeData.nextBooking.start).toLocaleDateString()}
                 </div>
               </div>
-              <div className="font-black text-xl italic mb-1">{homeData.nextBooking.summary || 'Session'}</div>
+              <div className="font-semibold text-xl mb-1">{homeData.nextBooking.summary || 'Session'}</div>
               <div className="flex items-center gap-2 text-sm text-zinc-300 mb-3">
                 <Clock size={14} className="text-zinc-500" />{' '}
                 {new Date(homeData.nextBooking.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -348,7 +345,7 @@ export default function HomeView({
                   <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Next Session</div>
                   <div className="text-sm text-zinc-300 mt-1">No session scheduled yet.</div>
                 </div>
-                <div className="text-xs font-bold text-white bg-violet-600 px-3 py-1.5 rounded-full">Book</div>
+                <div className="text-xs font-bold text-white bg-violet-600 px-3 py-1.5 rounded-lg">Book</div>
               </div>
 
               {homeData?.upcomingBookings && homeData.upcomingBookings.length ? (
@@ -373,7 +370,7 @@ export default function HomeView({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Coach plan</div>
-                <div className="text-lg font-black italic">Today’s Focus</div>
+                <div className="text-lg font-semibold">Today’s Focus</div>
               </div>
               <button
                 onClick={(e) => {
@@ -381,7 +378,7 @@ export default function HomeView({
                   void generateCoach();
                 }}
                 disabled={coachBusy}
-                className="text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-full disabled:opacity-50"
+                className="text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg disabled:opacity-50"
               >
                 {coachBusy ? '…' : 'Generate'}
               </button>
@@ -399,7 +396,7 @@ export default function HomeView({
                       void pinCoach(coach.history[0].id);
                     }}
                     disabled={coachBusy}
-                    className="text-xs font-bold text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-1.5 rounded-full disabled:opacity-50"
+                    className="text-xs font-bold text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-1.5 rounded-lg disabled:opacity-50"
                   >
                     Pin
                   </button>
@@ -425,15 +422,15 @@ export default function HomeView({
                 <div className="p-2 bg-violet-600/20 rounded-lg border border-violet-500/20 text-violet-400 group-hover:scale-110 transition-transform">
                   <Brain size={20} />
                 </div>
-                <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest">
                   Points Available
                 </div>
               </div>
-              <h4 className="text-sm font-black italic uppercase tracking-wider">Brain Training</h4>
+              <h4 className="text-sm font-semibold uppercase tracking-wider">Brain Training</h4>
               <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mt-1 mb-3 leading-relaxed">
                 Play the Reaction Lab <br /> speed challenge.
               </p>
-              <div className="flex items-center gap-2 text-[10px] font-black text-violet-400 uppercase tracking-widest group-hover:gap-3 transition-all">
+              <div className="flex items-center gap-2 text-[10px] font-semibold text-violet-400 uppercase tracking-widest group-hover:gap-3 transition-all">
                 Open Games <ChevronRight size={12} />
               </div>
             </div>
@@ -446,7 +443,7 @@ export default function HomeView({
             <div className="relative z-10 mb-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="text-xs text-zinc-500 font-bold tracking-widest uppercase">Current Level</div>
-                <div className="text-2xl font-black italic">Level {level}</div>
+                <div className="text-2xl font-semibold">Level {level}</div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-violet-400 font-bold tracking-widest uppercase">{nextLevel - xp} points to next level</div>
@@ -454,7 +451,7 @@ export default function HomeView({
             </div>
             <div className="h-2 bg-zinc-800 rounded-full overflow-hidden relative z-10">
               <div
-                className="h-full bg-gradient-to-r from-violet-600 to-fuchsia-500 transition-all duration-1000"
+                className="h-full bg-gradient-to-r from-violet-600 to-violet-500 transition-all duration-1000"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -476,7 +473,7 @@ export default function HomeView({
                   <UserIcon size={20} />
                 </div>
                 <div>
-                  <div className="font-black italic text-lg leading-none uppercase">{userProfile.name}</div>
+                  <div className="font-semibold text-lg leading-none">{userProfile.name}</div>
                   <div className="text-[10px] font-mono text-zinc-500">
                     GOAL: {((homeData?.profile?.goal ?? userProfile.goal) ?? '—').toUpperCase()}
                   </div>
@@ -530,7 +527,7 @@ export default function HomeView({
                 <div className="text-[10px] font-mono text-zinc-400 bg-black/20 border border-white/10 px-2 py-1 rounded">
                   {homeLoaded ? `${homeData?.progress?.workouts7d?.count ?? 0} • ${homeData?.progress?.workouts7d?.minutes ?? 0}m` : '—'}
                 </div>
-                <div className="text-xs font-bold text-white bg-violet-600 px-3 py-1.5 rounded-full">Log</div>
+                <div className="text-xs font-bold text-white bg-violet-600 px-3 py-1.5 rounded-lg">Log</div>
               </div>
             </div>
 
@@ -568,7 +565,7 @@ export default function HomeView({
                 <div className="text-xs text-zinc-500 mt-1">{homeError}</div>
                 <button
                   onClick={() => loadHome()}
-                  className="mt-3 text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-full"
+                  className="mt-3 text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg"
                 >
                   Retry
                 </button>
@@ -625,7 +622,7 @@ export default function HomeView({
                             e.stopPropagation();
                             jumpIn();
                           }}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-full ${item.completed ? 'bg-zinc-800 text-zinc-500' : 'text-white bg-violet-600 hover:bg-violet-500'
+                          className={`text-xs font-bold px-3 py-1.5 rounded-lg ${item.completed ? 'bg-zinc-800 text-zinc-500' : 'text-white bg-violet-600 hover:bg-violet-500'
                             }`}
                         >
                           {item.completed ? 'View' : 'Jump in'}
@@ -652,7 +649,7 @@ export default function HomeView({
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="font-bold text-lg">Daily Check-in</h2>
-                  <span className="bg-rose-500/20 text-rose-400 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-rose-500/30">🔥 3 Day Streak</span>
+                  <span className="bg-rose-500/20 text-rose-400 text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded border border-rose-500/30">🔥 3 Day Streak</span>
                 </div>
                 <div className="text-xs text-zinc-500 mt-1">Log weight/body fat and notes.</div>
               </div>
@@ -716,8 +713,8 @@ export default function HomeView({
                   <button
                     onClick={saveCheckin}
                     disabled={isSaving || justSaved}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full transition-all duration-300 ${
-                      justSaved ? 'bg-emerald-500 text-white scale-110 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'text-white bg-emerald-600 hover:bg-emerald-500'
+                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-300 ${
+                      justSaved ? 'bg-emerald-500 text-white scale-110' : 'text-white bg-emerald-600 hover:bg-emerald-500'
                     }`}
                   >
                     {isSaving ? 'Saving...' : justSaved ? 'Saved! ✓' : 'Save'}
@@ -761,7 +758,7 @@ export default function HomeView({
                     </div>
                     <button
                       onClick={() => toggleTile(tile.id)}
-                      className={`px-2 py-1 rounded-full font-bold ${tile.visible ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
+                      className={`px-2 py-1 rounded-lg font-bold ${tile.visible ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'
                         }`}
                     >
                       {tile.visible ? 'Visible' : 'Hidden'}
@@ -825,7 +822,7 @@ export default function HomeView({
                         <span className="uppercase font-bold tracking-widest">{tile.label}</span>
                         <Icon size={14} className="text-violet-400" />
                       </div>
-                      <div className="text-lg font-black">{value}</div>
+                      <div className="text-lg font-semibold">{value}</div>
                       <div className="text-[10px] text-emerald-400">{trend}</div>
                     </Card>
                   );

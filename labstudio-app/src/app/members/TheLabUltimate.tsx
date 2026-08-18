@@ -78,22 +78,15 @@ export default function TheLabUltimate({
       className="relative flex min-h-[100dvh] flex-col overflow-x-hidden bg-zinc-950 font-sans text-white selection:bg-violet-500/30"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      {/* Background glow */}
+      {/* Background wash */}
       <div className="fixed inset-0 pointer-events-none">
-        <div
-          className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-violet-900/20 blur-[150px] rounded-full animate-pulse"
-          style={{ animationDuration: '4s' }}
-        />
-        <div
-          className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] bg-emerald-900/10 blur-[150px] rounded-full animate-pulse"
-          style={{ animationDuration: '7s' }}
-        />
+        <div className="absolute top-[-30%] left-[-20%] w-[70%] h-[60%] bg-violet-950/25 blur-[160px] rounded-full" />
       </div>
 
       {/* Header */}
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/5 bg-zinc-950/80 px-4 py-3 backdrop-blur-xl">
         <div className="flex cursor-pointer items-center gap-3" onClick={() => setTab('home')}>
-          <div className="w-9 h-9 bg-violet-600 rounded-xl flex items-center justify-center font-black italic shadow-[0_0_15px_rgba(124,58,237,0.4)]">
+          <div className="w-9 h-9 bg-violet-600 rounded-xl flex items-center justify-center font-semibold">
             L
           </div>
           <div className="min-w-0">
@@ -115,7 +108,7 @@ export default function TheLabUltimate({
             </div>
             <a
               href="/onboarding"
-              className="w-full rounded-xl bg-yellow-400 px-3 py-2 text-center text-xs font-black text-zinc-950 hover:bg-yellow-300 sm:w-auto sm:shrink-0"
+              className="w-full rounded-xl bg-yellow-400 px-3 py-2 text-center text-xs font-semibold text-zinc-950 hover:bg-yellow-300 sm:w-auto sm:shrink-0"
             >
               Finish onboarding
             </a>
@@ -166,7 +159,6 @@ export default function TheLabUltimate({
           <NavBtn icon={Brain} label="Games" active={tab === 'games'} onClick={() => setTab('games')} />
 
           <div className="group relative -mt-8 flex justify-center sm:-mt-10">
-            <div className="absolute inset-0 bg-violet-600 blur-xl opacity-40 rounded-full group-hover:opacity-60 transition duration-500" />
             <button
               type="button"
               onClick={() => setTab('coach')}

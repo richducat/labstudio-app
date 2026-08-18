@@ -12,7 +12,7 @@ export default function PlaceholderView({
   return (
     <div className="space-y-4 pb-20">
       <div className="px-1">
-        <h1 className="text-2xl font-black italic uppercase">{title}</h1>
+        <h1 className="text-2xl font-semibold">{title}</h1>
         {subtitle ? <div className="text-xs text-zinc-500 mt-1">{subtitle}</div> : null}
       </div>
 

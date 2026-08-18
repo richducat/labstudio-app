@@ -1,82 +1,142 @@
 'use client';
 
-import { useEffect } from 'react';
-import { Bot } from 'lucide-react';
-import Script from 'next/script';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Bot, SendHorizonal } from 'lucide-react';
 
-const ZAPIER_FRAME_STYLE = [
-  'display: block',
-  'width: 100%',
-  'height: 100%',
-  'min-height: 100%',
-  'max-width: 100%',
-  'border: none',
-  'border-radius: 0',
-  'background: #09090b',
-  'box-shadow: none',
-  'overflow: hidden',
-].join('; ');
+type Msg = { role: 'user' | 'assistant'; text: string };
+
+const OPENER: Msg = {
+  role: 'assistant',
+  text: "I'm Toby, your coach. Tell me what you're trying to improve right now — sleep, strength, body comp, stress, consistency — and what's getting in the way.",
+};
 
 export default function TobyCoachView() {
+  const [messages, setMessages] = useState<Msg[]>([OPENER]);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const canSend = useMemo(() => input.trim().length > 0 && !busy, [input, busy]);
+
   useEffect(() => {
-    const setViewportHeight = () => {
-      document.documentElement.style.setProperty('--lab-vh', `${window.innerHeight}px`);
-    };
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, busy]);
 
-    setViewportHeight();
-    window.addEventListener('resize', setViewportHeight);
-    window.addEventListener('orientationchange', setViewportHeight);
+  async function send() {
+    const text = input.trim();
+    if (!text || busy) return;
 
-    return () => {
-      window.removeEventListener('resize', setViewportHeight);
-      window.removeEventListener('orientationchange', setViewportHeight);
-    };
-  }, []);
+    setBusy(true);
+    setInput('');
+    setMessages((m) => [...m, { role: 'user', text }]);
+
+    try {
+      const history = [...messages, { role: 'user' as const, text }]
+        .slice(-10)
+        .map((m) => ({ role: m.role, content: m.text }));
+      const res = await fetch('/api/toby/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Request failed');
+      setMessages((m) => [...m, { role: 'assistant', text: String(json.reply || '') }]);
+    } catch (e) {
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'assistant',
+          text: `Sorry — that didn't go through (${e instanceof Error ? e.message : 'unknown error'}). Try again.`,
+        },
+      ]);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div
-      className="w-full mx-auto flex flex-col min-h-0"
-      style={{ height: 'clamp(340px, calc(var(--lab-vh, 100dvh) - 236px), 900px)' }}
-    >
-      <Script
-        async
-        type="module"
-        strategy="afterInteractive"
-        src="https://interfaces.zapier.com/assets/web-components/zapier-interfaces/zapier-interfaces.esm.js"
-        crossOrigin="anonymous"
-      />
-
-      <div className="flex items-center justify-between mb-4 px-2">
+    <div className="mx-auto flex w-full max-w-3xl flex-col pb-24 lg:pb-6">
+      <div className="mb-4 flex items-center justify-between px-1">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-violet-600 flex items-center justify-center shadow-[0_0_20px_rgba(124,58,237,0.5)]">
-            <Bot size={24} className="text-white" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-600">
+            <Bot size={22} className="text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-black italic uppercase tracking-tight">Toby</h2>
-              <span className="px-1.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-[9px] font-bold text-violet-400 uppercase tracking-widest">
+              <h2 className="text-xl font-semibold tracking-tight">Toby</h2>
+              <span className="rounded-md border border-violet-500/20 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-violet-400">
                 Coach
               </span>
             </div>
-            <div className="text-[10px] text-zinc-500 flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-zinc-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Ready to chat
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 px-0 sm:px-2 pb-4 sm:pb-6 overflow-hidden">
-        <div className="relative h-full w-full min-h-0 overflow-hidden rounded-[20px] border border-white/10 bg-zinc-950 shadow-[0_18px_40px_rgba(0,0,0,0.45)]">
-          <div className="h-full w-full max-w-[960px] mx-auto bg-zinc-950 overflow-hidden">
-            <zapier-interfaces-chatbot-embed
-              className="block h-full w-full"
-              is-popup="false"
-              chatbot-id="cm8vrs6dr0039nau2hfeyvvhn"
-              height="100%"
-              width="100%"
-              style-override={ZAPIER_FRAME_STYLE}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950">
+        <div
+          ref={scrollRef}
+          className="min-h-[320px] flex-1 space-y-4 overflow-y-auto px-4 py-5"
+          style={{ maxHeight: 'calc(100dvh - 380px)' }}
+        >
+          {messages.map((m, i) => (
+            <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
+              <div
+                className={
+                  m.role === 'user'
+                    ? 'max-w-[85%] rounded-xl rounded-br-sm bg-violet-600 px-4 py-2.5 text-[15px] leading-relaxed text-white'
+                    : 'max-w-[85%] rounded-xl rounded-bl-sm border border-white/5 bg-zinc-900 px-4 py-2.5 text-[15px] leading-relaxed text-zinc-100'
+                }
+              >
+                <div className="whitespace-pre-wrap">{m.text}</div>
+              </div>
+            </div>
+          ))}
+          {busy ? (
+            <div className="flex justify-start">
+              <div className="rounded-xl rounded-bl-sm border border-white/5 bg-zinc-900 px-4 py-3">
+                <span className="inline-flex gap-1">
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:0ms]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:120ms]" />
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:240ms]" />
+                </span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="border-t border-white/10 p-3">
+          <div className="flex items-end gap-2">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  void send();
+                }
+              }}
+              rows={1}
+              placeholder="Message Toby…"
+              className="max-h-32 w-full resize-none rounded-lg border border-white/10 bg-zinc-900 px-3.5 py-3 text-[15px] text-white outline-none placeholder:text-zinc-500 focus:border-violet-500/50"
+              disabled={busy}
             />
+            <button
+              type="button"
+              onClick={() => void send()}
+              disabled={!canSend}
+              aria-label="Send message"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white transition hover:bg-violet-500 disabled:opacity-40"
+            >
+              <SendHorizonal size={18} />
+            </button>
+          </div>
+          <div className="mt-2 px-1 text-[11px] text-zinc-600">
+            Training, recovery, nutrition, and consistency. Toby checks in at the end of each session.
           </div>
         </div>
       </div>

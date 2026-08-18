@@ -11,7 +11,7 @@ export default function LoginSubmitButton() {
       type="submit"
       disabled={pending}
       aria-busy={pending}
-      className="mt-2 inline-flex items-center justify-center gap-2 rounded-[1.4rem] bg-[linear-gradient(135deg,_#7c3aed_0%,_#a21caf_100%)] px-4 py-4 text-sm font-black uppercase tracking-[0.22em] text-white shadow-[0_18px_34px_rgba(124,58,237,0.34)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_42px_rgba(124,58,237,0.42)] disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0"
+      className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-wait disabled:opacity-70"
     >
       {pending ? (
         <>

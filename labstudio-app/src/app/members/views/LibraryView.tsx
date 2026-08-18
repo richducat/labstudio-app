@@ -33,7 +33,7 @@ export default function LibraryView() {
     <div className="pb-32">
       <div className="text-center py-8 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-emerald-600/10 blur-[100px] -z-10"></div>
-        <h2 className="text-3xl font-black italic uppercase tracking-tighter">Library</h2>
+        <h2 className="text-3xl font-semibold tracking-tight">Library</h2>
         <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-bold">Training, nutrition, and recovery resources</p>
       </div>
 
@@ -54,7 +54,7 @@ export default function LibraryView() {
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
               className={`
-                flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all
+                flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap transition-all
                 ${activeCategory === cat.id ? 'bg-white text-black border-white' : 'bg-zinc-900/50 border-white/5 text-zinc-500 hover:text-zinc-300'}
               `}
             >
@@ -79,7 +79,7 @@ export default function LibraryView() {
 
                 <div className="flex-1 p-4 flex flex-col justify-center min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-white/5">
+                    <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-white/5">
                       {item.type}
                     </span>
                     <span className="text-[9px] font-bold text-zinc-600 flex items-center gap-1">
@@ -102,7 +102,7 @@ export default function LibraryView() {
         {/* Coming Soon Callout */}
         <div className="mt-8 p-6 bg-emerald-950/20 border border-emerald-500/20 rounded-2xl text-center">
           <Star className="text-emerald-400 mx-auto mb-3 animate-pulse" size={24} />
-          <h4 className="text-xs font-black uppercase italic text-emerald-400 mb-1">Fresh resources</h4>
+          <h4 className="text-xs font-semibold uppercase text-emerald-400 mb-1">Fresh resources</h4>
           <p className="text-[10px] text-emerald-400/60 uppercase font-bold tracking-widest leading-relaxed">
             New training modules and nutrition guides <br /> are added regularly.
           </p>

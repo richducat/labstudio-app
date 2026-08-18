@@ -135,7 +135,7 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
   return (
     <div className="pb-32">
       <div className="text-center py-6">
-        <h2 className="text-2xl font-black italic uppercase tracking-tighter">Challenges</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Challenges</h2>
         <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-bold">
           Progress from workouts, check-ins, and game scores
         </p>
@@ -153,11 +153,11 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
           onClick={() => setTab?.('games')}
         >
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-violet-600 rounded-2xl shadow-[0_0_20px_rgba(124,58,237,0.4)] group-hover:scale-110 transition-transform">
+            <div className="p-3 bg-violet-600 rounded-2xl group-hover:scale-110 transition-transform">
               <Gamepad2 size={24} />
             </div>
             <div className="flex-1">
-              <h3 className="font-black italic text-lg uppercase leading-none">Game Center</h3>
+              <h3 className="font-semibold text-lg leading-none">Game Center</h3>
               <p className="text-xs text-zinc-400 mt-1">Your best scores count toward challenge progress automatically.</p>
             </div>
             <ChevronRight className="text-zinc-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
@@ -165,7 +165,7 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
         </Card>
 
         <div>
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3 ml-2">Active Challenges</h3>
+          <h3 className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500 mb-3 ml-2">Active Challenges</h3>
           <div className="space-y-3">
             {activeChallenges.map((challenge) => {
               const clampedProgress = Math.min(challenge.progress, challenge.target);
@@ -182,7 +182,7 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
                         <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">{challenge.desc}</p>
                       </div>
                     </div>
-                    <div className={`text-[10px] font-black uppercase tracking-widest ${complete ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                    <div className={`text-[10px] font-semibold uppercase tracking-widest ${complete ? 'text-emerald-400' : 'text-zinc-500'}`}>
                       {complete ? 'Complete' : 'In progress'}
                     </div>
                   </div>
@@ -192,13 +192,13 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
                       <span>Progress</span>
                       <span>{challenge.progress} / {challenge.target}</span>
                     </div>
-                    <div className={`h-1.5 bg-zinc-800 rounded-full ${complete ? 'ring-1 ring-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'shadow-inner'}`}>
-                      <div className={`h-full rounded-full transition-all duration-1000 ease-out ${complete ? 'bg-emerald-500' : 'bg-violet-500 shadow-[0_0_10px_rgba(124,58,237,0.5)]'}`} style={{ width: `${percent}%` }} />
+                    <div className={`h-1.5 bg-zinc-800 rounded-full ${complete ? 'ring-1 ring-emerald-500/50' : 'shadow-inner'}`}>
+                      <div className={`h-full rounded-full transition-all duration-1000 ease-out ${complete ? 'bg-emerald-500' : 'bg-violet-500'}`} style={{ width: `${percent}%` }} />
                     </div>
                     <div className="text-[10px] text-zinc-500">{challenge.helper}</div>
                     <button
                       onClick={() => setTab?.(challenge.ctaTab)}
-                      className="mt-2 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-full border border-zinc-700 hover:bg-white hover:text-black transition-colors"
+                      className="mt-2 text-[10px] font-semibold uppercase tracking-widest px-3 py-2 rounded-lg border border-zinc-700 hover:bg-white hover:text-black transition-colors"
                     >
                       {challenge.ctaLabel}
                     </button>
@@ -211,7 +211,7 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
 
         <Card className="p-4 bg-zinc-950 border-dashed border-zinc-800 flex flex-col items-center text-center py-8">
           <Trophy className="text-yellow-500 mb-2 opacity-50" size={32} />
-          <p className="text-xs text-zinc-500 italic max-w-[240px]">
+          <p className="text-xs text-zinc-500 max-w-[240px]">
             Challenge progress updates automatically as you log activity across the app.
           </p>
         </Card>

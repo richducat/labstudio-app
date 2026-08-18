@@ -96,7 +96,7 @@ function StatCard({
         <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-500">{label}</div>
         <Icon size={14} className="text-violet-400" />
       </div>
-      <div className="text-2xl font-black italic">{value}</div>
+      <div className="text-2xl font-semibold">{value}</div>
       {helper ? <div className="mt-2 text-xs text-zinc-500">{helper}</div> : null}
     </Card>
   );
@@ -184,14 +184,14 @@ export default function ProfileView() {
 
   return (
     <div className="pb-20 space-y-6">
-      <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-violet-900/30 via-zinc-950 to-zinc-950 p-6">
+      <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-br from-violet-900/30 via-zinc-950 to-zinc-950 p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="w-20 h-20 rounded-3xl bg-zinc-900 border border-white/5 flex items-center justify-center">
+          <div className="w-20 h-20 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center">
             <User size={34} className="text-zinc-500" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-2xl font-black italic uppercase leading-none sm:text-3xl">{name}</h2>
+              <h2 className="text-2xl font-semibold leading-none sm:text-3xl">{name}</h2>
               <CheckCircle size={16} className="text-blue-500" fill="currentColor" />
             </div>
             <div className="text-sm text-zinc-400 mt-2">{profile?.goal ?? 'Goal not set yet'}</div>
@@ -290,7 +290,7 @@ export default function ProfileView() {
             {injuries.length ? (
               <div className="flex flex-wrap gap-2">
                 {injuries.map((injury) => (
-                  <span key={injury} className="px-3 py-1 rounded-full bg-zinc-800 border border-white/5 text-xs text-zinc-300">
+                  <span key={injury} className="px-3 py-1 rounded-lg bg-zinc-800 border border-white/5 text-xs text-zinc-300">
                     {injury}
                   </span>
                 ))}
@@ -328,7 +328,7 @@ export default function ProfileView() {
                 type="button"
                 onClick={deleteAccount}
                 disabled={deleting}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs font-black uppercase tracking-widest text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-xs font-semibold uppercase tracking-widest text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Trash2 size={14} />
                 {deleting ? 'Deleting' : 'Delete Account'}
@@ -352,11 +352,11 @@ export default function ProfileView() {
             {latestPr ? (
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <div className="text-xl font-black italic uppercase">{latestPr.lift}</div>
+                  <div className="text-xl font-semibold">{latestPr.lift}</div>
                   <div className="text-sm text-zinc-500">Logged from the strength tracker.</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-black italic text-violet-400">
+                  <div className="text-2xl font-semibold text-violet-400">
                     {latestPr.value} {latestPr.unit}
                   </div>
                   <div className="text-xs text-zinc-500">{latestPr.reps ? `${latestPr.reps} reps` : 'Single effort'}</div>
@@ -394,15 +394,15 @@ export default function ProfileView() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Booked 30D</div>
-                <div className="text-xl font-black italic">{homeData?.sessionLog?.bookedUpcoming30d ?? 0}</div>
+                <div className="text-xl font-semibold">{homeData?.sessionLog?.bookedUpcoming30d ?? 0}</div>
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Completed 7D</div>
-                <div className="text-xl font-black italic">{homeData?.sessionLog?.completed7d ?? 0}</div>
+                <div className="text-xl font-semibold">{homeData?.sessionLog?.completed7d ?? 0}</div>
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Missed 30D</div>
-                <div className="text-xl font-black italic">{homeData?.sessionLog?.missedApprox30d ?? 0}</div>
+                <div className="text-xl font-semibold">{homeData?.sessionLog?.missedApprox30d ?? 0}</div>
               </div>
             </div>
           </Card>

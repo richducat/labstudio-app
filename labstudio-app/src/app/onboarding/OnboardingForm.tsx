@@ -350,7 +350,7 @@ export default function OnboardingForm() {
             <button
               type="button"
               className={cx(
-                'rounded-xl border border-zinc-800 bg-transparent px-4 py-3 text-sm font-black text-zinc-200',
+                'rounded-xl border border-zinc-800 bg-transparent px-4 py-3 text-sm font-semibold text-zinc-200',
                 'hover:border-zinc-700',
                 (step === 1 || submitting) && 'opacity-50 cursor-not-allowed'
               )}
@@ -364,7 +364,7 @@ export default function OnboardingForm() {
               <button
                 type="button"
                 className={cx(
-                  'rounded-xl border border-green-500 bg-green-500 px-4 py-3 text-sm font-black text-zinc-950',
+                  'rounded-xl border border-green-500 bg-green-500 px-4 py-3 text-sm font-semibold text-zinc-950',
                   'hover:bg-green-400 hover:border-green-400',
                   submitting && 'opacity-60 cursor-not-allowed'
                 )}
@@ -381,7 +381,7 @@ export default function OnboardingForm() {
               <button
                 type="button"
                 className={cx(
-                  'rounded-xl border border-green-500 bg-green-500 px-4 py-3 text-sm font-black text-zinc-950',
+                  'rounded-xl border border-green-500 bg-green-500 px-4 py-3 text-sm font-semibold text-zinc-950',
                   'hover:bg-green-400 hover:border-green-400',
                   submitting && 'opacity-60 cursor-not-allowed'
                 )}

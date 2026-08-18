@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <article className="mx-auto max-w-3xl space-y-8">
         <header className="space-y-3">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-violet-300">Lab Studio</p>
-          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Privacy Policy</h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Privacy Policy</h1>
           <p className="text-sm text-zinc-500">Effective April 24, 2026</p>
         </header>
 

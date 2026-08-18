@@ -76,7 +76,7 @@ export default function MarketView() {
       {cartOpen ? (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 p-3" onClick={() => setCartOpen(false)}>
           <div
-            className="w-full max-w-lg rounded-3xl border border-white/10 bg-zinc-950 p-4"
+            className="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950 p-4"
             onClick={(e) => {
               e.stopPropagation();
             }}
@@ -84,11 +84,11 @@ export default function MarketView() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Cart</div>
-                <div className="text-lg font-black italic mt-1">{totals.item_count} item(s)</div>
+                <div className="text-lg font-semibold mt-1">{totals.item_count} item(s)</div>
               </div>
               <button
                 type="button"
-                className="text-xs font-black text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl"
+                className="text-xs font-semibold text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl"
                 onClick={() => setCartOpen(false)}
               >
                 Close
@@ -128,14 +128,14 @@ export default function MarketView() {
             )}
 
             <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm font-black">Subtotal</div>
-              <div className="text-sm font-black">${(totals.subtotal_cents / 100).toFixed(2)}</div>
+              <div className="text-sm font-semibold">Subtotal</div>
+              <div className="text-sm font-semibold">${(totals.subtotal_cents / 100).toFixed(2)}</div>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button
                 type="button"
-                className="text-xs font-black text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-3 rounded-xl"
+                className="text-xs font-semibold text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-3 rounded-xl"
                 onClick={() => setCart(clearCart())}
               >
                 Clear
@@ -143,7 +143,7 @@ export default function MarketView() {
               <button
                 type="button"
                 disabled={!cart.lines.length}
-                className="text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 px-3 py-3 rounded-xl"
+                className="text-xs font-semibold text-white bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-3 py-3 rounded-xl"
                 onClick={checkoutCart}
               >
                 Checkout
@@ -157,13 +157,13 @@ export default function MarketView() {
 
       <div className="px-1 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black italic uppercase">Shop</h1>
+          <h1 className="text-2xl font-semibold">Shop</h1>
           <div className="text-xs text-zinc-500 mt-1">Memberships, passes, and Studio Cafe.</div>
         </div>
 
         <button
           type="button"
-          className="shrink-0 text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+          className="shrink-0 text-xs font-semibold text-white bg-violet-600 hover:bg-violet-500 px-3 py-2 rounded-xl"
           onClick={() => setCartOpen(true)}
         >
           Cart ({totals.item_count})
@@ -193,7 +193,7 @@ export default function MarketView() {
               return (
                 <Card
                   key={p.slug}
-                  className={`p-4 space-y-2 ${clickable ? 'cursor-pointer hover:border-yellow-500/30' : ''}`}
+                  className={`p-4 space-y-2 ${clickable ? 'cursor-pointer hover:border-violet-500/30' : ''}`}
                   onClick={() => {
                     if (!clickable) return;
                     router.push(`/members/shop/${encodeURIComponent(p.slug)}`);
@@ -217,14 +217,14 @@ export default function MarketView() {
                           {p.description ? <div className="text-xs text-zinc-500 mt-1">{p.description}</div> : null}
                         </div>
                         {owned ? (
-                          <div className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full">Active</div>
+                          <div className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-lg">Active</div>
                         ) : null}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-sm font-black text-zinc-100">{price ?? ''}</div>
+                    <div className="text-sm font-semibold text-zinc-100">{price ?? ''}</div>
 
                     {p.stripe_price_id ? (
                       <div className="flex items-center gap-2">
@@ -246,7 +246,7 @@ export default function MarketView() {
                             );
                             setCart(next);
                           }}
-                          className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+                          className="inline-block text-xs font-semibold text-white bg-violet-600 hover:bg-violet-500 px-3 py-2 rounded-xl"
                         >
                           Add
                         </button>
@@ -257,7 +257,7 @@ export default function MarketView() {
                             e.stopPropagation();
                             router.push(`/members/shop/${encodeURIComponent(p.slug)}`);
                           }}
-                          className="inline-block text-xs font-black text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl"
+                          className="inline-block text-xs font-semibold text-zinc-200 bg-white/10 hover:bg-white/15 px-3 py-2 rounded-xl"
                         >
                           View
                         </button>
@@ -270,7 +270,7 @@ export default function MarketView() {
                           e.stopPropagation();
                           router.push(`/members/shop/${encodeURIComponent(p.slug)}`);
                         }}
-                        className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+                        className="inline-block text-xs font-semibold text-white bg-violet-600 hover:bg-violet-500 px-3 py-2 rounded-xl"
                       >
                         View
                       </button>
@@ -317,7 +317,7 @@ export default function MarketView() {
                         <div className="font-bold">{it.name}</div>
                         <div className="text-xs text-zinc-500 mt-1">{it.category.toUpperCase()}</div>
                       </div>
-                      <div className="text-sm font-black">${(it.price_cents / 100).toFixed(2)}</div>
+                      <div className="text-sm font-semibold">${(it.price_cents / 100).toFixed(2)}</div>
                     </div>
 
                     <div className="mt-2 flex items-center justify-end">
@@ -337,7 +337,7 @@ export default function MarketView() {
                             );
                             setCart(next);
                           }}
-                          className="inline-block text-xs font-black text-zinc-950 bg-yellow-400 hover:bg-yellow-300 px-3 py-2 rounded-xl"
+                          className="inline-block text-xs font-semibold text-white bg-violet-600 hover:bg-violet-500 px-3 py-2 rounded-xl"
 >
                           Add
                         </button>

@@ -157,7 +157,7 @@ export default function ReactionLab({ onExit }: ReactionLabProps) {
                     <ArrowLeft size={24} />
                 </button>
                 <div className="text-center">
-                    <h2 className="text-lg font-black italic uppercase tracking-tighter">REACTION LAB</h2>
+                    <h2 className="text-lg font-semibold tracking-tight">REACTION LAB</h2>
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Reaction Speed</p>
                 </div>
                 <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
@@ -169,31 +169,31 @@ export default function ReactionLab({ onExit }: ReactionLabProps) {
             <div className="flex justify-between max-w-lg w-full mx-auto mt-6 px-4">
                 <div className="flex items-center gap-2">
                     <Timer size={16} className="text-violet-400" />
-                    <span className={`text-xl font-black ${timeLeft < 5 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>
+                    <span className={`text-xl font-semibold ${timeLeft < 5 ? 'text-rose-500 animate-pulse' : 'text-white'}`}>
                         {timeLeft}s
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
                     <Zap size={16} className="text-yellow-400" />
-                    <span className="text-xl font-black">{score}</span>
+                    <span className="text-xl font-semibold">{score}</span>
                 </div>
             </div>
 
             {/* Game Stage */}
             <div
                 ref={gameRef}
-                className="flex-1 relative w-full max-w-2xl mx-auto my-8 border-4 border-zinc-900 bg-zinc-900/20 rounded-3xl overflow-hidden cursor-crosshair touch-none"
+                className="flex-1 relative w-full max-w-2xl mx-auto my-8 border-4 border-zinc-900 bg-zinc-900/20 rounded-2xl overflow-hidden cursor-crosshair touch-none"
             >
                 {gameState === 'idle' && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-zinc-950/80 backdrop-blur-sm z-10">
                         <Zap className="text-yellow-400 mb-6 animate-bounce" size={64} />
-                        <h3 className="text-2xl font-black uppercase mb-2">Reaction Challenge</h3>
+                        <h3 className="text-2xl font-semibold mb-2">Reaction Challenge</h3>
                         <p className="text-zinc-500 text-xs mb-8 uppercase font-bold tracking-widest max-w-[240px]">
                             Tap the targets as quickly as you can before time runs out.
                         </p>
                         <button
                             onClick={startGame}
-                            className="w-full max-w-xs py-4 bg-yellow-400 text-black font-black italic uppercase rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-[0_4px_30px_rgba(250,204,21,0.3)]"
+                            className="w-full max-w-xs py-4 bg-yellow-400 text-black font-semibold uppercase rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-[0_4px_30px_rgba(250,204,21,0.3)]"
                         >
                             Start Game <Play size={20} fill="currentColor" />
                         </button>
@@ -208,7 +208,7 @@ export default function ReactionLab({ onExit }: ReactionLabProps) {
                         className="absolute w-12 h-12 -translate-x-1/2 -translate-y-1/2 group"
                     >
                         <div className="absolute inset-0 bg-yellow-400/20 rounded-full animate-ping"></div>
-                        <div className="relative w-full h-full bg-yellow-400 rounded-full border-4 border-white flex items-center justify-center shadow-[0_0_20px_rgba(250,204,21,0.5)] active:scale-95 transition-transform">
+                        <div className="relative w-full h-full bg-yellow-400 rounded-full border-4 border-white flex items-center justify-center active:scale-95 transition-transform">
                             <Zap size={16} className="text-black" />
                         </div>
                     </button>
@@ -217,7 +217,7 @@ export default function ReactionLab({ onExit }: ReactionLabProps) {
                 {gameState === 'gameOver' && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-zinc-950/90 backdrop-blur-md z-10">
                         <Trophy className="text-yellow-400 mb-6 animate-bounce" size={64} />
-                        <h3 className="text-2xl font-black uppercase mb-2">Time&apos;s Up</h3>
+                        <h3 className="text-2xl font-semibold mb-2">Time&apos;s Up</h3>
                         <p className="text-zinc-500 text-xs mb-6 uppercase font-bold tracking-widest">Here&apos;s how you did.</p>
 
                         <div className="w-full max-w-xs bg-zinc-900 p-6 rounded-2xl border border-white/5 mb-8">
@@ -239,13 +239,13 @@ export default function ReactionLab({ onExit }: ReactionLabProps) {
                         <div className="w-full max-w-xs flex flex-col gap-3">
                             <button
                                 onClick={startGame}
-                                className="w-full py-4 bg-white text-black font-black italic uppercase rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95"
+                                className="w-full py-4 bg-white text-black font-semibold uppercase rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95"
                             >
                                 Play Again <ChevronRight size={20} />
                             </button>
                             <button
                                 onClick={onExit}
-                                className="w-full py-4 bg-zinc-800 text-white font-black italic uppercase rounded-xl flex items-center justify-center gap-2 transition-all"
+                                className="w-full py-4 bg-zinc-800 text-white font-semibold uppercase rounded-xl flex items-center justify-center gap-2 transition-all"
                             >
                                 Back to Games
                             </button>

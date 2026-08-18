@@ -72,7 +72,7 @@ export default function HabitsView() {
     <div className="space-y-4">
       <div>
         <div className="text-xs text-zinc-500 font-bold tracking-widest uppercase">Habits</div>
-        <div className="text-lg font-black italic">Today {day ? `(${day})` : ''}</div>
+        <div className="text-lg font-semibold">Today {day ? `(${day})` : ''}</div>
         <div className="text-xs text-zinc-500">Track the habits you want to stay consistent with.</div>
       </div>
 
@@ -86,7 +86,7 @@ export default function HabitsView() {
           />
           <button
             onClick={createHabit}
-            className="px-3 py-2 rounded-xl bg-violet-600 text-white text-sm font-black"
+            className="px-3 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold"
           >
             Add
           </button>
@@ -110,7 +110,7 @@ export default function HabitsView() {
                 <div className="text-xs text-zinc-500">Tap to toggle</div>
               </div>
               <div
-                className={`text-xs font-black px-3 py-1 rounded-full ${
+                className={`text-xs font-semibold px-3 py-1 rounded-lg ${
                   h.checkedToday ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-800 text-zinc-400'
                 }`}
               >

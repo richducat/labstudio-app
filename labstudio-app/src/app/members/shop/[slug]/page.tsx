@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 
 type ShopProduct = {
   slug: string;
@@ -13,8 +13,8 @@ type ShopProduct = {
   checkout_url?: string | null;
 };
 
-export default function ShopProductPage({ params }: { params: { slug: string } }) {
-  const slug = params.slug;
+export default function ShopProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const [p, setP] = useState<ShopProduct | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -56,10 +56,10 @@ export default function ShopProductPage({ params }: { params: { slug: string } }
     <main style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
         <div>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2, color: '#a1a1aa', textTransform: 'uppercase' }}>Shop</div>
-          <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: -0.5, marginTop: 6 }}>{p?.name || 'Product'}</h1>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 2, color: '#a1a1aa', textTransform: 'uppercase' }}>Shop</div>
+          <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.5, marginTop: 6 }}>{p?.name || 'Product'}</h1>
         </div>
-        <Link href="/members" style={{ fontSize: 13, fontWeight: 800 }}>
+        <Link href="/members" style={{ fontSize: 13, fontWeight: 600 }}>
           Back
         </Link>
       </div>
@@ -75,14 +75,14 @@ export default function ShopProductPage({ params }: { params: { slug: string } }
         <img
           src={p.image_url}
           alt={p.name}
-          style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 18, marginTop: 16, border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 12, marginTop: 16, border: '1px solid rgba(255,255,255,0.08)' }}
         />
       ) : null}
 
       {p ? (
         <>
           <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
-            <div style={{ fontSize: 18, fontWeight: 900 }}>{price}</div>
+            <div style={{ fontSize: 18, fontWeight: 700 }}>{price}</div>
             <div style={{ fontSize: 12, color: '#a1a1aa' }}>Secure checkout powered by Stripe</div>
           </div>
 
@@ -95,10 +95,10 @@ export default function ShopProductPage({ params }: { params: { slug: string } }
                 marginTop: 16,
                 width: '100%',
                 padding: 14,
-                borderRadius: 14,
-                fontWeight: 900,
-                background: '#facc15',
-                color: '#09090b',
+                borderRadius: 10,
+                fontWeight: 700,
+                background: '#7c3aed',
+                color: '#ffffff',
                 cursor: 'pointer',
               }}
               onClick={async () => {

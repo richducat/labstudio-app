@@ -159,6 +159,8 @@ async function chatCompletion(
 }
 
 export async function POST(req: Request) {
+  let fallbackText = '';
+
   try {
     const { message, history } = (await req.json().catch(() => ({}))) as {
       message?: string;
@@ -167,6 +169,7 @@ export async function POST(req: Request) {
 
     const text = String(message || '').trim();
     if (!text) return NextResponse.json({ error: 'Missing message' }, { status: 400 });
+    fallbackText = text;
 
     const jar = await cookies();
     const uid = jar.get('labstudio_uid')?.value;
@@ -345,6 +348,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ reply: messageContentToText(firstMsg.content) || '(no response)' });
   } catch (err: unknown) {
     console.error('Toby AI Error:', err);
+    if (fallbackText) {
+      return NextResponse.json({
+        reply: fallbackCoachReply(fallbackText),
+        provider: 'fallback',
+      });
+    }
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Server error' },
       { status: 500 },

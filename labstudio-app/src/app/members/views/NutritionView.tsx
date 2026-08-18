@@ -198,7 +198,7 @@ export default function NutritionView() {
   return (
     <div className="space-y-4 pb-20">
       <div className="px-1">
-        <h1 className="text-2xl font-black italic uppercase">Nutrition</h1>
+        <h1 className="text-2xl font-semibold">Nutrition</h1>
         <div className="text-xs text-zinc-500 mt-1">Track today&apos;s macros and your 7-day averages.</div>
       </div>
 
@@ -209,14 +209,14 @@ export default function NutritionView() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Today</div>
-              <div className="text-2xl font-black">{Math.round(data?.today?.calories ?? 0)} kcal</div>
+              <div className="text-2xl font-semibold">{Math.round(data?.today?.calories ?? 0)} kcal</div>
               <div className="text-xs text-zinc-500 mt-1">
                 P {Math.round(data?.today?.protein_g ?? 0)}g · C {Math.round(data?.today?.carbs_g ?? 0)}g · F {Math.round(data?.today?.fat_g ?? 0)}g
               </div>
             </div>
             <div>
               <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">7-day avg</div>
-              <div className="text-2xl font-black">{Math.round(data?.avg7?.calories ?? 0)} kcal</div>
+              <div className="text-2xl font-semibold">{Math.round(data?.avg7?.calories ?? 0)} kcal</div>
               <div className="text-xs text-zinc-500 mt-1">
                 P {Math.round(data?.avg7?.protein_g ?? 0)}g · C {Math.round(data?.avg7?.carbs_g ?? 0)}g · F {Math.round(data?.avg7?.fat_g ?? 0)}g
               </div>
@@ -384,7 +384,7 @@ export default function NutritionView() {
           <button
             onClick={save}
             disabled={!form.name.trim() || status === 'saving'}
-            className="self-start rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50 sm:self-auto"
+            className="self-start rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50 sm:self-auto"
           >
             Save
           </button>

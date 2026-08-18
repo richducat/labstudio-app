@@ -47,7 +47,7 @@ export default function ProgressView({ mode, onBack }: { mode: Mode; onBack: () 
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs font-bold text-zinc-500 tracking-widest uppercase">Progress</div>
-          <div className="text-2xl font-black italic uppercase">{title}</div>
+          <div className="text-2xl font-semibold">{title}</div>
         </div>
         <button
           onClick={onBack}

@@ -65,7 +65,7 @@ export default function WearablesView() {
   return (
     <div className="space-y-6 pb-20">
       <div className="px-1">
-        <h1 className="text-2xl font-black italic uppercase">Wearables</h1>
+        <h1 className="text-2xl font-semibold">Wearables</h1>
         <div className="text-xs text-zinc-500 mt-1">
           Review the devices currently linked to your account.
         </div>

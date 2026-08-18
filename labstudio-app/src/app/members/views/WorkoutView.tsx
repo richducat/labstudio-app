@@ -91,7 +91,7 @@ function WorkoutSessionView({ onDone }: { onDone: () => void }) {
   return (
     <div className="flex flex-col min-h-[80vh]">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-black italic uppercase">{WORKOUT_TEMPLATE.name}</h2>
+        <h2 className="text-xl font-semibold">{WORKOUT_TEMPLATE.name}</h2>
         <button onClick={onDone} className="p-2 bg-zinc-900 rounded-full"><X size={20} /></button>
       </div>
 
@@ -209,7 +209,7 @@ export default function WorkoutView({ onSelect }: { onSelect: (id: string) => vo
   return (
     <div className="space-y-4 pb-20">
       <div className="px-1">
-        <h1 className="text-2xl font-black italic uppercase">Workout</h1>
+        <h1 className="text-2xl font-semibold">Workout</h1>
         <div className="text-xs text-zinc-500">Choose how you want to train today.</div>
       </div>
 
@@ -263,7 +263,7 @@ export default function WorkoutView({ onSelect }: { onSelect: (id: string) => vo
           placeholder="Notes (optional)"
         />
         <div className="flex justify-end">
-          <button onClick={() => void saveWorkout()} className="text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 rounded-full">
+          <button onClick={() => void saveWorkout()} className="text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 rounded-lg">
             Save Workout
           </button>
         </div>
@@ -279,7 +279,7 @@ export default function WorkoutView({ onSelect }: { onSelect: (id: string) => vo
           <input value={pr.reps} onChange={(e) => setPr({ ...pr, reps: e.target.value })} className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm col-span-2" placeholder="Reps (optional)" />
         </div>
         <div className="flex justify-end">
-          <button onClick={() => void savePr()} className="text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-full">
+          <button onClick={() => void savePr()} className="text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 px-3 py-1.5 rounded-lg">
             Save PR
           </button>
         </div>

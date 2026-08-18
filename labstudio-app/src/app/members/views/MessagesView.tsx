@@ -72,7 +72,7 @@ export default function MessagesView({ setTab }: { setTab?: (tab: LabTab) => voi
           {activeThread.cta ? (
             <button
               onClick={() => setTab?.(activeThread.cta.tab)}
-              className="text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-full bg-violet-600 text-white hover:bg-violet-500 transition-colors"
+              className="text-[10px] font-semibold uppercase tracking-widest px-3 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-500 transition-colors"
             >
               {activeThread.cta.label}
             </button>
@@ -81,7 +81,7 @@ export default function MessagesView({ setTab }: { setTab?: (tab: LabTab) => voi
 
         <div className="px-1">
           <div className="flex items-center gap-4 p-4 border border-white/5 rounded-2xl bg-zinc-900/70">
-            <div className={`relative w-12 h-12 rounded-2xl ${activeThread.color} flex items-center justify-center font-black text-sm`}>
+            <div className={`relative w-12 h-12 rounded-2xl ${activeThread.color} flex items-center justify-center font-semibold text-sm`}>
               {activeThread.avatar}
               {activeThread.isAi ? (
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-zinc-950 rounded-full" />
@@ -121,7 +121,7 @@ export default function MessagesView({ setTab }: { setTab?: (tab: LabTab) => voi
   return (
     <div className="pb-32">
       <div className="py-6 px-2 space-y-4">
-        <h2 className="text-2xl font-black italic uppercase tracking-tighter">Messages</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Messages</h2>
         <label className="flex items-center gap-3 rounded-2xl border border-white/5 bg-zinc-900/80 px-4 py-3">
           <Search size={18} className="text-zinc-500" />
           <input
@@ -141,7 +141,7 @@ export default function MessagesView({ setTab }: { setTab?: (tab: LabTab) => voi
             className={`w-full text-left flex items-center gap-4 p-4 transition-all border-b border-white/5 ${thread.unread ? 'bg-violet-600/5' : 'hover:bg-zinc-900/50'
               }`}
           >
-            <div className={`relative w-12 h-12 rounded-2xl ${thread.color} flex items-center justify-center font-black text-sm`}>
+            <div className={`relative w-12 h-12 rounded-2xl ${thread.color} flex items-center justify-center font-semibold text-sm`}>
               {thread.avatar}
               {thread.isAi ? (
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-zinc-950 rounded-full" />

@@ -367,17 +367,17 @@ export default function BookView() {
   if (step === 3) {
     return (
       <div className="space-y-8 py-10 text-center">
-        <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto text-green-500 border border-green-500/20 shadow-[0_0_40px_-10px_rgba(34,197,94,0.4)]">
+        <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto text-green-500 border border-green-500/20">
           <CheckCircle size={48} />
         </div>
         <div>
-          <h2 className="mb-2 text-2xl font-black italic sm:text-3xl">Session booked.</h2>
+          <h2 className="mb-2 text-2xl font-semibold sm:text-3xl">Session booked.</h2>
           <p className="text-zinc-400">Your booking has been added to your schedule and dashboard.</p>
         </div>
         <div className="p-6 bg-zinc-900/50 backdrop-blur rounded-2xl border border-zinc-800 max-w-xs mx-auto text-sm text-left relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-violet-500" />
           <div className="text-xs font-bold text-zinc-500 mb-2 tracking-widest">SESSION DETAILS</div>
-          <div className="font-black text-xl text-white mb-1">{booking?.title ?? selection.service?.name}</div>
+          <div className="font-semibold text-xl text-white mb-1">{booking?.title ?? selection.service?.name}</div>
           <div className="flex items-center gap-2 text-violet-400 font-mono mb-2">
             <CalendarDays size={14} />
             <span>{confirmationDay}</span>
@@ -408,7 +408,7 @@ export default function BookView() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-black italic uppercase">Book a Session</h2>
+        <h2 className="text-2xl font-semibold">Book a Session</h2>
         {step === 2 ? (
           <button onClick={() => setStep(1)} className="text-xs text-zinc-500 underline flex items-center gap-1">
             <ChevronRight className="rotate-180" size={12} /> Back
@@ -463,7 +463,7 @@ export default function BookView() {
                       <div className="font-bold text-sm">{event.summary || 'Session'}</div>
                       <div className="text-xs text-zinc-500 mt-1">{formatNyTimeRange(event.start, event.end)}</div>
                     </div>
-                    <div className={`shrink-0 text-[10px] font-black uppercase tracking-widest ${event.source === 'google_calendar' ? 'text-blue-400' : 'text-violet-400'}`}>
+                    <div className={`shrink-0 text-[10px] font-semibold uppercase tracking-widest ${event.source === 'google_calendar' ? 'text-blue-400' : 'text-violet-400'}`}>
                       {event.source === 'google_calendar' ? 'Google' : 'Lab'}
                     </div>
                   </div>
@@ -624,7 +624,7 @@ export default function BookView() {
                       <div className="font-bold text-sm">{window.event.summary || 'Session'}</div>
                       <div className="text-xs text-zinc-500 mt-1">{formatNyTimeRange(window.event.start, window.event.end)}</div>
                     </div>
-                    <div className={`shrink-0 text-[10px] font-black uppercase tracking-widest ${window.event.source === 'google_calendar' ? 'text-blue-400' : 'text-violet-400'}`}>
+                    <div className={`shrink-0 text-[10px] font-semibold uppercase tracking-widest ${window.event.source === 'google_calendar' ? 'text-blue-400' : 'text-violet-400'}`}>
                       {window.event.source === 'google_calendar' ? 'Google' : 'Lab'}
                     </div>
                   </div>

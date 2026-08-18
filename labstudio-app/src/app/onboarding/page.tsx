@@ -29,7 +29,7 @@ export default async function OnboardingPage() {
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-6">
           <div className="text-sm font-semibold text-zinc-400">Lab Studio</div>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-50">Welcome — quick intake</h1>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-50">Welcome — quick intake</h1>
           <p className="mt-2 text-sm text-zinc-400">
             Tell us a bit about you so we can personalize your experience. You can update this later.
           </p>

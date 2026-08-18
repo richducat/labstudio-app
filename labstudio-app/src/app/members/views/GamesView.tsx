@@ -59,7 +59,7 @@ export default function GamesView({ setTab }: { setTab?: (tab: LabTab) => void }
     <div className="pb-32">
       <div className="text-center py-8 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-violet-600/10 blur-[100px] -z-10"></div>
-        <h2 className="text-3xl font-black italic uppercase tracking-tighter flex items-center justify-center gap-3">
+        <h2 className="text-3xl font-semibold tracking-tight flex items-center justify-center gap-3">
           <Gamepad2 className="text-violet-500" size={32} />
           Brain Training
         </h2>
@@ -81,7 +81,7 @@ export default function GamesView({ setTab }: { setTab?: (tab: LabTab) => void }
                 <div className="flex flex-col items-end">
                   <div className="flex gap-1">
                     {game.tags.map(tag => (
-                      <span key={tag} className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-white/5 text-zinc-400 border border-white/5">
+                      <span key={tag} className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-white/5 text-zinc-400 border border-white/5">
                         {tag}
                       </span>
                     ))}
@@ -93,14 +93,14 @@ export default function GamesView({ setTab }: { setTab?: (tab: LabTab) => void }
               </div>
 
               <div>
-                <h3 className="text-xl font-black uppercase italic tracking-wide">{game.title}</h3>
+                <h3 className="text-xl font-semibold tracking-wide">{game.title}</h3>
                 <p className="text-zinc-400 text-xs leading-relaxed mt-1 mb-4 line-clamp-2">{game.desc}</p>
               </div>
 
               <div className="flex items-end justify-between border-t border-white/5 pt-4">
                 <div>
                   <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">High Score</p>
-                  <p className="text-white font-black text-lg">
+                  <p className="text-white font-semibold text-lg">
                     {loading ? '...' : (highScores[game.id] || 0).toLocaleString()}
                   </p>
                 </div>
@@ -117,11 +117,11 @@ export default function GamesView({ setTab }: { setTab?: (tab: LabTab) => void }
       <div className="mt-8 px-4">
         <Card className="bg-zinc-900/40 border-dashed border-zinc-800 p-6 text-center">
           <Trophy className="mx-auto text-yellow-500 mb-3" size={32} />
-          <h4 className="text-sm font-bold uppercase italic">Leaderboard</h4>
+          <h4 className="text-sm font-bold uppercase">Leaderboard</h4>
           <p className="text-xs text-zinc-500 mt-1 mb-4">See how your best Reaction Lab score compares with other members.</p>
           <button
             onClick={() => setTab?.('social')}
-            className="text-[10px] font-black uppercase tracking-widest px-4 py-2 border border-zinc-700 rounded-full hover:bg-white hover:text-black transition-colors"
+            className="text-[10px] font-semibold uppercase tracking-widest px-4 py-2 border border-zinc-700 rounded-lg hover:bg-white hover:text-black transition-colors"
           >
             View Leaderboard
           </button>

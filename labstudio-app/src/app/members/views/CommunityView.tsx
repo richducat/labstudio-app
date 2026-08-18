@@ -7,7 +7,7 @@ export default function CommunityView() {
   return (
     <div className="pb-32">
       <div className="text-center py-6 px-4">
-        <h2 className="text-2xl font-black italic uppercase tracking-tighter">Community</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Community</h2>
         <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-bold">Updates from coaches and members</p>
       </div>
 
@@ -27,7 +27,7 @@ export default function CommunityView() {
         </Card>
 
         <div className="space-y-3">
-          <h3 className="font-black text-[10px] text-zinc-500 uppercase tracking-widest ml-2">Recent Activity</h3>
+          <h3 className="font-semibold text-[10px] text-zinc-500 uppercase tracking-widest ml-2">Recent Activity</h3>
           <Card className="p-5 bg-zinc-900/40 border-white/5">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-2xl bg-zinc-800 border border-white/5 flex items-center justify-center">

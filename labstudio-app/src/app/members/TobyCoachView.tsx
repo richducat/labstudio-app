@@ -56,8 +56,11 @@ export default function TobyCoachView() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col pb-24 lg:pb-6">
-      <div className="mb-4 flex items-center justify-between px-1">
+    <div
+      className="mx-auto flex w-full max-w-3xl flex-col"
+      style={{ height: 'calc(100dvh - 232px)' }}
+    >
+      <div className="mb-3 flex items-center justify-between px-1">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-600">
             <Bot size={22} className="text-white" />
@@ -80,8 +83,7 @@ export default function TobyCoachView() {
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950">
         <div
           ref={scrollRef}
-          className="min-h-[320px] flex-1 space-y-4 overflow-y-auto px-4 py-5"
-          style={{ maxHeight: 'calc(100dvh - 380px)' }}
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5"
         >
           {messages.map((m, i) => (
             <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>

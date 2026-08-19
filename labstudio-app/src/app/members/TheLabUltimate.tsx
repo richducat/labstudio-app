@@ -101,7 +101,13 @@ export default function TheLabUltimate({
       </header>
 
       {/* Content */}
-      <main className="relative z-10 mx-auto flex-1 w-full max-w-md p-4 pb-[calc(132px+env(safe-area-inset-bottom))] lg:max-w-6xl lg:pb-[calc(116px+env(safe-area-inset-bottom))]">
+      <main
+        className={`relative z-10 mx-auto w-full max-w-md flex-1 px-4 pt-4 lg:max-w-6xl ${
+          tab === 'coach'
+            ? 'overflow-hidden pb-0'
+            : 'pb-[calc(132px+env(safe-area-inset-bottom))] lg:pb-[calc(116px+env(safe-area-inset-bottom))]'
+        }`}
+      >
         {needsOnboarding ? (
           <div className="mb-4 flex flex-col items-start gap-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

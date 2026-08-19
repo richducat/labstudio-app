@@ -145,28 +145,28 @@ def render_one(output_name: str, source_name: str, headline: str, subhead: str) 
 def main() -> None:
     render_one(
         "01-your-gym-preview-6-9.png", "01-dash.png",
-        "Your gym in your pocket",
-        "Your next session, coach plan, and progress the moment you sign in.",
+        "Your whole gym in one app",
+        "See your next session, coach plan, and progress the moment you sign in.",
     )
     render_one(
         "02-coach-toby-preview-6-9.png", "03-toby.png",
         "Coach Toby, on demand",
-        "Real coaching answers between sessions — training, food, recovery.",
+        "Toby answers between sessions — training, food, and recovery.",
     )
     render_one(
         "03-book-sessions-preview-6-9.png", "02-book.png",
         "Book your next session",
-        "Live availability synced with the studio calendar.",
+        "Booking synced with the studio's Google Calendar.",
     )
     render_one(
         "04-passes-memberships-preview-6-9.png", "04-shop.png",
         "Passes and memberships",
-        "Day passes to monthly memberships with secure Stripe checkout.",
+        "Day passes to monthly memberships with Stripe checkout.",
     )
     render_one(
         "05-brain-training-preview-6-9.png", "05-games.png",
-        "Train your brain too",
-        "Reaction games, challenges, and the studio leaderboard.",
+        "Test your reflexes, earn points",
+        "The Reaction Lab speed challenge, points, and the studio leaderboard.",
     )
 
 

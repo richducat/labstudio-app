@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as Body;
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as Body;
   const lift = (body.lift || '').trim().slice(0, 80);
   const valueNum = body.value == null || body.value === '' ? NaN : Number(body.value);
   const unit = (body.unit || 'lb').trim().slice(0, 10);

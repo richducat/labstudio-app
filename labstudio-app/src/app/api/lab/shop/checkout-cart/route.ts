@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   await ensureSchema();
   await getOrCreateUser(uid);
 
-  const body = (await req.json().catch(() => ({}))) as { lines?: unknown };
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as { lines?: unknown };
   const linesRaw = Array.isArray(body?.lines) ? (body.lines as Record<string, unknown>[]) : [];
   const lines: CartLine[] = linesRaw
     .map((l) => ({ price_id: String(l?.price_id || '').trim(), quantity: Number(l?.quantity || 0) }))

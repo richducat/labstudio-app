@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     try {
-        const body = (await req.json().catch(() => ({}))) as { gameId?: unknown; score?: unknown };
+        const body = ((await req.json().catch(() => ({}))) ?? {}) as { gameId?: unknown; score?: unknown };
         const gameId = String(body.gameId || '').trim();
         const rawScore = typeof body.score === 'number' ? body.score : NaN;
         const score = Number.isFinite(rawScore) ? Math.floor(rawScore) : NaN;
@@ -35,6 +35,11 @@ export async function POST(req: Request) {
         }
         if (gameId !== ACTIVE_GAME_ID) {
             return NextResponse.json({ ok: false, error: 'Unsupported gameId' }, { status: 400 });
+        }
+        // Reaction Lab is a 30-second tap game; no human clears ~600 taps. Reject
+        // impossible scores so the leaderboard and XP can't be farmed with one POST.
+        if (score > 600) {
+            return NextResponse.json({ ok: false, error: 'Score out of range' }, { status: 400 });
         }
 
         await ensureSchema();

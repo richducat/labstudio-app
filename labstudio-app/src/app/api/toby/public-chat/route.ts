@@ -72,9 +72,11 @@ export async function POST(req: Request) {
   const providedKey = req.headers.get('x-labstudio-key');
 
   if (!requiredKey) {
+    // Public marketing chat is an optional feature; when its access code is not
+    // configured it is simply unavailable — not a server error.
     return NextResponse.json(
-      { error: 'Server not configured (LABSTUDIO_ACCESS_CODE missing)' },
-      { status: 500, headers: corsHeaders(origin) },
+      { error: 'Public coach chat is not available right now.' },
+      { status: 503, headers: corsHeaders(origin) },
     );
   }
 
@@ -85,7 +87,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { message } = (await req.json().catch(() => ({}))) as { message?: string };
+  const { message } = ((await req.json().catch(() => ({}))) ?? {}) as { message?: string };
   const text = String(message || '').trim();
   if (!text) {
     return NextResponse.json(

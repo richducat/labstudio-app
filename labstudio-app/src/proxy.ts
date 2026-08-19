@@ -77,12 +77,22 @@ export async function proxy(req: NextRequest) {
     return unauthorized(req);
   }
 
-  const uid = req.cookies.get(UID_COOKIE)?.value;
-  if (uid === session.userId) {
-    return NextResponse.next();
-  }
+  // SECURITY (cross-account IDOR fix): downstream route handlers read identity
+  // from the labstudio_uid cookie. A client can forge that cookie to any value,
+  // so we must NOT let the handler see the client's value. Force the REQUEST's
+  // labstudio_uid cookie to the verified session userId before the handler runs,
+  // by rewriting the forwarded Cookie header. Setting it only on the response
+  // (the old behavior) left the current request acting on the forged uid.
+  req.cookies.set(UID_COOKIE, session.userId);
+  const requestHeaders = new Headers(req.headers);
+  const rewrittenCookie = req.cookies
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join('; ');
+  requestHeaders.set('cookie', rewrittenCookie);
 
-  const res = NextResponse.next();
+  const res = NextResponse.next({ request: { headers: requestHeaders } });
+  // Keep the browser's stored uid canonical too.
   setUidCookie(res, req, session.userId);
   return res;
 }

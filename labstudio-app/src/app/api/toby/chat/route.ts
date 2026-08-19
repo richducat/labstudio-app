@@ -6,6 +6,7 @@ import { neon } from '@neondatabase/serverless';
 import { ensureSchema } from '@/lib/db';
 import { getTobyLlmConfig, getUpstreamErrorMessage } from '@/lib/toby-llm';
 import { callTobyWrapper, getTobyWrapperMode } from '@/lib/toby-wrapper';
+import { allow, clientIp } from '@/lib/ip-throttle';
 
 export const runtime = 'nodejs';
 
@@ -148,28 +149,53 @@ async function chatCompletion(
   headers: Record<string, string>,
   body: Record<string, unknown>,
 ) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
-
-  const json = (await res.json().catch(() => ({}))) as TobyChatCompletionJson;
-  return { res, json };
+  // Bound the upstream call so a slow/hung provider cannot pin the request and
+  // pile up workers on the shared host.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25_000);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const json = (await res.json().catch(() => ({}))) as TobyChatCompletionJson;
+    return { res, json };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function POST(req: Request) {
   let fallbackText = '';
 
   try {
-    const { message, history } = (await req.json().catch(() => ({}))) as {
+    // Toby calls a paid LLM per request. Throttle to stop cost amplification.
+    const ip = clientIp(req);
+    if (!allow(`toby:${ip}`, 20, 60_000)) {
+      return NextResponse.json(
+        { error: "Easy there — give me a second and ask again." },
+        { status: 429 },
+      );
+    }
+
+    const { message, history: rawHistory } = ((await req.json().catch(() => ({}))) ?? {}) as {
       message?: string;
       history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
     };
 
-    const text = String(message || '').trim();
+    // Bound input size so a single request cannot balloon token cost.
+    const text = String(message || '').trim().slice(0, 2000);
     if (!text) return NextResponse.json({ error: 'Missing message' }, { status: 400 });
     fallbackText = text;
+
+    const history = Array.isArray(rawHistory)
+      ? rawHistory
+          .filter((m) => m && typeof m.content === 'string')
+          .slice(-10)
+          .map((m) => ({ role: m.role, content: String(m.content).slice(0, 2000) }))
+      : undefined;
 
     const jar = await cookies();
     const uid = jar.get('labstudio_uid')?.value;
@@ -234,11 +260,7 @@ export async function POST(req: Request) {
       messages.push({
         role: 'system',
         content:
-          `${retrieval.context}\n\n` +
-          `Rules for using excerpts:\n` +
-          `- Only use if it actually matches the question.\n` +
-          `- Do NOT mention "excerpts" or the retrieval system.\n` +
-          `- If you use specific details from an excerpt, cite the source_file in parentheses, e.g. (source: <file>).\n`,
+          `Here is some of how Toby has coached real clients, for background on his voice and approach. Let it inform how you sound; do NOT quote it, cite it, mention "excerpts", or reference any source. Just talk like this:\n\n${retrieval.context}`,
       });
     }
 
@@ -259,6 +281,7 @@ export async function POST(req: Request) {
     const firstPayload: Record<string, unknown> = {
       model: llm.model,
       messages,
+      ...(llm.provider === 'openai' ? { max_completion_tokens: 1200 } : {}),
     };
 
     if (useTools) {
@@ -335,6 +358,7 @@ export async function POST(req: Request) {
       const secondResult = await chatCompletion(llm.chatCompletionsUrl, llm.headers, {
         model: llm.model,
         messages,
+        ...(llm.provider === 'openai' ? { max_completion_tokens: 1200 } : {}),
       });
 
       if (!secondResult.res.ok) {

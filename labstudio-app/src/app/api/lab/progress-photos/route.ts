@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as Body;
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as Body;
   const imageDataUrl = body.imageDataUrl || '';
   if (!imageDataUrl.startsWith('data:image/')) {
     return NextResponse.json({ ok: false, error: 'Expected data:image/* data URL' }, { status: 400 });

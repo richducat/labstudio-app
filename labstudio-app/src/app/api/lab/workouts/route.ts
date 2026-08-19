@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as Body;
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as Body;
   const kind = (body.kind || 'workout').slice(0, 50);
   const durationMin = body.durationMin == null || body.durationMin === '' ? null : Number(body.durationMin);
   const note = body.note?.slice(0, 2000) ?? null;

@@ -155,6 +155,7 @@ function shopResponse(products: ShopProduct[]) {
   return NextResponse.json({
     ok: true,
     products,
+    cart_enabled: Boolean(process.env.STRIPE_SECRET_KEY),
     entitlements: [],
     location: LAB_LOCATION,
     services: LAB_SERVICES,
@@ -191,7 +192,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as NativeLoginBody & { action?: string };
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as NativeLoginBody & { action?: string };
 
   if (body.action === 'login') {
     return handleNativeLogin(body);

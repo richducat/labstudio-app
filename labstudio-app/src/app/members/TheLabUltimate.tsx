@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Activity, Calendar, MessageSquare, Brain, ShoppingBag, User, Trophy } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
+import PremiumTabBar from './PremiumTabBar';
 import TobyCoachView from './TobyCoachView';
 import HomeView from './views/HomeView';
 import WorkoutView from './views/WorkoutView';
@@ -20,30 +20,6 @@ import MarketView from './views/MarketView';
 import ProgressView from './views/ProgressView';
 import ProfileView from './views/ProfileView';
 import { type LabTab } from './tabs';
-
-function NavBtn({
-  icon: Icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon: React.ElementType;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 transition-all sm:flex-none sm:px-2 ${active ? 'text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-300'
-        }`}
-    >
-      <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-      <span className="max-w-full truncate text-[9px] font-bold tracking-wide uppercase sm:text-[10px]">{label}</span>
-    </button>
-  );
-}
 
 export default function TheLabUltimate({
   initialUser,
@@ -72,6 +48,32 @@ export default function TheLabUltimate({
     setTabState(next);
     setTabMeta(meta ?? null);
   };
+
+  const [nextSession, setNextSession] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetch('/api/lab/home')
+      .then((r) => r.json())
+      .then((j) => {
+        if (!active) return;
+        const b = j?.nextBooking;
+        if (b?.title) {
+          const when = b.day ? new Date(b.day).toLocaleDateString(undefined, { weekday: 'short' }) : '';
+          setNextSession(`${b.title}${b.time ? ` · ${when} ${b.time}` : ''}`);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const accessory =
+    tab === 'coach'
+      ? null
+      : nextSession
+        ? { label: 'Next', value: nextSession, onClick: () => setTab('book') }
+        : { label: 'Coach', value: 'Ask Toby anything', onClick: () => setTab('coach') };
 
   return (
     <div
@@ -148,34 +150,7 @@ export default function TheLabUltimate({
         )}
       </main>
 
-      {/* Nav Bar */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 bg-zinc-950/90 backdrop-blur-xl border-t border-white/10 z-50 pt-2 shadow-[0_-10px_40px_-10px_rgba(0,0,0,1)]"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
-      >
-        <div className="mx-auto grid max-w-md grid-cols-7 items-end gap-1 px-2 lg:max-w-6xl">
-          <NavBtn icon={Activity} label="Dash" active={tab === 'home'} onClick={() => setTab('home')} />
-          <NavBtn icon={Calendar} label="Book" active={tab === 'book'} onClick={() => setTab('book')} />
-          <NavBtn icon={Brain} label="Games" active={tab === 'games'} onClick={() => setTab('games')} />
-
-          <div className="group relative -mt-8 flex justify-center sm:-mt-10">
-            <button
-              type="button"
-              onClick={() => setTab('coach')}
-              className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-full border-4 border-zinc-950 transition-all duration-300 sm:h-16 sm:w-16 ${tab === 'coach'
-                ? 'scale-105 bg-white text-violet-600 shadow-xl sm:scale-110'
-                : 'bg-violet-600 text-white group-hover:scale-105 group-hover:bg-violet-500'
-                }`}
-            >
-              <MessageSquare size={22} fill="currentColor" className="sm:h-[26px] sm:w-[26px]" />
-            </button>
-          </div>
-
-          <NavBtn icon={Trophy} label="Rank" active={tab === 'social'} onClick={() => setTab('social')} />
-          <NavBtn icon={ShoppingBag} label="Shop" active={tab === 'market'} onClick={() => setTab('market')} />
-          <NavBtn icon={User} label="Me" active={tab === 'profile'} onClick={() => setTab('profile')} />
-        </div>
-      </nav>
+      <PremiumTabBar tab={tab} setTab={setTab} accessory={accessory} />
     </div>
   );
 }

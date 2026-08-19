@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 401 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as Partial<Body>;
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as Partial<Body>;
   const action = body?.action;
 
   await ensureSchema();

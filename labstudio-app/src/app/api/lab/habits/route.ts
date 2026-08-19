@@ -22,38 +22,43 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
   }
 
-  await ensureSchema();
-  await getOrCreateUser(uid);
+  try {
+    await ensureSchema();
+    await getOrCreateUser(uid);
 
-  const q = sql();
+    const q = sql();
 
-  const habitsRows = (await q`
-    select id, name, active, sort_order
-    from lab_habits
-    where user_id = ${uid} and active = true
-    order by sort_order asc, created_at asc;
-  `) as unknown as Array<{ id: number; name: string }>;
+    const habitsRows = (await q`
+      select id, name, active, sort_order
+      from lab_habits
+      where user_id = ${uid} and active = true
+      order by sort_order asc, created_at asc;
+    `) as unknown as Array<{ id: number; name: string }>;
 
-  const todayRows = (await q`select (now() at time zone 'America/New_York')::date as day;`) as unknown as Array<{ day: string }>;
-  const day = String(todayRows?.[0]?.day || '');
+    const todayRows = (await q`select to_char((now() at time zone 'America/New_York')::date, 'YYYY-MM-DD') as day;`) as unknown as Array<{ day: string }>;
+    const day = String(todayRows?.[0]?.day || '');
 
-  const checkinRows = (await q`
-    select habit_id, checked
-    from lab_habit_checkins
-    where user_id = ${uid} and day = ${day}::date;
-  `) as unknown as Array<{ habit_id: number; checked: boolean }>;
+    const checkinRows = (await q`
+      select habit_id, checked
+      from lab_habit_checkins
+      where user_id = ${uid} and day = ${day}::date;
+    `) as unknown as Array<{ habit_id: number; checked: boolean }>;
 
-  const checkedByHabit = new Map<string, boolean>(checkinRows.map((c) => [String(c.habit_id), Boolean(c.checked)]));
+    const checkedByHabit = new Map<string, boolean>(checkinRows.map((c) => [String(c.habit_id), Boolean(c.checked)]));
 
-  return NextResponse.json({
-    ok: true,
-    habits: habitsRows.map((h) => ({
-      id: Number(h.id),
-      name: String(h.name),
-      checkedToday: checkedByHabit.get(String(h.id)) ?? false,
-    })),
-    day,
-  });
+    return NextResponse.json({
+      ok: true,
+      habits: habitsRows.map((h) => ({
+        id: Number(h.id),
+        name: String(h.name),
+        checkedToday: checkedByHabit.get(String(h.id)) ?? false,
+      })),
+      day,
+    });
+  } catch (e) {
+    console.error('habits GET failed', e);
+    return NextResponse.json({ ok: false, error: 'Could not load habits.' }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -74,7 +79,7 @@ export async function POST(req: Request) {
   await getOrCreateUser(uid);
 
   const q = sql();
-  const todayRows = (await q`select (now() at time zone 'America/New_York')::date as day;`) as unknown as Array<{ day: string }>;
+  const todayRows = (await q`select to_char((now() at time zone 'America/New_York')::date, 'YYYY-MM-DD') as day;`) as unknown as Array<{ day: string }>;
   const day = String(todayRows?.[0]?.day || '');
 
   if (action === 'create') {

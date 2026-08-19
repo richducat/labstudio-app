@@ -28,6 +28,7 @@ type CafeItem = {
 export default function MarketView() {
   const router = useRouter();
   const [data, setData] = useState<{ products: ShopProduct[]; entitlements: string[] } | null>(null);
+  const [cartEnabled, setCartEnabled] = useState(false);
   const [cafe, setCafe] = useState<CafeItem[] | null>(null);
   // Cart (local-only for now)
   const [cart, setCart] = useState<CartState>(() => readCart());
@@ -37,7 +38,10 @@ export default function MarketView() {
     fetch('/api/lab/shop')
       .then((r) => r.json())
       .then((j) => {
-        if (j?.ok) setData({ products: j.products ?? [], entitlements: j.entitlements ?? [] });
+        if (j?.ok) {
+          setData({ products: j.products ?? [], entitlements: j.entitlements ?? [] });
+          setCartEnabled(Boolean(j.cart_enabled));
+        }
       })
       .catch(() => {
         // ignore
@@ -161,13 +165,15 @@ export default function MarketView() {
           <div className="text-xs text-zinc-500 mt-1">Memberships, passes, and Studio Cafe.</div>
         </div>
 
-        <button
-          type="button"
-          className="shrink-0 text-xs font-semibold text-white bg-violet-600 hover:bg-violet-500 px-3 py-2 rounded-xl"
-          onClick={() => setCartOpen(true)}
-        >
-          Cart ({totals.item_count})
-        </button>
+        {cartEnabled ? (
+          <button
+            type="button"
+            className="shrink-0 text-xs font-semibold text-white bg-violet-600 hover:bg-violet-500 px-3 py-2 rounded-xl"
+            onClick={() => setCartOpen(true)}
+          >
+            Cart ({totals.item_count})
+          </button>
+        ) : null}
       </div>
 
       {/* Memberships / Passes */}
@@ -321,7 +327,8 @@ export default function MarketView() {
                     </div>
 
                     <div className="mt-2 flex items-center justify-end">
-                      <button
+                      {cartEnabled ? (
+                        <button
                           type="button"
                           onClick={() => {
                             const next = addToCart(
@@ -338,9 +345,12 @@ export default function MarketView() {
                             setCart(next);
                           }}
                           className="inline-block text-xs font-semibold text-white bg-violet-600 hover:bg-violet-500 px-3 py-2 rounded-xl"
->
+                        >
                           Add
                         </button>
+                      ) : (
+                        <span className="text-[11px] text-zinc-500">Available at the studio</span>
+                      )}
                     </div>
                   </div>
                 </div>

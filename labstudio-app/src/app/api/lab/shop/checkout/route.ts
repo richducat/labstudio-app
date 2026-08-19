@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   await ensureSchema();
   await getOrCreateUser(uid);
 
-  const body = (await req.json().catch(() => ({}))) as { price_id?: unknown };
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as { price_id?: unknown };
   const priceId = String(body?.price_id || '').trim();
   if (!priceId) {
     return NextResponse.json({ ok: false, error: 'Missing price_id' }, { status: 400 });

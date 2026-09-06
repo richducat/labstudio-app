@@ -17,3 +17,15 @@ build/
 .playwright-cli/
 .playwright-mcp/
 ios/**/.build/
+
+# Keep runtime diagnostics and private operational data out of git.
+**/.playwright-cli/
+**/.playwright-mcp/
+.env
+.env.*
+!.env*.example
+!.env*.sample
+!.env*.template
+memory/
+MEMORY.md
+zoho_exports/

@@ -3,6 +3,9 @@ name: Deploy Lab Studio to Namecheap
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: labstudio-namecheap-production
   cancel-in-progress: false
@@ -22,6 +25,7 @@ jobs:
       NAMECHEAP_REMOTE_ABS_ROOT: ${{ secrets.NAMECHEAP_REMOTE_ABS_ROOT }}
       NAMECHEAP_SSH_HOST: ${{ secrets.NAMECHEAP_SSH_HOST }}
       NAMECHEAP_SSH_KEY: ${{ secrets.NAMECHEAP_SSH_KEY }}
+      NAMECHEAP_SSH_KNOWN_HOSTS: ${{ secrets.NAMECHEAP_SSH_KNOWN_HOSTS }}
       NAMECHEAP_SSH_PORT: ${{ secrets.NAMECHEAP_SSH_PORT }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       LABSTUDIO_ACCESS_CODE: ${{ secrets.LABSTUDIO_ACCESS_CODE }}
@@ -38,9 +42,11 @@ jobs:
       APP_BASE_URL: https://app.labstudio.fit
       NAMECHEAP_ENV_FILE: ${{ github.workspace }}/labstudio-app/.deploy-env
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: npm
@@ -175,19 +181,24 @@ jobs:
           remote_root="${NAMECHEAP_REMOTE_ABS_ROOT:-/home/${NAMECHEAP_CPANEL_USER}/app.labstudio.fit}"
           ssh_port="${NAMECHEAP_SSH_PORT:-22}"
           key_path="$RUNNER_TEMP/namecheap_sftp_key"
+          known_hosts_path="$RUNNER_TEMP/namecheap_known_hosts"
+          umask 077
+          trap 'rm -f "$key_path" "$known_hosts_path" "$NAMECHEAP_ENV_FILE"' EXIT
 
-          if [[ -z "${NAMECHEAP_CPANEL_USER:-}" || -z "${NAMECHEAP_SSH_HOST:-}" || -z "${NAMECHEAP_SSH_KEY:-}" ]]; then
-            echo "Missing Namecheap SFTP secrets." >&2
+          if [[ -z "${NAMECHEAP_CPANEL_USER:-}" || -z "${NAMECHEAP_SSH_HOST:-}" || -z "${NAMECHEAP_SSH_KEY:-}" || -z "${NAMECHEAP_SSH_KNOWN_HOSTS:-}" ]]; then
+            echo "Missing Namecheap SFTP credentials or pinned known-hosts data." >&2
             exit 1
           fi
 
           printf '%s\n' "$NAMECHEAP_SSH_KEY" > "$key_path"
           chmod 600 "$key_path"
+          printf '%s\n' "$NAMECHEAP_SSH_KNOWN_HOSTS" > "$known_hosts_path"
+          chmod 600 "$known_hosts_path"
           printf 'restart=%s\n' "$(date -u +%FT%TZ)" > output/namecheap-targeted/tmp/restart.txt
 
           lftp -u "$NAMECHEAP_CPANEL_USER", "sftp://$NAMECHEAP_SSH_HOST:$ssh_port" <<LFTP
           set cmd:fail-exit yes
-          set sftp:connect-program "ssh -a -x -i $key_path -o BatchMode=yes -o StrictHostKeyChecking=no"
+          set sftp:connect-program "ssh -a -x -i $key_path -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$known_hosts_path"
           set net:timeout 60
           set net:max-retries 5
           set net:reconnect-interval-base 5

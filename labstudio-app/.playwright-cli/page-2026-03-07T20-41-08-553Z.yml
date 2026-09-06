@@ -1,9 +1,0 @@
-- generic [active] [ref=e1]:
-  - main [ref=e2]:
-    - heading "Lab Studio — Members" [level=1] [ref=e3]
-    - paragraph [ref=e4]: Enter the access code to continue.
-    - generic [ref=e5]:
-      - textbox "Access code" [ref=e6]
-      - button "Continue" [ref=e7] [cursor=pointer]
-    - paragraph [ref=e8]: Members-only access. Contact Lab Studio if you need help getting in.
-  - alert [ref=e9]

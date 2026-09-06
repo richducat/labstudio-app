@@ -1,3 +1,0 @@
-Total messages: 1 (Errors: 0, Warnings: 1)
-
-[WARNING] A preload for 'https://interfaces.zapier.com/assets/web-components/zapier-interfaces/zapier-interfaces.esm.js' is found, but is not used because the request credentials mode does not match. Consider taking a look at crossorigin attribute. @ https://app.labstudio.fit/_next/static/chunks/4a6e335f79b4e363.js?dpl=dpl_12AiQkiNGNcax1d9o6qcHM314v3Z:0

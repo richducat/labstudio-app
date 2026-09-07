@@ -1,5 +1,5 @@
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { dbConfigured, ensureSchema, getOrCreateUser, getUserProfile } from '@/lib/db';
 import { neon } from '@neondatabase/serverless';
 import { TOBY_SYSTEM_PROMPT } from '@/lib/toby-protocol';
@@ -28,9 +28,9 @@ function sql() {
 }
 
 async function mustUid() {
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
-  if (!uid) throw new Error('Missing labstudio_uid cookie');
+
+  const uid = await getAuthenticatedUserId();
+  if (!uid) throw new Error('Authentication required');
   return uid;
 }
 

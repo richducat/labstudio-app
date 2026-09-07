@@ -63,7 +63,8 @@ private struct LoadingView: View {
 private struct LoginView: View {
     @Environment(LabAppState.self) private var state
     @State private var email = ""
-    @State private var phone = ""
+    @State private var code = ""
+    @State private var challengeId: String?
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -92,7 +93,7 @@ private struct LoginView: View {
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text("Use the same email address or phone number from the current member app.")
+                Text("Sign in with a one-time code sent to your member email.")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(LabTheme.muted)
             }
@@ -110,20 +111,38 @@ private struct LoginView: View {
                     .padding(14)
                     .background(LabTheme.elevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .foregroundStyle(.white)
-                TextField("Phone", text: $phone)
-                    .keyboardType(.phonePad)
-                    .textContentType(.telephoneNumber)
-                    .padding(14)
-                    .background(LabTheme.elevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .foregroundStyle(.white)
-
+                .disabled(challengeId != nil || state.isLoading)
+                if challengeId != nil {
+                    Text("Check your email. Your code expires in 10 minutes.")
+                        .foregroundStyle(LabTheme.muted)
+                    TextField("Six-digit code", text: $code)
+                        .keyboardType(.numberPad)
+                        .textContentType(.oneTimeCode)
+                        .padding(14)
+                        .background(LabTheme.elevated, in: RoundedRectangle(cornerRadius: 18))
+                        .foregroundStyle(.white)
+                }
+                if let error = state.errorMessage {
+                    Text(error).foregroundStyle(.red).accessibilityLabel("Sign-in error: \(error)")
+                }
                 LabButton(
-                    title: state.isLoading ? "Signing In" : "Enter Lab Studio",
+                    title: state.isLoading ? "Please Wait" : challengeId == nil ? "Email Me a Code" : "Verify and Sign In",
                     icon: state.isLoading ? "hourglass" : "arrow.right",
                     tint: LabTheme.orange,
-                    isDisabled: state.isLoading || (email.nilIfBlank == nil && phone.nilIfBlank == nil)
+                    isDisabled: state.isLoading || email.nilIfBlank == nil || (challengeId != nil && (code.count != 6 || !code.allSatisfy { $0.isASCII && $0.isNumber }))
                 ) {
-                    Task { await state.login(email: email, phone: phone) }
+                    Task {
+                        if let challengeId {
+                            await state.login(email: email, challengeId: challengeId, code: code)
+                        } else {
+                            challengeId = await state.requestLoginCode(email: email)
+                        }
+                    }
+                }
+                if challengeId != nil {
+                    Button("Use another email or request a new code") {
+                        challengeId = nil; code = ""; state.errorMessage = nil
+                    }.disabled(state.isLoading)
                 }
             }
         }

@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { dbConfigured, ensureSchema, getOrCreateUser } from '@/lib/db';
 import { handleNativeLogin, handleNativeLogout, type NativeLoginBody } from '@/lib/lab-native-auth';
 import { LAB_LOCATION, LAB_SERVICES, LAB_TIME_GROUPS } from '@/lib/lab-services';
 import { getStripe } from '@/lib/stripe';
@@ -163,20 +161,6 @@ function shopResponse(products: ShopProduct[]) {
 }
 
 export async function GET() {
-  // IMPORTANT: Shop browse should not require auth cookies.
-  // We only use cookies when present (future: entitlements, user-specific pricing).
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value || null;
-
-  if (uid && dbConfigured()) {
-    try {
-      await ensureSchema();
-      await getOrCreateUser(uid);
-    } catch {
-      // Catalog browse should stay available even if the DB is unavailable.
-    }
-  }
-
   // If Stripe is configured, use it as the source of truth.
   if (process.env.STRIPE_SECRET_KEY) {
     try {

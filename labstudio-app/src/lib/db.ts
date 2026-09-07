@@ -108,7 +108,7 @@ export function dbConfigured() {
   return Boolean(dbUrl());
 }
 
-function sql() {
+export function sql() {
   const url = dbUrl();
   if (!url) throw new Error('DATABASE_URL not configured');
   return neon(url);

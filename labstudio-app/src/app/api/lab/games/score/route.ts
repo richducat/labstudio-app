@@ -1,5 +1,5 @@
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { dbConfigured, ensureSchema, getOrCreateUser } from '@/lib/db';
 import { neon } from '@neondatabase/serverless';
 
@@ -16,10 +16,9 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: 'DATABASE_URL not configured' }, { status: 400 });
     }
 
-    const jar = await cookies();
-    const uid = jar.get('labstudio_uid')?.value;
+    const uid = await getAuthenticatedUserId();
     if (!uid) {
-        return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
+        return NextResponse.json({ ok: false, error: 'Authentication required' }, { status: 401 });
     }
 
     try {
@@ -104,8 +103,8 @@ export async function GET(req: Request) {
         return NextResponse.json({ ok: true, leaderboards });
     } else {
         // Get high scores for ALL games (for the selection hub)
-        const jar = await cookies();
-        const uid = jar.get('labstudio_uid')?.value;
+
+        const uid = await getAuthenticatedUserId();
 
         const highScores = uid ? await q`
       select game_id, max(score) as top_score

@@ -1,5 +1,5 @@
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { TOBY_SYSTEM_PROMPT } from '@/lib/toby-protocol';
 import { getTobyRetrievalContext } from '@/lib/toby-retrieval';
 import { neon } from '@neondatabase/serverless';
@@ -127,8 +127,7 @@ export async function POST(req: Request) {
     const text = String(message || '').trim();
     if (!text) return NextResponse.json({ error: 'Missing message' }, { status: 400 });
 
-    const jar = await cookies();
-    const uid = jar.get('labstudio_uid')?.value;
+    const uid = await getAuthenticatedUserId();
     if (!uid) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
     const retrieval = getTobyRetrievalContext(text);

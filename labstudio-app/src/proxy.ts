@@ -4,7 +4,7 @@ import { getSessionSecret, verifyLabstudioSessionToken } from '@/lib/session';
 
 const UID_COOKIE = 'labstudio_uid';
 const SESSION_COOKIE = 'labstudio_session';
-const UID_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
+const UID_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 function isSecureRequest(req: NextRequest) {
   return req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
@@ -30,6 +30,7 @@ function clearAuthCookies(res: NextResponse, req: NextRequest) {
 
 const PUBLIC_LAB_API_PATHS = new Set([
   '/api/lab/auth/login',
+  '/api/lab/auth/request-code',
   '/api/lab/cafe',
   '/api/lab/services',
   '/api/lab/shop',

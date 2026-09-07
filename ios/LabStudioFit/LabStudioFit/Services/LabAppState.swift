@@ -7,6 +7,12 @@ private struct LabErrorResponse: Decodable {
     let error: String?
 }
 
+private struct LoginCodeResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let challengeId: String?
+}
+
 private struct LoginResponse: Decodable {
     let ok: Bool
     let error: String?
@@ -276,7 +282,20 @@ final class LabAppState {
         }
     }
 
-    func login(email: String, phone: String) async {
+    func requestLoginCode(email: String) async -> String? {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            let response: LoginCodeResponse = try await api.post("/api/lab/auth/request-code", json: ["email": email])
+            guard response.ok, let challengeId = response.challengeId else {
+                throw LabAPIError.server(response.error ?? "Unable to send a code.")
+            }
+            return challengeId
+        } catch { errorMessage = error.localizedDescription; return nil }
+    }
+
+    func login(email: String, challengeId: String, code: String) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -285,7 +304,8 @@ final class LabAppState {
             let response: LoginResponse = try await api.post("/api/lab/shop", json: [
                 "action": "login",
                 "email": email,
-                "phone": phone,
+                "challengeId": challengeId,
+                "code": code,
             ])
             if !response.ok {
                 throw LabAPIError.server(response.error ?? "Unable to log in.")

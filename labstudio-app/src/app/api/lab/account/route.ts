@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
 import { dbConfigured, deleteUserAccount } from '@/lib/db';
-import { getSessionSecret, verifyLabstudioSessionToken } from '@/lib/session';
 
 export const runtime = 'nodejs';
 
@@ -23,17 +22,7 @@ function clearAuthCookies(response: NextResponse) {
 }
 
 export async function DELETE() {
-  const jar = await cookies();
-  let uid = jar.get(UID_COOKIE)?.value;
-
-  if (!uid) {
-    const sessionToken = jar.get(SESSION_COOKIE)?.value;
-    const sessionSecret = getSessionSecret();
-    if (sessionToken && sessionSecret) {
-      const session = await verifyLabstudioSessionToken(sessionToken, sessionSecret);
-      uid = session?.userId;
-    }
-  }
+  const uid = await getAuthenticatedUserId();
 
   if (!uid) {
     const response = NextResponse.json({ ok: true, deleted: false });

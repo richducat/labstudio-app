@@ -1,5 +1,6 @@
-const SESSION_VERSION = 'v1';
-export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
+// v1 sessions were issued without proof of contact ownership. Never accept them.
+const SESSION_VERSION = 'v2';
+export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 const encoder = new TextEncoder();
 
@@ -38,9 +39,9 @@ async function signPayload(payload: string, secret: string) {
 
 export function getSessionSecret() {
   const configured = process.env.LABSTUDIO_SESSION_SECRET?.trim();
-  if (configured) return configured;
+  if (configured) return configured.length >= 32 ? configured : '';
   if (process.env.NODE_ENV !== 'production') {
-    return 'labstudio-dev-session-secret';
+    return 'labstudio-development-only-session-secret-change-in-production';
   }
   return '';
 }

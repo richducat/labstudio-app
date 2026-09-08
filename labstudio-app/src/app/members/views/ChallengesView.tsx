@@ -74,13 +74,8 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
     return agenda.filter((item) => item.id.startsWith('auto:') && item.completed).length;
   }, [homeData?.agenda]);
 
-  const totalBestScore = useMemo(
-    () => Object.values(highScores).reduce((sum, score) => sum + score, 0),
-    [highScores]
-  );
-
-  const gamesWithScores = useMemo(
-    () => Object.values(highScores).filter((score) => score > 0).length,
+  const reactionBestScore = useMemo(
+    () => highScores['reaction-lab'] ?? 0,
     [highScores]
   );
 
@@ -115,11 +110,11 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
       {
         id: 'arcade-volume',
         title: 'GAME SCORE',
-        desc: 'Reach a combined 5,000 points across your best score in each game.',
-        progress: totalBestScore,
+        desc: 'Reach 5,000 points in Reaction Lab.',
+        progress: reactionBestScore,
         target: 5000,
-        helper: `${gamesWithScores} game${gamesWithScores === 1 ? '' : 's'} currently have a saved score.`,
-        ctaLabel: 'Play arcade',
+        helper: `${reactionBestScore.toLocaleString()} points saved in Reaction Lab.`,
+        ctaLabel: 'Play Reaction Lab',
         ctaTab: 'games',
         icon: <Brain className="text-violet-500" size={24} />,
       },
@@ -135,7 +130,7 @@ export default function ChallengesView({ setTab }: { setTab?: (tab: LabTab) => v
         icon: <Trophy className="text-yellow-500" size={24} />,
       },
     ];
-  }, [checkinsCompleted, gamesWithScores, homeData?.progress?.photos30d, homeData?.progress?.workouts7d?.count, homeData?.progress?.workouts7d?.minutes, totalBestScore]);
+  }, [checkinsCompleted, homeData?.progress?.photos30d, homeData?.progress?.workouts7d?.count, homeData?.progress?.workouts7d?.minutes, reactionBestScore]);
 
   return (
     <div className="pb-32">

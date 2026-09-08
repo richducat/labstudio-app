@@ -1,5 +1,6 @@
-// v1 sessions were issued without proof of contact ownership. Never accept them.
-const SESSION_VERSION = 'v2';
+// Both v1 and production v2 sessions were issued without verified email ownership.
+// Only v3 tokens minted after a successful email challenge are accepted.
+const SESSION_VERSION = 'v3';
 export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 const encoder = new TextEncoder();

@@ -5,7 +5,6 @@ import { createLabstudioSessionToken, getSessionSecret, SESSION_COOKIE_MAX_AGE_S
 
 const UID_COOKIE = 'labstudio_uid';
 const SESSION_COOKIE = 'labstudio_session';
-const UID_COOKIE_MAX_AGE_SECONDS = SESSION_COOKIE_MAX_AGE_SECONDS;
 
 export type NativeLoginBody = {
   email?: string;
@@ -37,7 +36,7 @@ function setAuthCookies(response: NextResponse, userId: string, sessionToken: st
     sameSite: 'lax',
     secure,
     path: '/',
-    maxAge: UID_COOKIE_MAX_AGE_SECONDS,
+    maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
   });
 }
 
@@ -77,6 +76,7 @@ export async function handleNativeLogin(body: NativeLoginBody) {
     });
 
     setAuthCookies(response, user.id, sessionToken);
+    response.headers.set('Cache-Control', 'no-store');
     return response;
   } catch {
     const message = 'Sign-in could not be verified. Check your code or request a new one. If this continues, contact member support.';

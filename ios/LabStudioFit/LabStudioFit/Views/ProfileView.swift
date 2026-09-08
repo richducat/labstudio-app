@@ -30,6 +30,7 @@ struct ProfileView: View {
             }
             .refreshable { await state.refreshAfterMutation() }
             .navigationTitle("Profile")
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear(perform: syncProfile)
             .onChange(of: state.profile?.userId) { _, _ in syncProfile() }
             .onChange(of: selectedPhoto) { _, item in
@@ -54,8 +55,8 @@ struct ProfileView: View {
         PremiumCard(padding: 22) {
             VStack(spacing: 18) {
                 ZStack {
-                    Circle()
-                        .fill(LinearGradient(colors: [LabTheme.blue, LabTheme.orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(LinearGradient(colors: [LabTheme.violet, LabTheme.emerald.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 92, height: 92)
                     Text(initials)
                         .font(.title.weight(.black))
@@ -71,7 +72,7 @@ struct ProfileView: View {
                     .multilineTextAlignment(.center)
                 HStack {
                     MetricPill(title: "Level", value: "\(state.level)", icon: "star.fill", tint: LabTheme.blue)
-                    MetricPill(title: "XP", value: "\(state.xp)", icon: "bolt.fill", tint: LabTheme.orange)
+                    MetricPill(title: "XP", value: "\(state.xp)", icon: "bolt.fill", tint: LabTheme.violet)
                 }
             }
         }
@@ -90,7 +91,7 @@ struct ProfileView: View {
                     field("Phone", text: $phone, keyboard: .phonePad)
                     field("Primary goal", text: $goal)
                     field("Activity level", text: $activityLevel)
-                    LabButton(title: "Save Profile", icon: "checkmark.circle.fill", tint: LabTheme.blue, isDisabled: state.isLoading) {
+                    LabButton(title: "Save Profile", icon: "checkmark.circle.fill", tint: LabTheme.violet, isDisabled: state.isLoading) {
                         Task {
                             await state.saveProfile(
                                 firstName: firstName,
@@ -131,9 +132,9 @@ struct ProfileView: View {
             SectionHeader(title: "Progress", icon: "chart.line.uptrend.xyaxis")
             LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
                 PremiumCard { MetricPill(title: "Workouts 7D", value: "\(state.home?.progress?.workouts7d?.count ?? 0)", icon: "dumbbell.fill", tint: LabTheme.blue) }
-                PremiumCard { MetricPill(title: "Calories Avg", value: "\(state.home?.progress?.calories7dAvg ?? 0)", icon: "flame.fill", tint: LabTheme.orange) }
+                PremiumCard { MetricPill(title: "Calories Avg", value: "\(state.home?.progress?.calories7dAvg ?? 0)", icon: "flame.fill", tint: LabTheme.violet) }
                 PremiumCard { MetricPill(title: "Photos 30D", value: "\(state.home?.progress?.photos30d ?? 0)", icon: "camera.fill", tint: LabTheme.green) }
-                PremiumCard { MetricPill(title: "Nutrition", value: "\(state.profile?.nutritionRating ?? 0)/10", icon: "fork.knife", tint: LabTheme.orange) }
+                PremiumCard { MetricPill(title: "Nutrition", value: "\(state.profile?.nutritionRating ?? 0)/10", icon: "fork.knife", tint: LabTheme.violet) }
             }
 
             PhotosPicker(selection: $selectedPhoto, matching: .images) {
@@ -146,7 +147,8 @@ struct ProfileView: View {
                 .font(.headline.weight(.black))
                 .foregroundStyle(.white)
                 .padding(18)
-                .background(LabTheme.elevated, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .background(LabTheme.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(LabTheme.border, lineWidth: 1))
             }
         }
     }
@@ -156,7 +158,7 @@ struct ProfileView: View {
             SectionHeader(title: "Account", icon: "gearshape.fill")
             PremiumCard {
                 VStack(spacing: 12) {
-                    LabButton(title: "Sign Out", icon: "rectangle.portrait.and.arrow.right", tint: LabTheme.blue) {
+                    LabButton(title: "Sign Out", icon: "rectangle.portrait.and.arrow.right", tint: LabTheme.violet) {
                         Task { await state.logout() }
                     }
                     LabButton(title: "Delete Account", icon: "trash.fill", tint: LabTheme.red) {
@@ -179,7 +181,8 @@ struct ProfileView: View {
     private func field(_ title: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title.uppercased())
-                .font(.caption2.weight(.black))
+                .font(LabTheme.eyebrow())
+                .tracking(1.6)
                 .foregroundStyle(LabTheme.muted)
             TextField(title, text: text)
                 .keyboardType(keyboard)

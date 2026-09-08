@@ -52,10 +52,13 @@ function parseEnvLine(line) {
 
   const key = match[1];
   let value = match[2].trim();
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
+  if (value.startsWith('"') && value.endsWith('"')) {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      value = value.slice(1, -1);
+    }
+  } else if (value.startsWith("'") && value.endsWith("'")) {
     value = value.slice(1, -1);
   }
 
@@ -64,6 +67,33 @@ function parseEnvLine(line) {
 
 function serializeEnvValue(value) {
   return JSON.stringify(String(value).replace(/\n/g, '\\n'));
+}
+
+async function assertRequiredFiles(relativePaths) {
+  const missing = [];
+  for (const relativePath of relativePaths) {
+    if (!(await exists(path.join(outputDir, relativePath)))) {
+      missing.push(relativePath);
+    }
+  }
+
+  if (missing.length) {
+    throw new Error(`Namecheap deploy bundle is missing required files: ${missing.join(', ')}`);
+  }
+}
+
+async function countFiles(targetDir) {
+  let count = 0;
+  const entries = await fs.readdir(targetDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryPath = path.join(targetDir, entry.name);
+    if (entry.isDirectory()) {
+      count += await countFiles(entryPath);
+    } else if (entry.isFile()) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 async function readDeployEnv() {
@@ -249,6 +279,9 @@ async function main() {
         app: 'labstudio-app',
         hostTarget: 'app.labstudio.fit',
         packagedAt: new Date().toISOString(),
+        commit: process.env.GITHUB_SHA || null,
+        workflowRun: process.env.GITHUB_RUN_ID || null,
+        deploymentStrategy: 'full-standalone-sftp',
         envSourceUsed: envSource && await exists(envSource) ? path.basename(envSource) : null,
       },
       null,
@@ -257,7 +290,23 @@ async function main() {
     'utf8'
   );
 
+  await assertRequiredFiles([
+    'DEPLOY_INFO.json',
+    '.env.production.local',
+    'app.js',
+    'server.js',
+    'package.json',
+    '.next/BUILD_ID',
+    '.next/server/app/api/lab/shop/route.js',
+    '.next/server/app/api/lab/user/route.js',
+    '.next/server/app/privacy/page.js',
+    'node_modules/next/package.json',
+    'node_modules/react/package.json',
+    'tmp/restart.txt',
+  ]);
+
   console.log(`Packaged Namecheap deploy bundle at ${outputDir}`);
+  console.log(`Validated ${await countFiles(outputDir)} deploy files.`);
 }
 
 main().catch((error) => {

@@ -1,6 +1,10 @@
 # Verified member login release
 
-The web and native clients now require a single-use email code. Contact-only login, phone-based account linking and unsigned UID authorization are removed from all entry points. v1 sessions are rejected; v2 sessions expire after seven days. Existing phone-only members need a verified email linked through a controlled support recovery process, not by knowing a phone number.
+The web and native clients now require a single-use email code. Contact-only login, phone-based account linking and unsigned UID authorization are removed from all entry points. Both v1 and production v2 sessions are rejected; newly verified v3 sessions expire after seven days. Existing phone-only members need a verified email linked through a controlled support recovery process, not by knowing a phone number.
+
+Authenticated App Store Connect inspection on September 8, 2026 confirmed the live version is 1.0, build 2026070901. The release branch `codex/labstudio-booking-resubmission` records source commit `42b18c29768213be1cbbb8af1fa914e4bde85bcc` for that build. This remediation incorporates that branch to preserve the seven native tabs, Reaction Lab-only games, retry-safe booking, calendar privacy and best-effort refresh. Its v2 sessions were still issued without verified contact ownership, so v2 must not survive the security rollout.
+
+This patch still requires comparison with the exact archive chosen for the next submission. Preserve any newer intended release changes and validate the app icon in system surfaces, including the Messages drawer, on iPhone and iPad before resubmitting.
 
 ## Configuration and rollout
 

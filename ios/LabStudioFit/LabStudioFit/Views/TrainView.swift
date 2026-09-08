@@ -10,6 +10,10 @@ struct TrainView: View {
         BookingDateOption.nextOptions(scheduleDays: state.profile?.scheduleDays)
     }
 
+    private var timeSlots: [String] {
+        state.timeGroups.flatMap(\.slots)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
@@ -23,10 +27,14 @@ struct TrainView: View {
             }
             .refreshable { await state.refreshAfterMutation() }
             .navigationTitle("Train")
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear {
                 selectedService = selectedService ?? state.services.first
                 selectedDay = selectedDay ?? dateOptions.first?.value
-                selectedTime = selectedTime ?? state.timeGroups.first?.slots.first
+                selectFirstAvailableTimeIfNeeded()
+            }
+            .onChange(of: state.bookingCalendar) { _, _ in
+                selectFirstAvailableTimeIfNeeded()
             }
         }
     }
@@ -35,8 +43,9 @@ struct TrainView: View {
         PremiumCard {
             VStack(alignment: .leading, spacing: 10) {
                 Text("BOOKING")
-                    .font(.caption.weight(.black))
-                    .foregroundStyle(LabTheme.orange)
+                    .font(LabTheme.eyebrow())
+                    .tracking(2.6)
+                    .foregroundStyle(LabTheme.violetLight)
                 Text("Book sessions against the live Lab Studio calendar.")
                     .font(.title2.weight(.black))
                     .foregroundStyle(.white)
@@ -55,7 +64,10 @@ struct TrainView: View {
             } else {
                 ForEach(state.services) { service in
                     Button {
-                        withAnimation(.snappy) { selectedService = service }
+                        withAnimation(.snappy) {
+                            selectedService = service
+                            selectFirstAvailableTimeIfNeeded()
+                        }
                     } label: {
                         PremiumCard(interactive: true) {
                             HStack(alignment: .top, spacing: 14) {
@@ -64,8 +76,9 @@ struct TrainView: View {
                                     .foregroundStyle(selectedService?.id == service.id ? LabTheme.green : LabTheme.muted)
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(service.type.uppercased())
-                                        .font(.caption2.weight(.black))
-                                        .foregroundStyle(LabTheme.orange)
+                                        .font(LabTheme.eyebrow())
+                                        .tracking(1.8)
+                                        .foregroundStyle(LabTheme.violetLight)
                                     Text(service.name)
                                         .font(.title3.weight(.black))
                                         .foregroundStyle(.white)
@@ -103,6 +116,7 @@ struct TrainView: View {
                         ForEach(dateOptions) { option in
                             selectablePill(title: option.shortLabel, active: selectedDay == option.value) {
                                 selectedDay = option.value
+                                selectFirstAvailableTimeIfNeeded()
                             }
                         }
                     }
@@ -123,7 +137,13 @@ struct TrainView: View {
                         }
                     }
 
-                    LabButton(title: state.isLoading ? "Booking" : "Book Session", icon: "calendar.badge.plus", tint: LabTheme.blue, isDisabled: !canBook || state.isLoading) {
+                    if !hasAvailableTime {
+                        Label("No openings remain for this day. Choose another date.", systemImage: "calendar.badge.exclamationmark")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(LabTheme.muted)
+                    }
+
+                    LabButton(title: state.isLoading ? "Booking" : "Book Session", icon: "calendar.badge.plus", tint: LabTheme.violet, isDisabled: !canBook || state.isLoading) {
                         guard let selectedService, let selectedDay, let selectedTime else { return }
                         Task { await state.book(service: selectedService, day: selectedDay, time: selectedTime) }
                     }
@@ -134,10 +154,10 @@ struct TrainView: View {
 
     private var upcomingCalendar: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Calendar Blocks", icon: "calendar.badge.clock")
-            let events = state.bookingCalendar
+            SectionHeader(title: "Your Sessions", icon: "calendar.badge.clock")
+            let events = state.bookingCalendar.filter { $0.source != "google_calendar" }
             if events.isEmpty {
-                EmptyLabState(title: "No upcoming blocks", detail: "Booked sessions and calendar holds will appear here.", icon: "calendar")
+                EmptyLabState(title: "No sessions booked", detail: "Your confirmed in-app sessions will appear here.", icon: "calendar")
             } else {
                 ForEach(events.prefix(4)) { event in
                     PremiumCard {
@@ -151,9 +171,9 @@ struct TrainView: View {
                                     .foregroundStyle(LabTheme.muted)
                             }
                             Spacer()
-                            Text(event.source == "google_calendar" ? "Google" : "Lab")
+                            Text("Booked")
                                 .font(.caption2.weight(.black))
-                                .foregroundStyle(event.source == "google_calendar" ? LabTheme.blue : LabTheme.orange)
+                                .foregroundStyle(LabTheme.violetLight)
                         }
                     }
                 }
@@ -162,7 +182,20 @@ struct TrainView: View {
     }
 
     private var canBook: Bool {
-        selectedService != nil && selectedDay != nil && selectedTime != nil
+        guard selectedService != nil, selectedDay != nil, let selectedTime else { return false }
+        return !slotIsBlocked(selectedTime)
+    }
+
+    private var hasAvailableTime: Bool {
+        timeSlots.contains { !slotIsBlocked($0) }
+    }
+
+    private func selectFirstAvailableTimeIfNeeded() {
+        if let selectedTime, !slotIsBlocked(selectedTime) {
+            return
+        }
+
+        selectedTime = timeSlots.first { !slotIsBlocked($0) }
     }
 
     private func selectablePill(title: String, active: Bool, disabled: Bool = false, action: @escaping () -> Void) -> some View {
@@ -172,8 +205,8 @@ struct TrainView: View {
                 .foregroundStyle(disabled ? LabTheme.muted.opacity(0.5) : active ? .white : LabTheme.muted)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(active ? LabTheme.orange.opacity(0.30) : LabTheme.elevated, in: Capsule())
-                .overlay(Capsule().stroke(active ? LabTheme.orange.opacity(0.7) : .white.opacity(0.08), lineWidth: 1))
+                .background(active ? LabTheme.violet.opacity(0.30) : LabTheme.elevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(active ? LabTheme.violet.opacity(0.7) : .white.opacity(0.08), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .disabled(disabled)

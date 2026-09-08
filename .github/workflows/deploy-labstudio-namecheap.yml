@@ -118,14 +118,6 @@ jobs:
       - name: Package Namecheap bundle
         run: npm run package:namecheap
 
-      - name: Stage complete runtime bundle
-        run: |
-          node --input-type=module <<'NODE'
-          import fs from 'node:fs';
-          fs.rmSync('output/namecheap-targeted', { recursive: true, force: true });
-          fs.cpSync('output/namecheap-deploy', 'output/namecheap-targeted', { recursive: true });
-          NODE
-
       - name: Install lftp
         run: |
           sudo apt-get update
@@ -151,7 +143,7 @@ jobs:
           chmod 600 "$key_path"
           printf '%s\n' "$NAMECHEAP_SSH_KNOWN_HOSTS" > "$known_hosts_path"
           chmod 600 "$known_hosts_path"
-          printf 'restart=%s\n' "$(date -u +%FT%TZ)" > output/namecheap-targeted/tmp/restart.txt
+          printf 'restart=%s\n' "$(date -u +%FT%TZ)" > output/namecheap-deploy/tmp/restart.txt
 
           lftp -u "$NAMECHEAP_CPANEL_USER", "sftp://$NAMECHEAP_SSH_HOST:$ssh_port" <<LFTP
           set cmd:fail-exit yes
@@ -161,7 +153,11 @@ jobs:
           set net:reconnect-interval-base 5
           set xfer:clobber true
           set mirror:overwrite true
-          lcd output/namecheap-targeted
+          set cmd:fail-exit no
+          mkdir "$remote_root"
+          mkdir "$remote_root/tmp"
+          set cmd:fail-exit yes
+          lcd output/namecheap-deploy
           mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$remote_root"
           put -O "$remote_root/tmp" tmp/restart.txt
           cat "$remote_root/DEPLOY_INFO.json"

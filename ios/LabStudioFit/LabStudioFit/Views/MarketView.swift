@@ -15,6 +15,7 @@ struct MarketView: View {
                         Text("Cafe").tag("cafe")
                     }
                     .pickerStyle(.segmented)
+                    .tint(LabTheme.violet)
 
                     if category == "passes" {
                         products
@@ -26,6 +27,7 @@ struct MarketView: View {
             }
             .refreshable { await state.refreshAfterMutation() }
             .navigationTitle("Market")
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -33,7 +35,7 @@ struct MarketView: View {
         PremiumCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    MetricPill(title: "Cart", value: "\(state.cartCount) items", icon: "bag.fill", tint: LabTheme.orange)
+                    MetricPill(title: "Cart", value: "\(state.cartCount) items", icon: "bag.fill", tint: LabTheme.violet)
                     Text(Currency.format(cents: state.cartTotalCents))
                         .font(.title3.weight(.black))
                         .foregroundStyle(.white)
@@ -123,12 +125,13 @@ struct MarketView: View {
                     }
                 }
                 .frame(width: 82, height: 82)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 7) {
                     Text(tag.uppercased())
-                        .font(.caption2.weight(.black))
-                        .foregroundStyle(LabTheme.orange)
+                        .font(LabTheme.eyebrow())
+                        .tracking(1.6)
+                        .foregroundStyle(LabTheme.violetLight)
                     Text(name)
                         .font(.headline.weight(.black))
                         .foregroundStyle(.white)
@@ -147,7 +150,7 @@ struct MarketView: View {
                             .font(.headline.weight(.black))
                             .foregroundStyle(.white)
                             .frame(width: 42, height: 42)
-                            .background(LabTheme.orange.gradient, in: Circle())
+                            .background(LabTheme.violet, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }

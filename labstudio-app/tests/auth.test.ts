@@ -92,15 +92,17 @@ describe('verified sign-in', () => {
 });
 
 describe('session authorization', () => {
-  it('rejects old signed v1 sessions, tampering, wrong keys and expiry', async () => {
+  it('rejects signed legacy v1 and production v2 sessions, tampering, wrong keys and expiry', async () => {
     const token = await createLabstudioSessionToken('member-a', secret, 1000);
     expect(await verifyLabstudioSessionToken(token, secret, 2000)).toMatchObject({ userId: 'member-a' });
     expect(await verifyLabstudioSessionToken(token, secret, 1000 + 7 * 86400000)).toBeNull();
     expect(await verifyLabstudioSessionToken(token, secret + 'wrong', 2000)).toBeNull();
-    const old = Buffer.from(JSON.stringify({ v: 'v1', uid: 'member-a', exp: Date.now() + 999999 })).toString('base64url');
-    const signedOld = `${old}.${createHmac('sha256', secret).update(old).digest('base64url')}`;
-    expect(await verifyLabstudioSessionToken(signedOld, secret)).toBeNull();
-    const forged = Buffer.from(JSON.stringify({ v: 'v2', uid: 'member-b', exp: Date.now() + 999999 })).toString('base64url');
+    for (const version of ['v1', 'v2']) {
+      const old = Buffer.from(JSON.stringify({ v: version, uid: 'member-a', exp: Date.now() + 30 * 86400000 })).toString('base64url');
+      const signedOld = `${old}.${createHmac('sha256', secret).update(old).digest('base64url')}`;
+      expect(await verifyLabstudioSessionToken(signedOld, secret)).toBeNull();
+    }
+    const forged = Buffer.from(JSON.stringify({ v: 'v3', uid: 'member-b', exp: Date.now() + 999999 })).toString('base64url');
     expect(await verifyLabstudioSessionToken(`${forged}.${token.split('.')[1]}`, secret)).toBeNull();
   });
   it('ignores a forged UID and never authenticates a deleted account', async () => {

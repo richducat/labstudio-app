@@ -22,6 +22,7 @@ struct HomeView: View {
             }
             .refreshable { await state.refreshAfterMutation() }
             .navigationTitle("Lab Studio")
+            .toolbar(.hidden, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { cartBadge } }
         }
     }
@@ -32,17 +33,18 @@ struct HomeView: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("PRIVATE PERFORMANCE")
-                            .font(.caption.weight(.black))
-                            .foregroundStyle(LabTheme.orange)
-                        Text("Welcome back, \(state.displayName)")
-                            .font(.largeTitle.bold())
+                            .font(LabTheme.eyebrow())
+                            .tracking(2.6)
+                            .foregroundStyle(LabTheme.violetLight)
+                        Text("Welcome back, \(greetingName)")
+                            .font(.system(size: 34, weight: .black))
                             .foregroundStyle(.white)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 12)
                     Image(systemName: "bolt.heart.fill")
                         .font(.system(size: 34, weight: .black))
-                        .foregroundStyle(LabTheme.orange, LabTheme.blue)
+                        .foregroundStyle(LabTheme.violetLight, LabTheme.emerald)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -51,15 +53,15 @@ struct HomeView: View {
                             .font(.headline.weight(.black))
                         Spacer()
                         Text("\(state.xp) / \(state.nextLevelXP) XP")
-                            .font(.subheadline.weight(.bold))
+                            .font(LabTheme.mono(13, weight: .black))
                             .foregroundStyle(LabTheme.muted)
                     }
                     ProgressView(value: progress)
-                        .tint(LabTheme.orange)
+                        .tint(LabTheme.violet)
                         .scaleEffect(y: 1.5)
                 }
 
-                LabButton(title: "Book a Session", icon: "calendar.badge.plus") {
+                LabButton(title: "Book a Session", icon: "calendar.badge.plus", tint: LabTheme.violet) {
                     state.selectedTab = .train
                 }
             }
@@ -68,10 +70,10 @@ struct HomeView: View {
 
     private var quickMetrics: some View {
         LazyVGrid(columns: [.init(.flexible()), .init(.flexible())], spacing: 12) {
-            PremiumCard { MetricPill(title: "XP", value: "\(state.xp)", icon: "bolt.fill", tint: LabTheme.orange) }
+            PremiumCard { MetricPill(title: "XP", value: "\(state.xp)", icon: "bolt.fill", tint: LabTheme.violet) }
             PremiumCard { MetricPill(title: "Sessions", value: "\(state.home?.sessionLog?.bookedUpcoming30d ?? 0)", icon: "calendar.badge.checkmark", tint: LabTheme.blue) }
             PremiumCard { MetricPill(title: "Protein", value: "\(Int(state.home?.nutrition?.proteinG ?? 0))g", icon: "fork.knife", tint: LabTheme.green) }
-            PremiumCard { MetricPill(title: "Photos", value: "\(state.home?.progress?.photos30d ?? 0)", icon: "camera.fill", tint: LabTheme.orange) }
+            PremiumCard { MetricPill(title: "Photos", value: "\(state.home?.progress?.photos30d ?? 0)", icon: "camera.fill", tint: LabTheme.violet) }
         }
     }
 
@@ -96,7 +98,7 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
-                EmptyLabState(title: "No upcoming session", detail: "Book from the Train tab and it will appear here immediately.", icon: "calendar.badge.plus")
+                EmptyLabState(title: "No upcoming session", detail: "Book from the Book tab and it will appear here immediately.", icon: "calendar.badge.plus")
             }
         }
     }
@@ -168,7 +170,7 @@ struct HomeView: View {
                             Spacer()
                             Text(workout.durationMin.map { "\($0)m" } ?? "Logged")
                                 .font(.caption.weight(.black))
-                                .foregroundStyle(LabTheme.orange)
+                                .foregroundStyle(LabTheme.violetLight)
                         }
                     }
                 }
@@ -180,6 +182,16 @@ struct HomeView: View {
         Button { state.selectedTab = .market } label: {
             Label("\(state.cartCount)", systemImage: state.cart.isEmpty ? "bag" : "bag.fill")
         }
+    }
+
+    private var greetingName: String {
+        let name = state.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let at = name.firstIndex(of: "@") {
+            let emailPrefix = String(name[..<at])
+            let emailName = emailPrefix.split(separator: "+").first.map(String.init) ?? emailPrefix
+            return emailName.isEmpty ? "Athlete" : emailName
+        }
+        return name.isEmpty ? "Athlete" : name
     }
 
     private func formatDate(_ raw: String?) -> String {

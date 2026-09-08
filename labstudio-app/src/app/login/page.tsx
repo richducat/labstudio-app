@@ -1,29 +1,10 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Activity, HeartPulse, LogIn, Mail, Phone, Sparkles } from 'lucide-react';
-import { dbConfigured, findOrCreateUserByContact } from '@/lib/db';
-import { createLabstudioSessionToken, getSessionSecret, SESSION_COOKIE_MAX_AGE_SECONDS, verifyLabstudioSessionToken } from '@/lib/session';
-import LoginSubmitButton from './LoginSubmitButton';
-
+import { Activity, HeartPulse, LogIn, Sparkles } from 'lucide-react';
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
+import VerifiedLoginForm from './VerifiedLoginForm';
 export const dynamic = 'force-dynamic';
-
-const UID_COOKIE = 'labstudio_uid';
-const SESSION_COOKIE = 'labstudio_session';
-const UID_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
-
 function safeNextPath(value: unknown) {
-  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/members';
-}
-
-function isSecureCookie() {
-  return process.env.NODE_ENV === 'production';
-}
-
-function loginRedirect(nextPath: string, error: string) {
-  const params = new URLSearchParams();
-  params.set('next', nextPath);
-  params.set('error', error);
-  return `/login?${params.toString()}`;
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/members';
 }
 
 const memberAccessHighlights = [
@@ -53,71 +34,7 @@ export default async function LoginPage({
   const nextPath = safeNextPath(typeof sp.next === 'string' ? sp.next : undefined);
   const error = typeof sp.error === 'string' ? sp.error : '';
 
-  const secret = getSessionSecret();
-  const jar = await cookies();
-  const existingSession = jar.get(SESSION_COOKIE)?.value;
-
-  if (existingSession && secret) {
-    const session = await verifyLabstudioSessionToken(existingSession, secret);
-    if (session?.userId) {
-      redirect(nextPath);
-    }
-  }
-
-  async function loginAction(formData: FormData) {
-    'use server';
-
-    const nextFromForm = safeNextPath(formData.get('next'));
-    const email = typeof formData.get('email') === 'string' ? String(formData.get('email')) : '';
-    const phone = typeof formData.get('phone') === 'string' ? String(formData.get('phone')) : '';
-
-    if (!dbConfigured()) {
-      redirect(loginRedirect(nextFromForm, 'Database is not configured.'));
-    }
-
-    const sessionSecret = getSessionSecret();
-    if (!sessionSecret) {
-      redirect(loginRedirect(nextFromForm, 'Session secret is not configured.'));
-    }
-
-    try {
-      const cookieJar = await cookies();
-      const currentUserId = cookieJar.get(UID_COOKIE)?.value ?? null;
-      const { user } = await findOrCreateUserByContact({
-        email,
-        phone,
-        currentUserId,
-      });
-
-      const sessionToken = await createLabstudioSessionToken(user.id, sessionSecret);
-      const secure = isSecureCookie();
-
-      cookieJar.set({
-        name: SESSION_COOKIE,
-        value: sessionToken,
-        httpOnly: true,
-        sameSite: 'lax',
-        secure,
-        path: '/',
-        maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
-      });
-
-      cookieJar.set({
-        name: UID_COOKIE,
-        value: user.id,
-        httpOnly: true,
-        sameSite: 'lax',
-        secure,
-        path: '/',
-        maxAge: UID_COOKIE_MAX_AGE_SECONDS,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to log in.';
-      redirect(loginRedirect(nextFromForm, message));
-    }
-
-    redirect(nextFromForm);
-  }
+  if (await getAuthenticatedUserId()) redirect(nextPath);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.34),_transparent_34%),radial-gradient(circle_at_85%_18%,_rgba(217,70,239,0.18),_transparent_26%),linear-gradient(180deg,_#050508_0%,_#09090b_42%,_#18181b_100%)] px-4 py-8 text-white sm:px-6 lg:px-8">
@@ -152,7 +69,7 @@ export default async function LoginPage({
                 <div className="mt-6 text-center">
                   <div className="text-sm font-semibold uppercase tracking-[0.34em] text-violet-300">Lab Studio</div>
                   <h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-[2.4rem]">
-                    Sign in with email or phone
+                    Sign in with your email
                   </h1>
                 </div>
 
@@ -162,44 +79,7 @@ export default async function LoginPage({
                   </div>
                 ) : null}
 
-                <form action={loginAction} className="mt-8 grid gap-4">
-                  <input type="hidden" name="next" value={nextPath} />
-
-                  <label className="grid gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">Email</span>
-                    <div className="group flex items-center gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.04] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition focus-within:border-violet-500/50 focus-within:bg-violet-500/10 focus-within:ring-4 focus-within:ring-violet-500/10">
-                      <Mail className="h-4 w-4 text-zinc-500 transition group-focus-within:text-violet-300" />
-                      <input
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        placeholder="you@example.com"
-                        className="w-full bg-transparent text-[15px] text-white outline-none placeholder:text-zinc-500"
-                      />
-                    </div>
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-400">Phone Number</span>
-                    <div className="group flex items-center gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.04] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition focus-within:border-violet-500/50 focus-within:bg-violet-500/10 focus-within:ring-4 focus-within:ring-violet-500/10">
-                      <Phone className="h-4 w-4 text-zinc-500 transition group-focus-within:text-violet-300" />
-                      <input
-                        name="phone"
-                        type="tel"
-                        autoComplete="tel"
-                        placeholder="(555) 555-5555"
-                        className="w-full bg-transparent text-[15px] text-white outline-none placeholder:text-zinc-500"
-                      />
-                    </div>
-                  </label>
-
-                  <div className="flex items-center justify-between gap-3 text-xs text-zinc-500">
-                    <span>Use either one. Add both if you want them linked.</span>
-                    <span className="font-semibold text-violet-300">Same member profile</span>
-                  </div>
-
-                  <LoginSubmitButton />
-                </form>
+                <VerifiedLoginForm nextPath={nextPath} />
 
                 <div className="mt-6 flex items-center gap-4 text-[11px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
                   <div className="h-px flex-1 bg-white/10" />
@@ -222,7 +102,7 @@ export default async function LoginPage({
                 </div>
 
                 <p className="mt-6 text-center text-xs leading-5 text-zinc-500">
-                  Use the same email address or phone number next time and we&apos;ll reopen this member account.
+                  We’ll send a one-time code to your member email address.
                 </p>
               </div>
             </section>

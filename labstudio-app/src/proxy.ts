@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getSessionSecret, verifyLabstudioSessionToken } from '@/lib/session';
+import { getSessionSecret, SESSION_COOKIE_MAX_AGE_SECONDS, verifyLabstudioSessionToken } from '@/lib/session';
 
 const UID_COOKIE = 'labstudio_uid';
 const SESSION_COOKIE = 'labstudio_session';
-const UID_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
 
 function isSecureRequest(req: NextRequest) {
   return req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
@@ -18,7 +17,7 @@ function setUidCookie(res: NextResponse, req: NextRequest, value: string) {
     sameSite: 'lax',
     secure: isSecureRequest(req),
     path: '/',
-    maxAge: UID_COOKIE_MAX_AGE_SECONDS,
+    maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
   });
 }
 
@@ -30,6 +29,7 @@ function clearAuthCookies(res: NextResponse, req: NextRequest) {
 
 const PUBLIC_LAB_API_PATHS = new Set([
   '/api/lab/auth/login',
+  '/api/lab/auth/request-code',
   '/api/lab/cafe',
   '/api/lab/services',
   '/api/lab/shop',

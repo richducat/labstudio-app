@@ -1,5 +1,7 @@
-const SESSION_VERSION = 'v1';
-export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
+// Both v1 and production v2 sessions were issued without verified email ownership.
+// Only v3 tokens minted after a successful email challenge are accepted.
+const SESSION_VERSION = 'v3';
+export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 const encoder = new TextEncoder();
 
@@ -38,9 +40,9 @@ async function signPayload(payload: string, secret: string) {
 
 export function getSessionSecret() {
   const configured = process.env.LABSTUDIO_SESSION_SECRET?.trim();
-  if (configured) return configured;
+  if (configured) return configured.length >= 32 ? configured : '';
   if (process.env.NODE_ENV !== 'production') {
-    return 'labstudio-dev-session-secret';
+    return 'labstudio-development-only-session-secret-change-in-production';
   }
   return '';
 }

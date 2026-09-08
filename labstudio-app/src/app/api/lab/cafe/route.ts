@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { neon } from '@neondatabase/serverless';
 import Stripe from 'stripe';
-import { dbConfigured, ensureSchema, getOrCreateUser } from '@/lib/db';
+import { dbConfigured, ensureSchema } from '@/lib/db';
 import { getStripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
@@ -58,12 +57,7 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'DATABASE_URL not configured' }, { status: 400 });
   }
 
-  // Cafe browse should not depend on uid cookie.
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value || null;
-
   await ensureSchema();
-  if (uid) await getOrCreateUser(uid);
 
   const q = sql();
 

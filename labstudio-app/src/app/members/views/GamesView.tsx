@@ -2,14 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Trophy, Zap, Brain, LayoutGrid,
-  Settings, Gamepad2, ArrowRight, Activity
+  Trophy, Zap, Gamepad2, ArrowRight, Activity
 } from 'lucide-react';
 import Card from '../components/Card';
-import GearSort from '@/app/members/views/games/GearSort';
-import PatternMaster from '@/app/members/views/games/PatternMaster';
 import ReactionLab from '@/app/members/views/games/ReactionLab';
-import NeuroGrid from '@/app/members/views/games/NeuroGrid';
 import { type LabTab } from '../tabs';
 
 interface HighScoreRow {
@@ -18,28 +14,6 @@ interface HighScoreRow {
 }
 
 const GAMES = [
-  {
-    id: 'gear-sort',
-    title: 'GEAR SORT',
-    subtitle: 'Sorting',
-    desc: 'Sort each color into its own tube as efficiently as you can.',
-    icon: <Settings className="text-violet-400" size={32} />,
-    color: 'from-violet-600/20 to-zinc-900',
-    borderColor: 'border-violet-500/30',
-    xpPerWin: 50,
-    tags: ['Brain', 'Speed']
-  },
-  {
-    id: 'pattern-master',
-    title: 'PATTERN MASTER',
-    subtitle: 'Sequence Recall',
-    desc: 'Watch the sequence, then repeat it from memory.',
-    icon: <Brain className="text-pink-400" size={32} />,
-    color: 'from-pink-600/20 to-zinc-900',
-    borderColor: 'border-pink-500/30',
-    xpPerWin: 30,
-    tags: ['Memory', 'Focus']
-  },
   {
     id: 'reaction-lab',
     title: 'REACTION LAB',
@@ -50,17 +24,6 @@ const GAMES = [
     borderColor: 'border-yellow-500/30',
     xpPerWin: 40,
     tags: ['Reflex', 'Speed']
-  },
-  {
-    id: 'neuro-grid',
-    title: 'NEURO GRID',
-    subtitle: 'Visual Processing',
-    desc: 'Find the mismatch in each grid before time runs out.',
-    icon: <LayoutGrid className="text-cyan-400" size={32} />,
-    color: 'from-cyan-600/20 to-zinc-900',
-    borderColor: 'border-cyan-500/30',
-    xpPerWin: 60,
-    tags: ['Visual', 'Logic']
   }
 ];
 
@@ -90,10 +53,7 @@ export default function GamesView({ setTab }: { setTab?: (tab: LabTab) => void }
     fetchScores();
   }, [activeGame]);
 
-  if (activeGame === 'gear-sort') return <GearSort onExit={() => setActiveGame(null)} />;
-  if (activeGame === 'pattern-master') return <PatternMaster onExit={() => setActiveGame(null)} />;
   if (activeGame === 'reaction-lab') return <ReactionLab onExit={() => setActiveGame(null)} />;
-  if (activeGame === 'neuro-grid') return <NeuroGrid onExit={() => setActiveGame(null)} />;
 
   return (
     <div className="pb-32">
@@ -103,7 +63,7 @@ export default function GamesView({ setTab }: { setTab?: (tab: LabTab) => void }
           <Gamepad2 className="text-violet-500" size={32} />
           Brain Training
         </h2>
-        <p className="text-zinc-500 text-xs uppercase tracking-[0.2em] mt-1 font-bold">Focus, memory, reaction, and visual scanning</p>
+        <p className="text-zinc-500 text-xs uppercase tracking-[0.2em] mt-1 font-bold">Reaction speed challenge</p>
       </div>
 
       <div className="grid gap-4 px-4">
@@ -158,7 +118,7 @@ export default function GamesView({ setTab }: { setTab?: (tab: LabTab) => void }
         <Card className="bg-zinc-900/40 border-dashed border-zinc-800 p-6 text-center">
           <Trophy className="mx-auto text-yellow-500 mb-3" size={32} />
           <h4 className="text-sm font-bold uppercase italic">Leaderboard</h4>
-          <p className="text-xs text-zinc-500 mt-1 mb-4">See how your best scores compare with other members.</p>
+          <p className="text-xs text-zinc-500 mt-1 mb-4">See how your best Reaction Lab score compares with other members.</p>
           <button
             onClick={() => setTab?.('social')}
             className="text-[10px] font-black uppercase tracking-widest px-4 py-2 border border-zinc-700 rounded-full hover:bg-white hover:text-black transition-colors"

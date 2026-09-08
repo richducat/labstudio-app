@@ -1,5 +1,5 @@
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { neon } from '@neondatabase/serverless';
 import * as ical from 'ical';
 import { dbConfigured, ensureSchema, getOrCreateUser } from '@/lib/db';
@@ -27,28 +27,31 @@ async function fetchIcalEvents() {
   const icalUrl = process.env.LABSTUDIO_BOOKINGS_ICAL_URL;
   if (!icalUrl) return [];
 
-  const res = await fetch(icalUrl, {
-    headers: {
-      'user-agent': 'labstudio-app/1.0',
-      accept: 'text/calendar,*/*',
-    },
-    cache: 'no-store',
-  });
-  if (!res.ok) return [];
+  try {
+    const res = await fetch(icalUrl, {
+      headers: {
+        'user-agent': 'labstudio-app/1.0',
+        accept: 'text/calendar,*/*',
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return [];
 
-  const icsText = await res.text();
-  const data = ical.parseICS(icsText) as Record<string, { type?: string; summary?: string; start?: string | Date; end?: string | Date; location?: string; description?: string }>;
+    const icsText = await res.text();
+    const data = ical.parseICS(icsText) as Record<string, { type?: string; start?: string | Date; end?: string | Date }>;
 
-  return Object.values(data || {})
-    .filter((entry) => entry && entry.type === 'VEVENT')
-    .map((entry) => ({
-      summary: String(entry.summary ?? ''),
-      start: entry.start ? new Date(entry.start) : null,
-      end: entry.end ? new Date(entry.end) : null,
-      location: entry.location ? String(entry.location) : null,
-      description: entry.description ? String(entry.description) : null,
-    }))
-    .filter((entry) => entry.start && entry.end);
+    return Object.values(data || {})
+      .filter((entry) => entry && entry.type === 'VEVENT')
+      .map((entry) => ({
+        start: toDate(entry.start),
+        end: toDate(entry.end),
+      }))
+      .filter((entry): entry is { start: Date; end: Date } => Boolean(entry.start && entry.end));
+  } catch (error) {
+    console.error('Booking availability feed unavailable:', error instanceof Error ? error.message : 'unknown error');
+    return [];
+  }
 }
 
 function normalizeDateInput(value: unknown): string | null {
@@ -92,30 +95,42 @@ function normalizeDetailsJson(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+type DatabaseDate = Date | string;
+
 type PlannedAgendaRow = {
   id: string;
-  day: Date;
+  day: DatabaseDate;
   time_label: string | null;
-  scheduled_at: Date | null;
+  scheduled_at: DatabaseDate | null;
   duration_min: number | null;
   title: string;
   type: string;
   action: string;
   sort_order: number;
   details_json: Record<string, unknown> | null;
-  completed_at: Date | null;
+  completed_at: DatabaseDate | null;
 };
+
+function toDate(value: unknown): Date | null {
+  if (!(value instanceof Date) && typeof value !== 'string') return null;
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function toISOString(value: unknown): string | null {
+  return toDate(value)?.toISOString() ?? null;
+}
 
 function serializeAgendaRow(row: PlannedAgendaRow) {
   return {
     id: String(row.id),
-    day: row.day instanceof Date ? row.day.toISOString() : String(row.day),
+    day: toISOString(row.day) ?? String(row.day),
     time: row.time_label ?? null,
     title: row.title,
     type: row.type,
     action: row.action,
     completed: Boolean(row.completed_at),
-    scheduledAt: row.scheduled_at ? row.scheduled_at.toISOString() : null,
+    scheduledAt: toISOString(row.scheduled_at),
     durationMin: row.duration_min ?? null,
     details: row.details_json ?? {},
   };
@@ -126,10 +141,9 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'DATABASE_URL not configured' }, { status: 400 });
   }
 
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
+  const uid = await getAuthenticatedUserId();
   if (!uid) {
-    return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
+    return NextResponse.json({ ok: false, error: 'Authentication required' }, { status: 401 });
   }
 
   await ensureSchema();
@@ -243,10 +257,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'DATABASE_URL not configured' }, { status: 400 });
   }
 
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
+  const uid = await getAuthenticatedUserId();
   if (!uid) {
-    return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
+    return NextResponse.json({ ok: false, error: 'Authentication required' }, { status: 401 });
   }
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -280,17 +293,25 @@ export async function POST(req: Request) {
     select
       ((${day}::date + ${time24}::time) at time zone 'America/New_York') as start_at,
       ((((${day}::date + ${time24}::time) at time zone 'America/New_York')) + (${durationMin} * interval '1 minute')) as end_at;
-  `) as Array<{ start_at: Date; end_at: Date }>;
+  `) as Array<{ start_at: DatabaseDate; end_at: DatabaseDate }>;
 
-  const requestedStart = requestedWindow[0]?.start_at;
-  const requestedEnd = requestedWindow[0]?.end_at;
+  const requestedStart = toDate(requestedWindow[0]?.start_at);
+  const requestedEnd = toDate(requestedWindow[0]?.end_at);
   if (!requestedStart || !requestedEnd) {
     return NextResponse.json({ ok: false, error: 'Failed to calculate booking window' }, { status: 500 });
   }
 
+  if (requestedStart.getTime() <= Date.now()) {
+    return NextResponse.json({ ok: false, error: 'Choose a future session time.' }, { status: 400 });
+  }
+
+  if (requestedStart.getTime() > Date.now() + 45 * 24 * 60 * 60 * 1_000) {
+    return NextResponse.json({ ok: false, error: 'Choose a session within the next 45 days.' }, { status: 400 });
+  }
+
   if (action === 'book') {
     const overlappingAgenda = (await q`
-      select id
+      select id, day, time_label, scheduled_at, duration_min, title, type, action, sort_order, details_json, completed_at
       from lab_agenda_items
       where user_id = ${uid}
         and action = 'book'
@@ -298,10 +319,22 @@ export async function POST(req: Request) {
         and scheduled_at < ${requestedEnd}
         and (scheduled_at + (coalesce(duration_min, 60) * interval '1 minute')) > ${requestedStart}
       limit 1;
-    `) as Array<{ id: string }>;
+    `) as PlannedAgendaRow[];
 
-    if (overlappingAgenda[0]) {
-      return NextResponse.json({ ok: false, error: 'That time overlaps another saved booking' }, { status: 409 });
+    const existingBooking = overlappingAgenda[0];
+    if (existingBooking) {
+      const existingStart = toDate(existingBooking.scheduled_at);
+      const requestedServiceId = normalizeText(details.serviceId);
+      const existingServiceId = normalizeText(existingBooking.details_json?.serviceId);
+      const isExactRetry = existingStart?.getTime() === requestedStart.getTime()
+        && existingBooking.title === title
+        && (!requestedServiceId || requestedServiceId === existingServiceId);
+
+      if (isExactRetry) {
+        return NextResponse.json({ ok: true, existing: true, item: serializeAgendaRow(existingBooking) });
+      }
+
+      return NextResponse.json({ ok: false, error: 'That time is no longer available. Choose another opening.' }, { status: 409 });
     }
 
     const importedEvents = await fetchIcalEvents();
@@ -314,9 +347,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error: overlappingImportedEvent.summary
-            ? `That time conflicts with Google Calendar: ${overlappingImportedEvent.summary}`
-            : 'That time conflicts with an imported Google Calendar event',
+          error: 'That time is no longer available. Choose another opening.',
         },
         { status: 409 }
       );

@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
 import { redirect } from 'next/navigation';
 import TheLabUltimate from './TheLabUltimate';
 import { dbConfigured, getOrCreateUser, getUserProfile } from '@/lib/db';
@@ -7,8 +7,8 @@ import type { InitialProfile } from './types';
 export const dynamic = 'force-dynamic';
 
 export default async function MembersHome() {
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
+
+  const uid = await getAuthenticatedUserId();
 
   let initialUser: { display_name?: string; xp?: number; level?: number } | null = null;
   let initialProfile: InitialProfile = null;

@@ -1,0 +1,34 @@
+name: Verified login regression checks
+on:
+  pull_request:
+    paths:
+      - 'labstudio-app/**'
+      - 'ios/LabStudioFit/**'
+      - '.github/workflows/verified-login.yml'
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: labstudio-app
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run test:auth
+      - run: npx --no-install tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: xcodebuild -project ios/LabStudioFit/LabStudioFit.xcodeproj -scheme LabStudioFit -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

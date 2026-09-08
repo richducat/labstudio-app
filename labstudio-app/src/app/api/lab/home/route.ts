@@ -1,5 +1,5 @@
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { dbConfigured, ensureSchema, getOrCreateUser, getUserProfile } from '@/lib/db';
 import { neon } from '@neondatabase/serverless';
 import * as ical from 'ical';
@@ -25,32 +25,41 @@ async function fetchIcalEvents() {
   const icalUrl = process.env.LABSTUDIO_BOOKINGS_ICAL_URL;
   if (!icalUrl) return [];
 
-  const res = await fetch(icalUrl, {
-    headers: {
-      'user-agent': 'labstudio-app/1.0',
-      accept: 'text/calendar,*/*',
-    },
-    cache: 'no-store',
-  });
-  if (!res.ok) return [];
+  try {
+    const res = await fetch(icalUrl, {
+      headers: {
+        'user-agent': 'labstudio-app/1.0',
+        accept: 'text/calendar,*/*',
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return [];
 
-  const icsText = await res.text();
-  const data = ical.parseICS(icsText) as Record<string, { type?: string; summary?: string; start?: string | Date; end?: string | Date; location?: string; description?: string }>;
+    const icsText = await res.text();
+    const data = ical.parseICS(icsText) as Record<string, { type?: string; start?: string | Date; end?: string | Date }>;
 
-  const events = Object.values(data || {}).filter((v) => v && v.type === 'VEVENT');
-  return events
-    .map((e) => ({
-      summary: String(e.summary ?? ''),
-      start: e.start ? new Date(e.start) : null,
-      end: e.end ? new Date(e.end) : null,
-      location: e.location ? String(e.location) : null,
-      description: e.description ? String(e.description) : null,
-    }))
-    .filter((e) => e.start && e.end);
+    const events = Object.values(data || {}).filter((value) => value && value.type === 'VEVENT');
+    return events
+      .map((event) => ({
+        start: toDate(event.start),
+        end: toDate(event.end),
+      }))
+      .filter((event): event is { start: Date; end: Date } => Boolean(event.start && event.end));
+  } catch (error) {
+    console.error('Booking availability feed unavailable:', error instanceof Error ? error.message : 'unknown error');
+    return [];
+  }
 }
 
 function textOrNull(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length ? value.trim() : null;
+}
+
+function toDate(value: unknown): Date | null {
+  if (!(value instanceof Date) && typeof value !== 'string') return null;
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 export async function GET() {
@@ -58,10 +67,9 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'DATABASE_URL not configured' }, { status: 400 });
   }
 
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
+  const uid = await getAuthenticatedUserId();
   if (!uid) {
-    return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
+    return NextResponse.json({ ok: false, error: 'Authentication required' }, { status: 401 });
   }
 
   await ensureSchema();
@@ -133,7 +141,6 @@ export async function GET() {
   const icsEvents = await fetchIcalEvents();
   const now = new Date();
   const in30d = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const appBookings = (await q`
     select id, title, scheduled_at, duration_min, details_json
@@ -147,25 +154,27 @@ export async function GET() {
   `) as Array<{
     id: string;
     title: string;
-    scheduled_at: Date | null;
+    scheduled_at: Date | string | null;
     duration_min: number | null;
     details_json: Record<string, unknown> | null;
   }>;
 
-  const iCalUpcoming = icsEvents
-    .filter((e) => e.start && e.start > now && e.start < in30d)
-    .sort((a, b) => a.start!.getTime() - b.start!.getTime())
+  const availabilityBlocks = icsEvents
+    .filter((event) => event.start > now && event.start < in30d)
+    .sort((a, b) => a.start.getTime() - b.start.getTime())
     .map((event) => ({
-      ...event,
+      summary: 'Unavailable',
+      start: event.start,
+      end: event.end,
+      location: null,
+      description: null,
       source: 'google_calendar' as const,
-      description: event.description ?? 'Imported from the shared Google Calendar feed.',
     }));
-  const bookedPast30d = icsEvents.filter((e) => e.start && e.start < now && e.start > last30d).length;
 
   const plannedUpcoming = appBookings
-    .filter((booking) => booking.scheduled_at)
     .map((booking) => {
-      const start = booking.scheduled_at as Date;
+      const start = toDate(booking.scheduled_at);
+      if (!start) return null;
       const durationMin = Number(booking.duration_min ?? 60) || 60;
       const end = new Date(start.getTime() + durationMin * 60 * 1000);
       const details = booking.details_json ?? {};
@@ -177,21 +186,22 @@ export async function GET() {
         description: textOrNull(details.description) ?? 'Saved from the in-app booking planner.',
         source: 'app' as const,
       };
-    });
+    })
+    .filter((booking): booking is NonNullable<typeof booking> => booking !== null);
 
-  const bookedUpcoming30d = iCalUpcoming.length + plannedUpcoming.length;
+  const bookedUpcoming30d = plannedUpcoming.length;
 
   const completed7d = Number(workouts7d?.[0]?.completed ?? 0);
   const workoutMinutes7d = Number(workouts7d?.[0]?.minutes ?? 0);
-  const missedApprox30d = Math.max(bookedPast30d - completed7d, 0);
+  const missedApprox30d = 0;
 
-  const combinedUpcomingBookings = [...iCalUpcoming, ...plannedUpcoming]
-    .sort((a, b) => a.start!.getTime() - b.start!.getTime())
+  const combinedAvailability = [...availabilityBlocks, ...plannedUpcoming]
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
   const in14d = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-  const bookingCalendar = combinedUpcomingBookings
-    .filter((booking) => booking.start && booking.start < in14d)
+  const bookingCalendar = combinedAvailability
+    .filter((booking) => booking.start < in14d)
     .slice(0, 50);
-  const upcomingBookings = combinedUpcomingBookings.slice(0, 5);
+  const upcomingBookings = plannedUpcoming.slice(0, 5);
   const nextBooking = upcomingBookings[0] ?? null;
 
   const recentWorkouts = (await q`
@@ -308,7 +318,7 @@ export async function GET() {
       bookingCalendar,
       calendarFeed: {
         connected: Boolean(process.env.LABSTUDIO_BOOKINGS_ICAL_URL),
-        importedUpcomingCount: iCalUpcoming.length,
+        importedUpcomingCount: availabilityBlocks.length,
       },
       recentWorkouts,
       agenda,

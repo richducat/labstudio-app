@@ -1,5 +1,5 @@
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import {
   dbConfigured,
   ensureSchema,
@@ -55,10 +55,9 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: 'DATABASE_URL not configured' }, { status: 400 });
   }
 
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
+  const uid = await getAuthenticatedUserId();
   if (!uid) {
-    return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
+    return NextResponse.json({ ok: false, error: 'Authentication required' }, { status: 401 });
   }
 
   await ensureSchema();
@@ -74,10 +73,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'DATABASE_URL not configured' }, { status: 400 });
   }
 
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
+  const uid = await getAuthenticatedUserId();
   if (!uid) {
-    return NextResponse.json({ ok: false, error: 'Missing labstudio_uid cookie' }, { status: 401 });
+    return NextResponse.json({ ok: false, error: 'Authentication required' }, { status: 401 });
   }
 
   const body: unknown = await req.json().catch(() => null);
@@ -90,6 +88,9 @@ export async function POST(req: Request) {
   await ensureSchema();
   await getOrCreateUser(uid);
   const existingProfile = await getUserProfile(uid);
+  if (hasOwn(b, 'email') && String(b.email ?? '').trim().toLowerCase() !== String(existingProfile?.email ?? '').trim().toLowerCase()) {
+    return NextResponse.json({ ok: false, error: 'Changing your sign-in email requires verification. Contact member support.' }, { status: 400 });
+  }
   const currentWearables = normalizeWearablesJson(existingProfile?.wearables_json);
 
   const profile = await upsertUserProfile(uid, {
@@ -103,11 +104,7 @@ export async function POST(req: Request) {
         ? b.last_name
         : null
       : existingProfile?.last_name ?? null,
-    email: hasOwn(b, 'email')
-      ? typeof b.email === 'string'
-        ? b.email
-        : null
-      : existingProfile?.email ?? null,
+    email: existingProfile?.email ?? null,
     phone: hasOwn(b, 'phone')
       ? typeof b.phone === 'string'
         ? b.phone

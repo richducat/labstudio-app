@@ -7,11 +7,11 @@
 - Bundle ID: fit.labstudio.app
 - SKU: fit.labstudio.app
 - Version: 1.0
-- Build: 2026052903
+- Build: 2026070901
 - Primary category: Health & Fitness
 - Secondary category: Lifestyle
 - App Store Connect Apple ID: 6763787815
-- App Store Connect state: Waiting for Review
+- App Store Connect state: Waiting for Review for version 1.0 build 2026070901; fresh authenticated submission-detail verification completed July 9, 2026
 - App Store age rating: 12+
 - Marketing URL: https://labstudio.fit
 - Support URL: https://app.labstudio.fit/support
@@ -36,11 +36,11 @@ fitness, training, gym, coach, nutrition, workout
 
 ## What's New
 
-Native SwiftUI release with production Lab Studio API login, Home, Train booking, Market checkout, Toby coaching, progress photo upload, profile management, and account deletion.
+Booking reliability update: successful reservations now keep their confirmation even if a later dashboard refresh is interrupted, repeated requests are retry-safe, unavailable times cannot be submitted, and calendar availability is displayed more clearly.
 
 ## Review Notes
 
-Login uses email or phone only; no password or email verification is required. Use reviewer+labstudio@labstudio.fit, complete onboarding if prompted, and review the native Home, Train, Market, Coach, and Profile tabs.
+Login uses email or phone only; no password or email verification is required. Use reviewer+labstudio@labstudio.fit, complete onboarding if prompted, then open Book and choose an enabled time. Build 2026070901 fixes the false booking-failure banner from the June 13 review, makes exact retries safe, disables unavailable slots, and keeps shared calendar details private.
 
 ## Submission Snapshot
 
@@ -61,22 +61,35 @@ Login uses email or phone only; no password or email verification is required. U
 - Public group: Studio Crew
 - Public link: https://testflight.apple.com/join/rtpbMJhP
 - Public link limit: None
-- Build: 2026042401
-- Internal build state: In Beta Testing
-- External build state: Waiting for Beta Review
-- Beta App Review submitted: 2026-04-26T05:51:23-07:00
+- Build: 2026070901
+- Build ID: f8e56909-b71a-4abe-9aa1-4633174c71ee
+- Internal build state: Valid, selected for version 1.0, and Waiting for Review
+- External build state: Not submitted for external Beta App Review for build 2026070901
+- Public link build: 2026042401 remains the previously approved external TestFlight build
 
 ## Internal Launch Notes
 
-- App Store Connect version state: Waiting for Review
-- Attached build ID or build number: 2026052903 after upload/processing
+- App Store Connect version state: Waiting for Review on 1.0 (2026070901)
+- Candidate build number: 2026070901
+- Last uploaded build ID or build number: f8e56909-b71a-4abe-9aa1-4633174c71ee / 2026070901
 - Native screenshot sources:
-  - app-store/releases/labstudio/screenshots/native/iphone-17-pro-login.png
-  - app-store/releases/labstudio/screenshots/native/ipad-pro-13-login.png
+  - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-home.png
+  - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-games.png
+  - app-store/releases/labstudio/screenshots/native/asc/iphone-6-5-rank.png
+  - app-store/releases/labstudio/screenshots/native/iphone-17-pro-max-home.png
+  - app-store/releases/labstudio/screenshots/native/iphone-17-pro-max-games.png
+  - app-store/releases/labstudio/screenshots/native/iphone-17-pro-max-rank.png
+  - app-store/releases/labstudio/screenshots/native/ipad-pro-13-home.png
+  - app-store/releases/labstudio/screenshots/native/ipad-pro-13-games.png
+  - app-store/releases/labstudio/screenshots/native/ipad-pro-13-rank.png
 - Review submission ID: b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b
-- Review submitted at: 2026-04-25T18:31:20.768Z
+- Latest native upload: 2026-07-09T22:51:07Z for build 2026070901; build ID f8e56909-b71a-4abe-9aa1-4633174c71ee
+- Review submitted at: July 9, 2026 at 8:06 PM EDT for build 2026070901
+- Fresh ASC verification result: submission b56d98ff-c5be-4b8d-bd4e-4acb94a9eb1b contains version 1.0 build 2026070901 and is Waiting for Review
+- Candidate delta: 2026070901 preserves successful write confirmations, makes booking retries idempotent, blocks unavailable-slot submission, protects shared-calendar details, and updates production runtime dependencies
+- Verification: Swift tests, Xcode analysis, web lint/build, optimized native builds, signed archive validation, production deploy run 29055606467, and live reviewer booking/idempotency/refresh/privacy tests passed
 - App Privacy state: Published on April 25, 2026
 - Manual release after approval: Yes
-- Post-approval checks to run:
+- Reviewer-flow checks to keep current:
   - Confirm https://app.labstudio.fit is serving Namecheap, not Vercel
-  - Confirm login, booking, market checkout handoff, Toby, profile save, progress photo upload, account deletion, and member dashboard from the live native iOS app
+  - Confirm login, booking, shop checkout handoff, Toby, profile save, progress photo upload, account deletion, and member dashboard from the live native iOS app

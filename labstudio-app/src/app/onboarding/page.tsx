@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { getAuthenticatedUserId } from '@/lib/authenticated-user';
 import { redirect } from 'next/navigation';
 import { dbConfigured, getOrCreateUser, getUserProfile } from '@/lib/db';
 import OnboardingForm from './OnboardingForm';
@@ -6,8 +6,8 @@ import OnboardingForm from './OnboardingForm';
 export const dynamic = 'force-dynamic';
 
 export default async function OnboardingPage() {
-  const jar = await cookies();
-  const uid = jar.get('labstudio_uid')?.value;
+
+  const uid = await getAuthenticatedUserId();
 
   if (uid && dbConfigured()) {
     try {

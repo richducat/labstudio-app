@@ -2,6 +2,12 @@ name: Deploy Lab Studio to Namecheap
 
 on:
   workflow_dispatch:
+    inputs:
+      verified_native_release:
+        description: 'App Store version with verified-email login has passed release validation'
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -31,6 +37,12 @@ jobs:
       LABSTUDIO_ACCESS_CODE: ${{ secrets.LABSTUDIO_ACCESS_CODE }}
       LABSTUDIO_BOOKINGS_ICAL_URL: ${{ secrets.LABSTUDIO_BOOKINGS_ICAL_URL }}
       LABSTUDIO_SESSION_SECRET: ${{ secrets.LABSTUDIO_SESSION_SECRET }}
+      LABSTUDIO_SMTP_HOST: ${{ secrets.LABSTUDIO_SMTP_HOST }}
+      LABSTUDIO_SMTP_PORT: ${{ secrets.LABSTUDIO_SMTP_PORT }}
+      LABSTUDIO_SMTP_USER: ${{ secrets.LABSTUDIO_SMTP_USER }}
+      LABSTUDIO_SMTP_PASSWORD: ${{ secrets.LABSTUDIO_SMTP_PASSWORD }}
+      LABSTUDIO_LOGIN_FROM: ${{ secrets.LABSTUDIO_LOGIN_FROM }}
+
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       TOBY_AI_PROVIDER: ${{ secrets.TOBY_AI_PROVIDER }}
@@ -55,8 +67,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify secure sign-in release prerequisites
+        env:
+          VERIFIED_NATIVE_RELEASE: ${{ inputs.verified_native_release }}
+        run: node scripts/check-secure-login-release.mjs
+
       - name: Check app
         run: |
+          npm run test:auth
           npm run lint
           npm run build
 
@@ -72,6 +90,12 @@ jobs:
             'LABSTUDIO_ACCESS_CODE',
             'LABSTUDIO_BOOKINGS_ICAL_URL',
             'LABSTUDIO_SESSION_SECRET',
+            'LABSTUDIO_SMTP_HOST',
+            'LABSTUDIO_SMTP_PORT',
+            'LABSTUDIO_SMTP_USER',
+            'LABSTUDIO_SMTP_PASSWORD',
+            'LABSTUDIO_LOGIN_FROM',
+
             'NEXT_PUBLIC_SITE_URL',
             'OPENAI_API_KEY',
             'SITE_URL',
@@ -93,81 +117,6 @@ jobs:
 
       - name: Package Namecheap bundle
         run: npm run package:namecheap
-
-      - name: Stage changed runtime files
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const src = path.resolve('output/namecheap-deploy');
-          const stage = path.resolve('output/namecheap-targeted');
-          fs.rmSync(stage, { recursive: true, force: true });
-          fs.mkdirSync(stage, { recursive: true });
-
-          const files = new Set([
-            'DEPLOY_INFO.json',
-            'app.js',
-            '.next/app-path-routes-manifest.json',
-            '.next/BUILD_ID',
-            '.next/build-manifest.json',
-            '.next/package.json',
-            '.next/prerender-manifest.json',
-            '.next/required-server-files.json',
-            '.next/routes-manifest.json',
-            '.next/server/app-paths-manifest.json',
-            '.next/server/functions-config-manifest.json',
-            '.next/server/middleware-build-manifest.js',
-            '.next/server/middleware-manifest.json',
-            '.next/server/middleware.js',
-            '.next/server/next-font-manifest.js',
-            '.next/server/next-font-manifest.json',
-            '.next/server/pages-manifest.json',
-            '.next/server/server-reference-manifest.js',
-            '.next/server/server-reference-manifest.json',
-          ]);
-
-          function addTree(relativeDir) {
-            const absoluteDir = path.join(src, relativeDir);
-            if (!fs.existsSync(absoluteDir)) return;
-            for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
-              const relativePath = path.join(relativeDir, entry.name);
-              const absolutePath = path.join(src, relativePath);
-              if (entry.isDirectory()) {
-                addTree(relativePath);
-              } else if (entry.isFile()) {
-                files.add(relativePath);
-              }
-            }
-          }
-
-          for (const dir of [
-            '.next/server/app/api/lab',
-            '.next/server/app/api/toby',
-            '.next/server/app/account-deletion',
-            '.next/server/app/privacy',
-            '.next/server/app/support',
-            '.next/server/app/terms',
-            '.next/server/chunks',
-            '.next/server/chunks/ssr',
-            'data',
-            'tmp',
-          ]) {
-            addTree(dir);
-          }
-
-          let copied = 0;
-          for (const relativePath of files) {
-            const from = path.join(src, relativePath);
-            if (!fs.existsSync(from)) continue;
-            const to = path.join(stage, relativePath);
-            fs.mkdirSync(path.dirname(to), { recursive: true });
-            fs.copyFileSync(from, to);
-            copied += 1;
-          }
-
-          console.log(`Staged ${copied} files for targeted upload.`);
-          NODE
-          du -sh output/namecheap-targeted
 
       - name: Install lftp
         run: |
@@ -194,7 +143,7 @@ jobs:
           chmod 600 "$key_path"
           printf '%s\n' "$NAMECHEAP_SSH_KNOWN_HOSTS" > "$known_hosts_path"
           chmod 600 "$known_hosts_path"
-          printf 'restart=%s\n' "$(date -u +%FT%TZ)" > output/namecheap-targeted/tmp/restart.txt
+          printf 'restart=%s\n' "$(date -u +%FT%TZ)" > output/namecheap-deploy/tmp/restart.txt
 
           lftp -u "$NAMECHEAP_CPANEL_USER", "sftp://$NAMECHEAP_SSH_HOST:$ssh_port" <<LFTP
           set cmd:fail-exit yes
@@ -204,7 +153,11 @@ jobs:
           set net:reconnect-interval-base 5
           set xfer:clobber true
           set mirror:overwrite true
-          lcd output/namecheap-targeted
+          set cmd:fail-exit no
+          mkdir "$remote_root"
+          mkdir "$remote_root/tmp"
+          set cmd:fail-exit yes
+          lcd output/namecheap-deploy
           mirror -R --parallel=1 --transfer-all --no-perms --no-umask . "$remote_root"
           put -O "$remote_root/tmp" tmp/restart.txt
           cat "$remote_root/DEPLOY_INFO.json"
@@ -265,36 +218,14 @@ jobs:
           const login = await parseJson(`${base}/api/lab/shop`, {
             method: 'POST',
             headers: { 'content-type': 'application/json', accept: 'application/json' },
-            body: JSON.stringify({
-              action: 'login',
-              email: `native-ci+${process.env.GITHUB_RUN_ID}@labstudio.fit`,
-            }),
+            body: JSON.stringify({ action: 'login', email: 'security-probe@example.invalid' }),
           });
-
-          if (!login.response.ok || !login.parsed?.ok) {
-            throw new Error(`Native compatibility login failed. status=${login.response.status} body=${login.text.slice(0, 160)}`);
+          if (login.response.ok || login.parsed?.ok || login.response.headers.has('set-cookie')) {
+            throw new Error('Contact-only login must fail without issuing cookies.');
           }
-
-          const setCookies = typeof login.response.headers.getSetCookie === 'function'
-            ? login.response.headers.getSetCookie()
-            : [login.response.headers.get('set-cookie')].filter(Boolean);
-          const cookieHeader = setCookies
-            .flatMap((value) => String(value).split(/,(?=\s*labstudio_)/))
-            .map((value) => value.match(/labstudio_(?:uid|session)=[^;]+/)?.[0])
-            .filter(Boolean)
-            .join('; ');
-
-          if (!cookieHeader.includes('labstudio_uid=') || !cookieHeader.includes('labstudio_session=')) {
-            throw new Error('Native compatibility login did not return both auth cookies.');
-          }
-
-          const user = await parseJson(`${base}/api/lab/user?deploy=${process.env.GITHUB_RUN_ID}`, {
-            headers: { accept: 'application/json', cookie: cookieHeader },
+          const user = await parseJson(`${base}/api/lab/user`, {
+            headers: { cookie: 'labstudio_uid=security-probe-invalid' },
           });
-
-          if (!user.response.ok || !user.parsed?.ok || !user.parsed?.user?.id) {
-            throw new Error(`Authenticated user check failed. status=${user.response.status} body=${user.text.slice(0, 160)}`);
-          }
-
-          console.log(`native login ok ${user.parsed.user.id}`);
+          if (user.response.status !== 401) throw new Error('Unsigned UID must not authenticate.');
+          console.log('Public catalog available; contact-only login and unsigned UID rejected.');
           NODE

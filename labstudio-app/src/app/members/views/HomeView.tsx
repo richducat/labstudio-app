@@ -431,7 +431,7 @@ export default function HomeView({
               </div>
               <h4 className="text-sm font-black italic uppercase tracking-wider">Brain Training</h4>
               <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mt-1 mb-3 leading-relaxed">
-                Play short focus, memory, <br /> and reaction games.
+                Play the Reaction Lab <br /> speed challenge.
               </p>
               <div className="flex items-center gap-2 text-[10px] font-black text-violet-400 uppercase tracking-widest group-hover:gap-3 transition-all">
                 Open Games <ChevronRight size={12} />

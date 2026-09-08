@@ -7,6 +7,12 @@ private struct LabErrorResponse: Decodable {
     let error: String?
 }
 
+private struct LoginCodeResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let challengeId: String?
+}
+
 private struct LoginResponse: Decodable {
     let ok: Bool
     let error: String?
@@ -80,6 +86,7 @@ private struct BookingResponse: Decodable {
     let ok: Bool
     let error: String?
     let item: Item?
+    let existing: Bool?
 }
 
 private struct CheckoutResponse: Decodable {
@@ -96,6 +103,13 @@ private struct TobyResponse: Decodable {
 private struct GenericResponse: Decodable {
     let ok: Bool?
     let error: String?
+}
+
+private struct GameScoresResponse: Decodable {
+    let ok: Bool
+    let error: String?
+    let highScores: [LabGameHighScore]?
+    let leaderboards: [LabLeaderboardEntry]?
 }
 
 private enum LabAPIError: LocalizedError {
@@ -135,6 +149,8 @@ final class LabAPIClient {
         configuration.httpCookieAcceptPolicy = .always
         configuration.httpShouldSetCookies = true
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.timeoutIntervalForRequest = 12
+        configuration.timeoutIntervalForResource = 20
         self.session = URLSession(configuration: configuration)
     }
 
@@ -206,6 +222,9 @@ final class LabAPIClient {
 @MainActor
 @Observable
 final class LabAppState {
+    private static let signedOutCoachPrompt = "I’m Toby. Sign in and I’ll use your Lab Studio profile, training logs, and nutrition data to help you stay on track."
+    private static let signedInCoachPrompt = "You’re in. I’ll use your Lab Studio profile and current logs for training, nutrition, booking, and recovery guidance."
+
     var selectedTab: LabTab = .home
     var isBootstrapping = true
     var isLoading = false
@@ -223,11 +242,16 @@ final class LabAppState {
     var cafeItems: [LabCafeItem] = []
     var nutrition: LabNutrition?
     var cart: [LabCartLine] = []
+    var gameHighScores: [String: Int] = [:]
+    var leaderboard: [LabLeaderboardEntry] = []
     var coachMessages: [ChatMessage] = [
-        .init(text: "I’m Toby. Sign in and I’ll use your Lab Studio profile, training logs, and nutrition data to help you stay on track.", isCoach: true)
+        .init(text: LabAppState.signedOutCoachPrompt, isCoach: true)
     ]
 
     private let api = LabAPIClient()
+#if DEBUG
+    private var isUsingScreenshotFixture = false
+#endif
 
     var displayName: String {
         profile?.displayName ?? user?.displayName ?? "Lab Member"
@@ -261,9 +285,17 @@ final class LabAppState {
         isBootstrapping = true
         defer { isBootstrapping = false }
 
+#if DEBUG
+        if applyScreenshotFixtureIfRequested() {
+            return
+        }
+#endif
+
         do {
-            try await refreshAll()
+            try await refreshAll(includeGameData: false)
             isAuthenticated = true
+            updateCoachPromptForAuthenticatedSession()
+            refreshGameDataInBackground()
         } catch LabAPIError.unauthorized {
             isAuthenticated = false
             user = nil
@@ -276,16 +308,29 @@ final class LabAppState {
         }
     }
 
-    func login(email: String, phone: String) async {
+    func requestLoginCode(email: String) async -> String? {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            let response: LoginCodeResponse = try await api.post("/api/lab/auth/request-code", json: ["email": email])
+            guard response.ok, let challengeId = response.challengeId else {
+                throw LabAPIError.server(response.error ?? "Unable to send a code.")
+            }
+            return challengeId
+        } catch { errorMessage = error.localizedDescription; return nil }
+    }
+
+    func login(email: String, challengeId: String, code: String) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
         do {
-            let response: LoginResponse = try await api.post("/api/lab/shop", json: [
-                "action": "login",
+            let response: LoginResponse = try await api.post("/api/lab/auth/login", json: [
                 "email": email,
-                "phone": phone,
+                "challengeId": challengeId,
+                "code": code,
             ])
             if !response.ok {
                 throw LabAPIError.server(response.error ?? "Unable to log in.")
@@ -294,9 +339,10 @@ final class LabAppState {
             profile = response.profile
             isAuthenticated = true
             coachMessages = [
-                .init(text: "You’re in. I’ll use your Lab Studio profile and current logs for training, nutrition, booking, and recovery guidance.", isCoach: true)
+                .init(text: Self.signedInCoachPrompt, isCoach: true)
             ]
-            try await refreshAll()
+            try await refreshAll(includeGameData: false)
+            refreshGameDataInBackground()
         } catch {
             errorMessage = error.localizedDescription
             isAuthenticated = false
@@ -304,26 +350,49 @@ final class LabAppState {
     }
 
     func logout() async {
-        _ = try? await api.post("/api/lab/shop", json: ["action": "logout"]) as GenericResponse
+        _ = try? await api.post("/api/lab/auth/logout") as GenericResponse
         api.clearCookies()
         user = nil
         profile = nil
         home = nil
         nutrition = nil
         cart.removeAll()
+        gameHighScores = [:]
+        leaderboard = []
+        coachMessages = [
+            .init(text: Self.signedOutCoachPrompt, isCoach: true)
+        ]
         isAuthenticated = false
         selectedTab = .home
         successMessage = "Signed out."
     }
 
-    func refreshAll() async throws {
-        let userResponse: UserResponse = try await api.get("/api/lab/user")
-        let profileResponse: ProfileResponse = try await api.get("/api/lab/profile")
-        let homeResponse: HomeResponse = try await api.get("/api/lab/home")
-        let servicesResponse: ServicesResponse = try await api.get("/api/lab/services")
-        let shopResponse: ShopResponse = try await api.get("/api/lab/shop")
-        let cafeResponse: CafeResponse = try await api.get("/api/lab/cafe")
-        let nutritionResponse: NutritionResponse = try await api.get("/api/lab/nutrition")
+    func refreshAll(includeGameData: Bool = true) async throws {
+        async let userRequest: UserResponse = api.get("/api/lab/user")
+        async let profileRequest: ProfileResponse = api.get("/api/lab/profile")
+        async let homeRequest: HomeResponse = api.get("/api/lab/home")
+        async let servicesRequest: ServicesResponse = api.get("/api/lab/services")
+        async let shopRequest: ShopResponse = api.get("/api/lab/shop")
+        async let cafeRequest: CafeResponse = api.get("/api/lab/cafe")
+        async let nutritionRequest: NutritionResponse = api.get("/api/lab/nutrition")
+
+        let (
+            userResponse,
+            profileResponse,
+            homeResponse,
+            servicesResponse,
+            shopResponse,
+            cafeResponse,
+            nutritionResponse
+        ) = try await (
+            userRequest,
+            profileRequest,
+            homeRequest,
+            servicesRequest,
+            shopRequest,
+            cafeRequest,
+            nutritionRequest
+        )
 
         user = userResponse.user
         profile = profileResponse.profile ?? homeResponse.home?.profile
@@ -335,14 +404,27 @@ final class LabAppState {
         cafeItems = cafeResponse.items
         nutrition = LabNutrition(today: nutritionResponse.today, avg7: nutritionResponse.avg7)
         isAuthenticated = true
+        updateCoachPromptForAuthenticatedSession()
+        if includeGameData {
+            await refreshGameScores()
+            await refreshLeaderboard()
+        }
     }
 
     func refreshAfterMutation(success: String? = nil) async {
+        if let success {
+            errorMessage = nil
+            successMessage = success
+        }
+
         do {
             try await refreshAll()
-            successMessage = success
         } catch {
-            errorMessage = error.localizedDescription
+            // A completed write must not be reported as failed just because a
+            // later dashboard refresh was temporarily unavailable.
+            if success == nil {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -383,7 +465,10 @@ final class LabAppState {
             if !response.ok {
                 throw LabAPIError.server(response.error ?? "Unable to book that session.")
             }
-            await refreshAfterMutation(success: "Session booked for \(day) at \(time).")
+            let confirmation = response.existing == true
+                ? "That session was already booked for \(day) at \(time)."
+                : "Session booked for \(day) at \(time)."
+            await refreshAfterMutation(success: confirmation)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -453,6 +538,8 @@ final class LabAppState {
             home = nil
             nutrition = nil
             cart.removeAll()
+            gameHighScores = [:]
+            leaderboard = []
             isAuthenticated = false
             selectedTab = .home
             successMessage = "Account deleted."
@@ -475,6 +562,55 @@ final class LabAppState {
             coachMessages.append(.init(text: response.reply ?? "I’m here, but I didn’t get a clean response back. Try that again.", isCoach: true))
         } catch {
             coachMessages.append(.init(text: error.localizedDescription, isCoach: true))
+        }
+    }
+
+    func refreshGameScores() async {
+#if DEBUG
+        if isUsingScreenshotFixture { return }
+#endif
+        do {
+            let response: GameScoresResponse = try await api.get("/api/lab/games/score")
+            if response.ok {
+                gameHighScores = Dictionary(uniqueKeysWithValues: (response.highScores ?? []).map { ($0.gameId, $0.topScore) })
+            }
+        } catch {
+            // Scores are additive; the rest of the member app should stay usable if this endpoint is unavailable.
+        }
+    }
+
+    func refreshLeaderboard() async {
+#if DEBUG
+        if isUsingScreenshotFixture { return }
+#endif
+        do {
+            let response: GameScoresResponse = try await api.get("/api/lab/games/score?scope=global")
+            if response.ok {
+                leaderboard = response.leaderboards ?? []
+            }
+        } catch {
+            leaderboard = []
+        }
+    }
+
+    func submitGameScore(gameId: String, score: Int) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let response: GenericResponse = try await api.post("/api/lab/games/score", json: [
+                "gameId": gameId,
+                "score": max(0, score),
+            ])
+            if let ok = response.ok, !ok {
+                throw LabAPIError.server(response.error ?? "Unable to save score.")
+            }
+            await refreshGameScores()
+            await refreshLeaderboard()
+            successMessage = "Score saved."
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -561,6 +697,159 @@ final class LabAppState {
         successMessage = "\(name) added to cart."
     }
 
+    private func updateCoachPromptForAuthenticatedSession() {
+        if coachMessages.count == 1, coachMessages.first?.text == Self.signedOutCoachPrompt {
+            coachMessages = [
+                .init(text: Self.signedInCoachPrompt, isCoach: true)
+            ]
+        }
+    }
+
+    private func refreshGameDataInBackground() {
+        Task { @MainActor in
+            await refreshGameScores()
+            await refreshLeaderboard()
+        }
+    }
+
+#if DEBUG
+    private func applyScreenshotFixtureIfRequested() -> Bool {
+        let process = ProcessInfo.processInfo
+        let arguments = process.arguments
+        let environment = process.environment
+
+        let rawMode: String?
+        if let index = arguments.firstIndex(of: "-LabStudioScreenshotMode"),
+           arguments.indices.contains(index + 1) {
+            rawMode = arguments[index + 1]
+        } else {
+            rawMode = environment["LABSTUDIO_SCREENSHOT_MODE"]
+        }
+
+        guard let rawMode, let tab = screenshotTab(for: rawMode) else {
+            return false
+        }
+
+        applyScreenshotFixture(selectedTab: tab)
+        return true
+    }
+
+    private func screenshotTab(for rawMode: String) -> LabTab? {
+        switch rawMode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "dash", "home":
+            .home
+        case "book", "train":
+            .train
+        case "games", "game":
+            .games
+        case "shop", "market":
+            .market
+        case "coach", "toby":
+            .coach
+        case "rank", "social", "leaderboard":
+            .social
+        case "me", "profile":
+            .profile
+        default:
+            nil
+        }
+    }
+
+    private func applyScreenshotFixture(selectedTab tab: LabTab) {
+        let fixtureProfile = LabProfile(
+            userId: "reviewer",
+            firstName: "Avery",
+            lastName: "Member",
+            email: "reviewer+labstudio@labstudio.fit",
+            phone: "321-555-0198",
+            goal: "Build strength and stay consistent",
+            activityLevel: "Active",
+            scheduleDays: ["mon", "wed", "fri"],
+            nutritionRating: 4
+        )
+
+        user = LabUser(id: "reviewer", displayName: "Avery Member", xp: 1840, level: 3, onboardingComplete: true)
+        profile = fixtureProfile
+        location = "3280 Suntree Blvd, Melbourne, FL"
+        services = [
+            .init(id: "private-strength", name: "Private Strength", price: 85, time: "60 min", desc: "One-on-one programming and coaching.", type: "Training"),
+            .init(id: "performance-checkin", name: "Performance Check-In", price: 45, time: "30 min", desc: "Movement review, goal setting, and recovery planning.", type: "Coaching"),
+            .init(id: "small-group", name: "Small Group Training", price: 35, time: "45 min", desc: "Coach-led strength session with a focused group.", type: "Training")
+        ]
+        timeGroups = [
+            .init(label: "Morning", slots: ["7:00 AM", "8:30 AM", "10:00 AM"]),
+            .init(label: "Afternoon", slots: ["12:30 PM", "2:00 PM", "4:30 PM"]),
+            .init(label: "Evening", slots: ["5:30 PM", "6:30 PM"])
+        ]
+        shopProducts = [
+            .init(slug: "day-pass", name: "Day Pass", description: "Single-day facility access.", priceCents: 2500, imageUrl: nil, stripePriceId: nil, checkoutUrl: nil),
+            .init(slug: "private-pack", name: "Private Training Pack", description: "Five private coaching sessions.", priceCents: 39900, imageUrl: nil, stripePriceId: nil, checkoutUrl: nil),
+            .init(slug: "membership", name: "Studio Membership", description: "Monthly access for Lab Studio members.", priceCents: 12900, imageUrl: nil, stripePriceId: nil, checkoutUrl: nil)
+        ]
+        cafeItems = [
+            .init(slug: "recovery-shake", name: "Recovery Shake", category: "Cafe", priceCents: 900, productUrl: nil, imageUrl: nil, stripePriceId: nil),
+            .init(slug: "protein-coffee", name: "Protein Coffee", category: "Cafe", priceCents: 650, productUrl: nil, imageUrl: nil, stripePriceId: nil)
+        ]
+        home = LabHome(
+            profile: fixtureProfile,
+            nutrition: .init(proteinG: 126, carbsG: 210, fatG: 62, calories: 1840),
+            latestStats: .init(id: 44, createdAt: "2026-06-10T13:30:00-04:00", weightLbs: 176.4, bodyFatPct: 15.8, restingHr: 54, note: "Feeling strong after lower-body day."),
+            nextBooking: .init(summary: "Private Strength Session", start: "2026-06-12T14:00:00-04:00", end: "2026-06-12T15:00:00-04:00", location: location, description: "Lower-body strength block.", source: "labstudio"),
+            upcomingBookings: [
+                .init(summary: "Private Strength Session", start: "2026-06-12T14:00:00-04:00", end: "2026-06-12T15:00:00-04:00", location: location, description: nil, source: "labstudio"),
+                .init(summary: "Small Group Training", start: "2026-06-15T17:30:00-04:00", end: "2026-06-15T18:15:00-04:00", location: location, description: nil, source: "labstudio")
+            ],
+            bookingCalendar: [
+                .init(summary: "Private Strength Session", start: "2026-06-12T14:00:00-04:00", end: "2026-06-12T15:00:00-04:00", location: location, description: nil, source: "labstudio"),
+                .init(summary: "Small Group Training", start: "2026-06-15T17:30:00-04:00", end: "2026-06-15T18:15:00-04:00", location: location, description: nil, source: "labstudio")
+            ],
+            calendarFeed: .init(connected: true, importedUpcomingCount: 2),
+            recentWorkouts: [
+                .init(id: 301, createdAt: "2026-06-10T09:45:00-04:00", kind: "strength", durationMin: 62, note: "Trap bar deadlift and sled work."),
+                .init(id: 300, createdAt: "2026-06-08T08:30:00-04:00", kind: "conditioning", durationMin: 38, note: "Intervals and mobility.")
+            ],
+            agenda: [
+                .init(id: "protein", title: "Hit protein target", time: "Today", type: "Nutrition", action: "log", completed: false),
+                .init(id: "mobility", title: "10-minute mobility reset", time: "4:00 PM", type: "Recovery", action: "checkoff", completed: true),
+                .init(id: "session", title: "Confirm Friday session", time: "6:00 PM", type: "Booking", action: "book", completed: false)
+            ],
+            sessionLog: .init(bookedUpcoming30d: 4, completed7d: 3, missedApprox30d: 0),
+            progress: .init(photos30d: 2, calories7dAvg: 1880, workouts7d: .init(count: 4, minutes: 215), latestPr: .init(lift: "Trap Bar Deadlift", value: 225, unit: "lb", reps: 3))
+        )
+        nutrition = LabNutrition(
+            today: .init(
+                proteinG: 126,
+                carbsG: 210,
+                fatG: 62,
+                calories: 1840,
+                entries: [
+                    .init(id: 1001, createdAt: "2026-06-10T08:00:00-04:00", name: "Protein oats", proteinG: 38, carbsG: 52, fatG: 12, timeLabel: "Breakfast"),
+                    .init(id: 1002, createdAt: "2026-06-10T12:30:00-04:00", name: "Chicken bowl", proteinG: 48, carbsG: 70, fatG: 18, timeLabel: "Lunch")
+                ]
+            ),
+            avg7: .init(proteinG: 121, carbsG: 198, fatG: 58, calories: 1815)
+        )
+        gameHighScores = ["reaction-lab": 540]
+        leaderboard = [
+            .init(displayName: "Maya Stone", score: 720, gamesPlayed: 9),
+            .init(displayName: "Avery Member", score: 540, gamesPlayed: 6),
+            .init(displayName: "Chris Lee", score: 480, gamesPlayed: 5),
+            .init(displayName: "Jordan Pace", score: 360, gamesPlayed: 4)
+        ]
+        coachMessages = [
+            .init(text: Self.signedInCoachPrompt, isCoach: true),
+            .init(text: "Focus today on the lower-body session and keep protein above 120g.", isCoach: true)
+        ]
+        cart.removeAll()
+        errorMessage = nil
+        successMessage = nil
+        isLoading = false
+        isAuthenticated = true
+        isUsingScreenshotFixture = true
+        selectedTab = tab
+    }
+#endif
+
     private func compressedJPEGData(from data: Data) -> Data? {
         guard let image = UIImage(data: data) else { return nil }
         let maxSide: CGFloat = 1_200
@@ -578,19 +867,35 @@ final class LabAppState {
 enum LabTab: String, CaseIterable, Identifiable {
     case home = "Home"
     case train = "Train"
+    case games = "Games"
     case market = "Market"
     case coach = "Coach"
+    case social = "Social"
     case profile = "Profile"
 
     var id: String { rawValue }
 
     var icon: String {
         switch self {
-        case .home: "house.fill"
-        case .train: "dumbbell.fill"
+        case .home: "waveform.path.ecg"
+        case .train: "calendar"
+        case .games: "brain.head.profile"
         case .market: "bag.fill"
-        case .coach: "bubble.left.and.bubble.right.fill"
-        case .profile: "person.crop.circle.fill"
+        case .coach: "message.fill"
+        case .social: "trophy.fill"
+        case .profile: "person.fill"
+        }
+    }
+
+    var navLabel: String {
+        switch self {
+        case .home: "Dash"
+        case .train: "Book"
+        case .games: "Games"
+        case .market: "Shop"
+        case .coach: "Coach"
+        case .social: "Rank"
+        case .profile: "Me"
         }
     }
 }
